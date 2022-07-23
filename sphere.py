@@ -1,128 +1,139 @@
-import numpy as np
 from matplotlib import pyplot as plt
-from panel_class import Panel, quadPanel, triPanel, Vector
+import numpy as np
+
+
+def sphere(radius, num_longitude, num_latitude,
+                     mesh_shell_type='triangular'):
     
-
-num_theta = 20
-num_phi = 20
-thetas = np.linspace(0, 2*np.pi, num_theta)
-phis = np.linspace(0, np.pi, num_phi)
-r = 1
-coords = np.empty((num_theta, num_phi), dtype=tuple)
-
-for i, theta in enumerate(thetas):
-    for j, phi in enumerate(phis):
-        x = r * np.sin(phi) * np.cos(theta)
-        y = r * np.sin(phi) * np.sin(theta) 
-        z = r * np.cos(phi)
-        coords[i][j] = (x, y, z)
-
-panels = []
-ax = plt.axes(projection='3d')
-ax.set_xlabel('x')
-ax.set_ylabel('y')
-ax.set_zlabel('z')
-# ax.view_init(0, 0)
-
-
-# quadrilateral panels
-
-# for i in range(num_theta):
-#     for j in range(num_phi-1):
+    # sqrt = np.sqrt(node_num)
+    # num_longitude, num_latitude = np.floor(sqrt), np.ceil(sqrt)
+    # num_longitude, num_latitude = np.ceil(sqrt), np.floor(sqrt)
+    
+    num_theta = int(num_longitude)
+    num_phi = int(num_latitude)
+    
+    thetas = np.linspace(0, 2*np.pi, num_theta)
+    phis = np.linspace(0, np.pi, num_phi)
+    r = radius
+    
+    thetas = np.delete(thetas, -1) # 0 = 2π
+    num_theta = num_theta-1  # 0 = 2π
+    
+    nodes = []
+    shells = []
+    
+    for theta in thetas:
+        for phi in phis:
+            x = r * np.sin(phi) * np.cos(theta)
+            y = r * np.sin(phi) * np.sin(theta) 
+            z = r * np.cos(phi)
+            nodes.append([x, y, z])
         
-#         if j == 0:
-#             vertex0 = Point(coords[i][j])
-#             vertex1 = Point(coords[i][j+1])
-#             vertex2 = Point(coords[(i+1)%num_theta][j+1])
-#             panels.append(triPanel(vertex0, vertex1, vertex2))
-            
-#             x = [vertex0.x, vertex1.x, vertex2.x, vertex0.x]
-#             y = [vertex0.y, vertex1.y, vertex2.y, vertex0.y]
-#             z = [vertex0.z, vertex1.z, vertex2.z, vertex0.z]
-#             ax.plot3D(x, y, z, color='k')
-#             plt.draw()
-#             plt.pause(0.1)
-            
-#         elif j == num_phi-1:
-#             vertex0 = Point(coords[i][j])
-#             vertex1 = Point(coords[(i+1)%num_theta][j+1])
-#             vertex2 = Point(coords[(i+1)%num_theta][j])
-#             panels.append(triPanel(vertex0, vertex1, vertex2))
-            
-#             x = [vertex0.x, vertex1.x, vertex2.x, vertex0.x]
-#             y = [vertex0.y, vertex1.y, vertex2.y, vertex0.y]
-#             z = [vertex0.z, vertex1.z, vertex2.z, vertex0.z]
-#             ax.plot3D(x, y, z, color='k')
-#             plt.draw()
-#             plt.pause(0.01)
+    if mesh_shell_type == 'quadrilateral':
+        # quadrilateral shells
         
-#         else:           
-#             vertex0 = Point(coords[i][j])
-#             vertex1 = Point(coords[i][j+1])
-#             vertex2 = Point(coords[(i+1)%num_theta][j+1])
-#             vertex3 = Point(coords[(i+1)%num_theta][j])
-#             panels.append(quadPanel(vertex0, vertex1, vertex2, vertex3))
-#             x = [vertex0.x, vertex1.x, vertex2.x, vertex3.x, vertex0.x]
-#             y = [vertex0.y, vertex1.y, vertex2.y, vertex3.y, vertex0.y]
-#             z = [vertex0.z, vertex1.z, vertex2.z, vertex3.z, vertex0.z]
-            
-#             ax.plot3D(x, y, z, color='k')
-#             plt.draw()
-#             plt.pause(0.01)
-# plt.show()
+        for i in range(num_theta):
+            for j in range(num_phi-1):
+                
+                if j == 0:
+                    # shells.append([i*num_phi + j,
+                    #             i*num_phi + j+1,
+                    #             ((i+1)%num_theta )* num_phi + j+1])
+                    
+                    shells.append([j,
+                                i*num_phi + j+1,
+                                ((i+1)%num_theta )* num_phi + j+1])
+                    
+                elif j == num_phi-2:            
+                    # shells.append([i*num_phi + j,
+                    #                i*num_phi + j+1,
+                    #             ((i+1)%num_theta )* num_phi + j])
+                    
+                    shells.append([i*num_phi + j,
+                                   j+1,
+                                ((i+1)%num_theta )* num_phi + j])
+                    
+                    # alternatively
+                    # shells.append([i*num_phi + j,
+                    #             ((i+1)%num_theta )* num_phi + j+1,
+                    #             ((i+1)%num_theta )* num_phi + j])
+                    
+                    
+                else:            
+                    shells.append([i*num_phi + j,
+                                i*num_phi + j+1,
+                                ((i+1)%num_theta )* num_phi + j+1,
+                                ((i+1)%num_theta )* num_phi + j])
+                
+    elif mesh_shell_type == 'triangular':
+        ## triangular panels
+        for i in range(num_theta):
+            for j in range(num_phi-1):
+                
+                if j == 0:            
+                    # shells.append([i*num_phi + j,
+                    #                i*num_phi + j+1,
+                    #                ((i+1)%num_theta )* num_phi + j+1])
+                    
+                    shells.append([j,
+                                   i*num_phi + j+1,
+                                   ((i+1)%num_theta )* num_phi + j+1])
+                  
+                elif j == num_phi-2:
+                    
+                    # shells.append([i*num_phi + j,
+                    #                i*num_phi + j+1,
+                    #             ((i+1)%num_theta )* num_phi + j])
+                    
+                    shells.append([i*num_phi + j,
+                                   j+1,
+                                   ((i+1)%num_theta )* num_phi + j])
+                    
+                    # alternatively            
+                    # shells.append([i*num_phi + j,
+                    #                ((i+1)%num_theta)*num_phi + j+1,
+                    #                ((i+1)%num_theta)*num_phi + j])
+                    
+                else:
+                    shells.append([i*num_phi + j,
+                                   i*num_phi + j+1,
+                                   ((i+1)%num_theta)*num_phi + j+1])
+                    
+                    shells.append([((i+1)%num_theta)*num_phi + j+1,
+                                   ((i+1)%num_theta)*num_phi + j,
+                                   i*num_phi + j])
+    
+    return nodes, shells
 
-
-### triangular panels
-
-for i in range(num_theta):
-    for j in range(num_phi-1):
-        if j == 0:
-            vertex0 = Vector(coords[i][j])
-            vertex1 = Vector(coords[i][j+1])
-            vertex2 = Vector(coords[(i+1)%num_theta][j+1])
-            panels.append(triPanel(vertex0, vertex1, vertex2))
-            
-            x = [vertex0.x, vertex1.x, vertex2.x, vertex0.x]
-            y = [vertex0.y, vertex1.y, vertex2.y, vertex0.y]
-            z = [vertex0.z, vertex1.z, vertex2.z, vertex0.z]
-            ax.plot3D(x, y, z, color='k')
-            plt.draw()
-            plt.pause(0.1)
+if __name__=='__main__':
+    from mesh_class import Mesh
+    
+    radius = 1
+    num_longitude, num_latitude = 5, 6
+    nodes, shells = sphere(radius, num_longitude, num_latitude,
+                                     mesh_shell_type='triangular')
+    
+    neighbors = []                    
+    for i, shell_i in enumerate(shells):
+        neighbors.append([])
+        for j, shell_j in enumerate(shells):
+            if i != j and Mesh.do_intersect(shell_i, shell_j):
+                neighbors[-1].append(j)
+    
+    print("node id, [x, y, x]")
+    for i, node in enumerate(nodes):
+        print(i, node)
         
-        elif j == num_phi-1:
-            vertex0 = Vector(coords[i][j])
-            vertex1 = Vector(coords[(i+1)%num_theta][j+1])
-            vertex2 = Vector(coords[(i+1)%num_theta][j])
-            panels.append(triPanel(vertex0, vertex1, vertex2))
-            
-            x = [vertex0.x, vertex1.x, vertex2.x, vertex0.x]
-            y = [vertex0.y, vertex1.y, vertex2.y, vertex0.y]
-            z = [vertex0.z, vertex1.z, vertex2.z, vertex0.z]
-            ax.plot3D(x, y, z, color='k')
-            plt.draw()
-            plt.pause(0.005)
-           
-        else:   
-            vertex0 = Vector(coords[i][j])
-            vertex1 = Vector(coords[i][j+1])
-            vertex2 = Vector(coords[(i+1)%num_theta][j+1])
-            vertex3 = Vector(coords[(i+1)%num_theta][j])
-            
-            panels.append(triPanel(vertex0, vertex1, vertex2))
-            x = [vertex0.x, vertex1.x, vertex2.x, vertex0.x]
-            y = [vertex0.y, vertex1.y, vertex2.y, vertex0.y]
-            z = [vertex0.z, vertex1.z, vertex2.z, vertex0.z]
-            ax.plot3D(x, y, z, color='k')
-            plt.draw()
-            plt.pause(0.01)
-            
-            panels.append(triPanel(vertex2, vertex3, vertex0))
-            x = [vertex2.x, vertex3.x, vertex0.x, vertex2.x]
-            y = [vertex2.y, vertex3.y, vertex0.y, vertex2.y]
-            z = [vertex2.z, vertex3.z, vertex0.z, vertex2.z]
-            ax.plot3D(x, y, z, color='k')
-            plt.draw()
-            plt.pause(0.01)        
-        
-        
-plt.show()
+    print("shell id, [nodes' ids]")
+    for i, shell in enumerate(shells):
+        print(i, shell)
+    
+    print("shell id, node coords")
+    for shell_id, shell in enumerate(shells):
+        for node_id in shell:
+            print(shell_id, ": ",
+                  nodes[node_id][0],nodes[node_id][1],nodes[node_id][2])        
+    
+    print("shell id, [neighbors' ids]")
+    for shell_id, neighbor in enumerate(neighbors):
+        print(shell_id, neighbor)

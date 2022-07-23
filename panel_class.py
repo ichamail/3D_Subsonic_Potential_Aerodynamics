@@ -1,10 +1,9 @@
-from array import array
-from cProfile import label
 import numpy as np
 from vector_class import Vector
         
 class Panel:
     def __init__(self, num_vertices):
+        self.id = None  # panel's identity
         self.sigma = 0  # constant source stregth per area
         self.mu = 0  # constant doublet strength per area
         self.num_vertices = num_vertices # panel's number of vertices
@@ -168,10 +167,10 @@ if __name__=='__main__':
     # Triangular panel
     panel = triPanel(vertex1, vertex2, vertex3)
     
-    print(panel.num_vertices)
-    print(panel.n)
-    print(panel.l)
-    print(panel.m)
+    # print(panel.num_vertices)
+    # print(panel.n)
+    # print(panel.l)
+    # print(panel.m)
     
     ax = plt.axes(projection='3d')
     ax.set_xlabel('x')
@@ -205,9 +204,3 @@ if __name__=='__main__':
     ax.legend()
     
     plt.show()
-    
-    print(panel.R)
-    v = Vector.addition(panel.r_vertex[0], panel.r_cp.scalar_product(-1))
-    v_local = (v.transformation(panel.R))
-    print(panel.r_vertex[0])
-    print(v_local)  

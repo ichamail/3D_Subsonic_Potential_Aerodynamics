@@ -1,6 +1,7 @@
 import numpy as np
 from vector_class import Vector
-from panel_class import Panel
+from panel_class import Panel, quadPanel, triPanel
+from is_inside_polygon import is_inside_polygon
 
 
 def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
@@ -11,12 +12,11 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     
     r = Vector.addition(r_p, r_cp.scalar_product(-1))
     r_local = r.transformation(R)
-    r = r_local 
+    r = r_local
     
     if r.norm() >= alpha * panel.char_length:
         
         B = panel.area/r.norm()
-    
     
     elif r.z == 0:
         
@@ -41,12 +41,12 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             
             first_term = first_term/d_ab
                
-        if (r_a + r_b - d_ab) == 0:
-            # point p coincide lies on a panel's edge
-            return 0
+            if (r_a + r_b - d_ab) == 0:
+                # point p coincide lies on a panel's edge
+                return 0
         
-        else:  
-            log_term = np.log((r_a + r_b + d_ab)/(r_a + r_b - d_ab))
+            else:  
+                log_term = np.log((r_a + r_b + d_ab)/(r_a + r_b - d_ab))
                 
             B = B + first_term * log_term  
               
@@ -92,7 +92,7 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
                             )    
                         
             B = B + first_term * log_term - arctan_term
-            
+                  
     B = - 1/(4 * np.pi) * B
     
     return B
@@ -109,10 +109,18 @@ def Dblt_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     
     if r.norm() >= alpha * panel.char_length:
         C = - 1/(4*np.pi) * ( panel.area * r.z)/(r.norm()**3)
-        
+    
     elif r.z == 0:
+        point = (r.x, r.y)  
+        polygon = [(r_vertex[i].x, r_vertex[i].y) for i in range(n)]
         
-        C = - 2 * np.pi
+        if is_inside_polygon(polygon, point):
+            # point p lies on panel's surface as z-->0
+            # C = - 0.5  # if z--> +0
+            C = 0.5  # if z--> -0
+        else:
+            # point p lies outside of panel's surface as z-->0
+            C = 0
         
     else:
         C = 0
@@ -148,4 +156,57 @@ def Dblt_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
 
 
 if __name__=='__main__':
-    pass
+    from matplotlib import pyplot as plt
+    vertex1 = Vector((-1, -1, 1))
+    vertex2 = Vector((1, -1, 1))
+    vertex3 = Vector((1, 1, 1))
+    vertex4 = Vector((-1, 1, 1))
+    
+    # Quadrilateral panel
+    panel = quadPanel(vertex1, vertex2, vertex3, vertex4)
+    
+    # Triangular panel
+    # panel = triPanel(vertex1, vertex2, vertex3)
+    
+    r_p = panel.r_cp
+
+    C = Dblt_influence_coeff(r_p, panel)
+    B = Src_influence_coeff(r_p, panel)
+    print("C = " + str(C) + "\nB = " + str(B))
+    
+    
+    # plot panel
+    
+    ax = plt.axes(projection='3d')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    ax.set_xlim(-5, 5)
+    ax.set_ylim(-5, 5)
+    ax.set_zlim(-5, 5)
+    # ax.view_init(0, 0)
+    x = []
+    y = []
+    z = []
+    for i in range(panel.num_vertices+1):
+        i = i % panel.num_vertices
+        x.append(panel.r_vertex[i].x)
+        y.append(panel.r_vertex[i].y)
+        z.append(panel.r_vertex[i].z)
+       
+    ax.plot3D(x, y, z, color='k', label='panel')
+    
+    ax.quiver(panel.r_cp.x, panel.r_cp.y, panel.r_cp.z,
+              panel.n.x, panel.n.y, panel.n.z,
+              color='r', label='normal vector n')
+    ax.quiver(panel.r_cp.x, panel.r_cp.y, panel.r_cp.z,
+              panel.l.x, panel.l.y, panel.l.z,
+              color='b', label='longidutinal vector l')
+    ax.quiver(panel.r_cp.x, panel.r_cp.y, panel.r_cp.z,
+              panel.m.x, panel.m.y, panel.m.z,
+              color='g', label='transverse vector m')
+    
+    ax.legend()
+    
+    plt.show()
+  
