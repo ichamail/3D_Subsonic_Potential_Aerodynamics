@@ -63,6 +63,85 @@ class Vector:
         components = (x_comp, y_comp, z_comp)
         vector3 = Vector(components)
         return vector3
-
+    
+    def __add__(self, vector):
+        x = self.x + vector.x
+        y = self.y + vector.y
+        z = self.z + vector.z
+        components = (x, y, z)
+        return Vector(components)
+    
+    def __radd__(self, vector):
+        x = self.x + vector.x
+        y = self.y + vector.y
+        z = self.z + vector.z
+        components = (x, y, z)
+        return Vector(components)
+    
+    def __sub__(self, vector):
+        x = self.x - vector.x
+        y = self.y - vector.y
+        z = self.z - vector.z
+        components = (x, y, z)
+        return Vector(components)
+    
+    def __rsub__(self, vector):
+        x = self.x - vector.x
+        y = self.y - vector.y
+        z = self.z - vector.z
+        components = (x, y, z)
+        return Vector(components)
+    
+    def __mul__(self, vector_or_scalar):
+        if type(vector_or_scalar) == Vector:
+            vector = vector_or_scalar
+            x1, x2 = self.x, vector.x
+            y1, y2 = self.y, vector.y
+            z1, z2 = self.z, vector.z
+            dot_product = x1*x2 + y1*y2 + z1*z2
+            return dot_product
+        else:
+            scalar = vector_or_scalar
+            x = scalar * self.x 
+            y = scalar * self.y 
+            z = scalar * self.z
+            components = (x, y, z)
+            return Vector(components)
+    
+    def __rmul__(self, vector_or_scalar):
+        if type(vector_or_scalar) == Vector:
+            vector = vector_or_scalar
+            x1, x2 = self.x, vector.x
+            y1, y2 = self.y, vector.y
+            z1, z2 = self.z, vector.z
+            dot_product = x1*x2 + y1*y2 + z1*z2
+            return dot_product
+        else:
+            scalar = vector_or_scalar
+            x = scalar * self.x 
+            y = scalar * self.y 
+            z = scalar * self.z
+            components = (x, y, z)
+            return Vector(components)
+    
+    def __truediv__(self, scalar):
+        x = self.x / scalar
+        y = self.y / scalar
+        z = self.z / scalar
+        components = (x, y, z)
+        return Vector(components)
+    
+    def __pos__(self):
+        return self
+       
+    def __neg__(self):
+        x = - self.x 
+        y = - self.y 
+        z = - self.z
+        components = (x, y, z)
+        return Vector(components)
+        
+        
 if __name__=='__main__':
+    
     pass

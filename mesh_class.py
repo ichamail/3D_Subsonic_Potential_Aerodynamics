@@ -62,6 +62,7 @@ class PanelMesh(Mesh):
     def __init__(self, nodes, shells):
         super().__init__(nodes, shells)
         self.panels = None
+        self.panels_num = None
         self.panel_neighbours = None
         self.CreatePanels()
     
@@ -83,6 +84,7 @@ class PanelMesh(Mesh):
                 
         self.panels = panels
         self.panel_neighbours = self.shell_neighbours
+        self.panels_num = len(panels)
 
     def give_neighbours(self, panel):
         

@@ -10,7 +10,7 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     r_cp = panel.r_cp
     R = panel.R 
     
-    r = Vector.addition(r_p, r_cp.scalar_product(-1))
+    r = r_p - r_cp
     r_local = r.transformation(R)
     r = r_local
     
@@ -27,11 +27,11 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             a = (i+1)%n  # 0, 3, 2, 1 (cw) (instead 0, 1, 2, 3 (cw))
             b = i # 3, 2, 1, 0, (clock wise) (instead 1, 2, 3, 0 (cw))
             
-            r_ab = Vector.addition(r_vertex[b], r_vertex[a].scalar_product(-1))
+            r_ab = r_vertex[b] - r_vertex[a]
             d_ab = r_ab.norm()
-            r_a = Vector.addition(r, r_vertex[a].scalar_product(-1))
+            r_a = r - r_vertex[a]
             r_a = r_a.norm()
-            r_b = Vector.addition(r, r_vertex[b].scalar_product(-1))
+            r_b = r - r_vertex[b]
             r_b = r_b.norm()     
             
             first_term = (
@@ -59,12 +59,12 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             a = (i+1)%n  # 0, 3, 2, 1 (cw) (instead 0, 1, 2, 3 (cw))
             b = i # 3, 2, 1, 0, (clock wise) (instead 1, 2, 3, 0 (cw))
             
-            r_ab = Vector.addition(r_vertex[b], r_vertex[a].scalar_product(-1))
+            r_ab = r_vertex[b] - r_vertex[a]
             d_ab = r_ab.norm()
-            r_a = Vector.addition(r, r_vertex[a].scalar_product(-1))
+            r_a = r - r_vertex[a]
             r_a = r_a.norm()
-            r_b = Vector.addition(r, r_vertex[b].scalar_product(-1))
-            r_b = r_b.norm()     
+            r_b = r - r_vertex[b]
+            r_b = r_b.norm()       
             
             first_term = (
                 (r.x - r_vertex[a].x) * (r_vertex[b].y - r_vertex[a].y)
@@ -103,7 +103,7 @@ def Dblt_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     r_cp = panel.r_cp
     R = panel.R 
     
-    r = Vector.addition(r_p, r_cp.scalar_product(-1))
+    r = r_p - r_cp
     r_local = r.transformation(R)
     r = r_local
     
@@ -130,10 +130,10 @@ def Dblt_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             a = (i+1)%n  # 0, 3, 2, 1 (cw) (instead 0, 1, 2, 3 (cw))
             b = i # 3, 2, 1, 0, (clock wise) (instead 1, 2, 3, 0 (cw))
             
-            r_a = Vector.addition(r, r_vertex[a].scalar_product(-1))
+            r_a = r - r_vertex[a]
             r_a = r_a.norm()
-            r_b = Vector.addition(r, r_vertex[b].scalar_product(-1))
-            r_b = r_b.norm()
+            r_b = r - r_vertex[b]
+            r_b = r_b.norm()   
             
             if (r_vertex[b].x - r_vertex[a].x) == 0:
                 m_ab = np.inf 

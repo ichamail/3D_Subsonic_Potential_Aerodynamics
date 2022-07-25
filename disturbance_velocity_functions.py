@@ -11,7 +11,7 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
     r_cp = panel.r_cp
     R = panel.R 
     
-    r = Vector.addition(r_p, r_cp.scalar_product(-1))
+    r = r_p - r_cp
     r_local = r.transformation(R)
     r = r_local
     
@@ -46,12 +46,12 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             a = (i+1)%n  # 0, 3, 2, 1 (cw) (instead 0, 1, 2, 3 (cw))
             b = i # 3, 2, 1, 0, (clock wise) (instead 1, 2, 3, 0 (cw))
 
-            r_ab = Vector.addition(r_vertex[b], r_vertex[a].scalar_product(-1))
+            r_ab = r_vertex[b] - r_vertex[a]
             d_ab = r_ab.norm()
-            r_a = Vector.addition(r, r_vertex[a].scalar_product(-1))
+            r_a = r - r_vertex[a]
             r_a = r_a.norm()
-            r_b = Vector.addition(r, r_vertex[b].scalar_product(-1))
-            r_b = r_b.norm()
+            r_b = r - r_vertex[b]
+            r_b = r_b.norm() 
             
             if (r_a + r_b - d_ab) == 0:
                 # point p coincide lies on a panel's edge
@@ -88,12 +88,12 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             a = (i+1)%n  # 0, 3, 2, 1 (cw) (instead 0, 1, 2, 3 (cw))
             b = i # 3, 2, 1, 0, (clock wise) (instead 1, 2, 3, 0 (cw))
             
-            r_ab = Vector.addition(r_vertex[b], r_vertex[a].scalar_product(-1))
+            r_ab = r_vertex[b] - r_vertex[a]
             d_ab = r_ab.norm()
-            r_a = Vector.addition(r, r_vertex[a].scalar_product(-1))
+            r_a = r - r_vertex[a]
             r_a = r_a.norm()
-            r_b = Vector.addition(r, r_vertex[b].scalar_product(-1))
-            r_b = r_b.norm()
+            r_b = r - r_vertex[b]
+            r_b = r_b.norm() 
             
             if (r_vertex[b].x - r_vertex[a].x) == 0:
                 m_ab = np.inf 
@@ -131,7 +131,7 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
     r_cp = panel.r_cp
     R = panel.R 
     
-    r = Vector.addition(r_p, r_cp.scalar_product(-1))
+    r = r_p - r_cp
     r_local = r.transformation(R)
     r = r_local
     
@@ -156,10 +156,10 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             a = (i+1)%n  # 0, 3, 2, 1 (cw) (instead 0, 1, 2, 3 (cw))
             b = i # 3, 2, 1, 0, (clock wise) (instead 1, 2, 3, 0 (cw))
             
-            r_a = Vector.addition(r, r_vertex[a].scalar_product(-1))
+            r_a = r - r_vertex[a]
             r_a = r_a.norm()
-            r_b = Vector.addition(r, r_vertex[b].scalar_product(-1))
-            r_b = r_b.norm()
+            r_b = r - r_vertex[b]
+            r_b = r_b.norm() 
             
             denominator = (
                 r_a * r_b
@@ -184,10 +184,10 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             a = (i+1)%n  # 0, 3, 2, 1 (cw) (instead 0, 1, 2, 3 (cw))
             b = i # 3, 2, 1, 0, (clock wise) (instead 1, 2, 3, 0 (cw))
             
-            r_a = Vector.addition(r, r_vertex[a].scalar_product(-1))
+            r_a = r - r_vertex[a]
             r_a = r_a.norm()
-            r_b = Vector.addition(r, r_vertex[b].scalar_product(-1))
-            r_b = r_b.norm()
+            r_b = r - r_vertex[b]
+            r_b = r_b.norm() 
             
             # υπάρχει λάθος στον παρονομαστή στην εξίσωση του βιβλίου
             denominator = (
@@ -230,11 +230,11 @@ def Vrtx_ring_disturb_velocity(r_p:Vector, panel:Panel, epsilon = 10**(-6)):
         next = (i+1)%n
         
         # Katz & Plotking figure 2.16 and 10.23
-        r_1 = Vector.addition(r_p, r_vertex[i].scalar_product(-1))
-        r_2 = Vector.addition(r_p, r_vertex[next].scalar_product(-1))
-        r_0 = Vector.addition(r_1, r_2.scalar_product(-1)) 
+        r_1 = r_p - r_vertex[i]
+        r_2 = r_p - r_vertex[next]
+        r_0 = r_1 - r_2
         # or
-        # r_0 = Vector.addition(r_vertex[next], r_vertex[i].scalar_product(-1))
+        # r_0 = r_vertex[next] - r_vertex[i]
         
         # Katz & Plotking (eq 10.115)
         term1 = panel.mu/(4 * np.pi)
@@ -252,16 +252,17 @@ def Vrtx_ring_disturb_velocity(r_p:Vector, panel:Panel, epsilon = 10**(-6)):
             
         else:
                       
-            vec12 = vec12.scalar_product(1/(norm12**2))
-            vec1 = r_1.scalar_product(1/norm1)
-            vec2 = r_2.scalar_product(-1/norm2)
-            vec3 = Vector.addition(vec1, vec2)
-            term2 = Vector.dot_product(r_0, vec3)
+            vec12 = vec12/(norm12**2)
+            vec1 = r_1/norm1
+            vec2 = r_2/norm2
+            vec3 = vec1 - vec2
+            # term2 = Vector.dot_product(r_0, vec3)
+            term2 = r_0 * vec3
+            # velocity_term = vec12.scalar_product(term1 * term2)
+            velocity_term = term1 * term2 * vec12
             
-            velocity_term = vec12.scalar_product(term1 * term2)
             
-            
-        disturb_velocity = Vector.addition(disturb_velocity, velocity_term)
+        disturb_velocity = disturb_velocity + velocity_term
     
     
     return disturb_velocity
