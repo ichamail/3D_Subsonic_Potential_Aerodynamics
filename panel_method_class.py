@@ -177,7 +177,7 @@ if __name__ == "__main__":
     from sphere import sphere
     
     radius = 1
-    num_longitude, num_latitude = 101, 100
+    num_longitude, num_latitude = 11, 10
     nodes, shells = sphere(radius, num_longitude, num_latitude,
                                      mesh_shell_type='quadrilateral')
     mesh = PanelMesh(nodes, shells)
