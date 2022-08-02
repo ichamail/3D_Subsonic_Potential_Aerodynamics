@@ -27,6 +27,9 @@ class Panel:
         
         self.char_length = 0  # maximum diagonal length or maximum edge length
         self.area = 0 # area of the panel
+        
+        self.Velocity = Vector((0, 0, 0))  # Velocity Vector at control point
+        self.Cp = 0  # Pressure coefficient at control point
               
     def set_centroid(self):
         r_cp = Vector((0, 0, 0))
