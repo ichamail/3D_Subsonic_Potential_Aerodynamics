@@ -47,7 +47,12 @@ class PanelMethod:
             
             
             # Velocity calculation with disturbance velocity functions
-    
+            
+            # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
+            # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
+            # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
+            # παρ' ότι πολύ πιο αργή
+            
             # panel.Velocity = Velocity(panel.r_cp, mesh.panels, self.V_fs)
             
             
@@ -177,7 +182,7 @@ if __name__ == "__main__":
     from sphere import sphere
     
     radius = 1
-    num_longitude, num_latitude = 11, 10
+    num_longitude, num_latitude = 21, 20
     nodes, shells = sphere(radius, num_longitude, num_latitude,
                                      mesh_shell_type='quadrilateral')
     mesh = PanelMesh(nodes, shells)

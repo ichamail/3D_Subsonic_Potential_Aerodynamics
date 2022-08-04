@@ -91,8 +91,44 @@ for i in range(nx):
             u[i, j, k] = V[i, j, k].x
             v[i, j, k] = V[i, j, k].y
             w[i, j, k] = V[i, j, k].z
-            print(V[i, j, k])
+            
 
 ax.quiver(X, Y, Z, u, v, w, normalize=True, color='m')
 
 plt.show()
+
+
+"""
+Data provided from the paper "A Comprehensive and Practical Guide to the Hess and Smith Constant Source and Dipole Panel" of Lothar Birk
+"""
+
+from influence_coefficient_functions import Dblt_influence_coeff
+
+vertex1 = Vector((-0.5, -0.5, 0))
+vertex2 = Vector((0.5, -0.5, 0))
+vertex3 = Vector((0.5, 0.5, 0))
+vertex4 = Vector((-0.5, 0.5, 0))
+
+# Quadrilateral panel
+panel = quadPanel(vertex1, vertex2, vertex3, vertex4)
+panel.mu = 1
+r_p_list = [Vector((0, 0, 2)),
+            Vector((0, 0, -0.5)),
+            Vector((0.5, 1, 0)),
+            Vector((-0.25, 0.25, 0.5)),
+            Vector((0.1, 0.4, 8))]
+
+print("Panel's information \n...........\n"
+      + "position vectors of vertices: \n"
+      + "r1 = " + str(panel.r_vertex[0]) + "\n"
+      + "r2 = " + str(panel.r_vertex[1]) + "\n"
+      + "r3 = " + str(panel.r_vertex[2]) + "\n"
+      + "r4 = " + str(panel.r_vertex[3]) + "\n"
+      + "Doublet strength mu = " + str(panel.mu) + "\n\n")
+for r_p in r_p_list:
+    V, phi = Dblt_disturb_velocity(r_p, panel), Dblt_influence_coeff(r_p, panel)
+    print(
+        "rp = " + str(r_p) + " : \n" 
+        + "V = " + str(V) + "\n" 
+        + "phi = " + str(phi) + "\n" 
+    )

@@ -43,10 +43,15 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
                
             if (r_a + r_b - d_ab) == 0:
                 # point p coincide lies on a panel's edge
+                # log term ---> inf => B ---> inf
                 return 0
         
-            else:  
+            else:
+                # katz & Plotkin
                 log_term = np.log((r_a + r_b + d_ab)/(r_a + r_b - d_ab))
+                
+                # paper of Lothar birk  
+                # log_term = np.log((r_a + r_b - d_ab)/(r_a + r_b + d_ab))
                 
             B = B + first_term * log_term  
               
@@ -73,7 +78,11 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             
             first_term = first_term/d_ab
             
+            # katz & Plotkin
             log_term = np.log((r_a + r_b + d_ab)/(r_a + r_b - d_ab))
+            
+            # paper of Lothar birk  
+            # log_term = np.log((r_a + r_b - d_ab)/(r_a + r_b + d_ab))
                 
             if (r_vertex[b].x - r_vertex[a].x) == 0:
                 m_ab = np.inf 
@@ -86,12 +95,22 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             h_a = (r.x - r_vertex[a].x)*(r.y - r_vertex[a].y)
             h_b = (r.x - r_vertex[b].x)*(r.y - r_vertex[b].y)
             
-            arctan_term = ( np.abs(r.z)
-                            * ( np.arctan((m_ab*e_a - h_a)/(r.z*r_a))
-                                - np.arctan((m_ab*e_b - h_b)/(r.z*r_b)))
-                            )    
-                        
+            # Katz & Plotkin
+            # arctan_term = ( np.abs(r.z)
+            #                 * ( np.arctan((m_ab*e_a - h_a)/(r.z*r_a))
+            #                     - np.arctan((m_ab*e_b - h_b)/(r.z*r_b)))
+            #                 )
+            
+            # paper of Lothar birk  
+            arctan_term = ( r.z * ( np.arctan((m_ab*e_a - h_a)/(r.z*r_a))
+                                  - np.arctan((m_ab*e_b - h_b)/(r.z*r_b)) )
+                           )     
+            
+            # Katz & Plotkin            
             B = B + first_term * log_term - arctan_term
+            
+            # paper of Lothar birk 
+            # B = B + first_term * log_term + arctan_term
                   
     B = - 1/(4 * np.pi) * B
     
