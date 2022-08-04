@@ -76,9 +76,14 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             u = u + (r_vertex[b].y - r_vertex[a].y)/d_ab  * log_term 
             
             v = v + (r_vertex[a].x - r_vertex[b].x)/d_ab * log_term
-            
+        
+        # Katz & Plotkin    
         u = panel.sigma/(4*np.pi) * u
         v = panel.sigma/(4*np.pi) * v
+        
+        # paper of Lothar birk 
+        # u = - panel.sigma/(4*np.pi) * u
+        # v = - panel.sigma/(4*np.pi) * v
         
     else:
         u, v, w = 0, 0, 0
@@ -115,10 +120,16 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             
             w = w + (  np.arctan((m_ab * e_a - h_a)/(r.z * r_a))
                         - np.arctan((m_ab * e_b - h_b)/(r.z * r_b))  )
-            
+        
+        # Katz & Plotkin     
         u = panel.sigma/(4*np.pi) * u
         v = panel.sigma/(4*np.pi) * v           
-        w = panel.sigma/(4*np.pi) * w 
+        w = panel.sigma/(4*np.pi) * w
+        
+        # paper of Lothar birk 
+        # u = - panel.sigma/(4*np.pi) * u
+        # v = - panel.sigma/(4*np.pi) * v           
+        # w = - panel.sigma/(4*np.pi) * w
                 
     disturb_velocity_local = Vector((u, v, w))
     disturb_velocity = disturb_velocity_local.transformation(R.T)
