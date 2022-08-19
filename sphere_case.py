@@ -6,7 +6,7 @@ from mesh_class import PanelMesh
 from sphere import sphere
 
 radius = 1
-num_longitude, num_latitude = 11, 10
+num_longitude, num_latitude = 21, 20
 nodes, shells = sphere(radius, num_longitude, num_latitude,
                                     mesh_shell_type='quadrilateral')
 mesh = PanelMesh(nodes, shells)
@@ -86,8 +86,6 @@ for id in saved_ids:
     theta = np.arctan2(mesh.panels[id].r_cp.y, mesh.panels[id].r_cp.x)
     thetas.append(np.rad2deg(theta))
     Cp.append(mesh.panels[id].Cp)
-    
-print(Cp)
     
 plt.plot(thetas, Cp, 'ks', markerfacecolor='r',
             label='Panel Method - Sphere')

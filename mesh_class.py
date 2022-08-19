@@ -1,3 +1,6 @@
+from matplotlib import pyplot as plt
+from plot_functions import set_axes_equal
+import numpy as np
 from vector_class import Vector
 from panel_class import Panel, triPanel, quadPanel
 
@@ -129,17 +132,17 @@ class PanelMesh(Mesh):
             # plot normal vectors
             r_cp = panel.r_cp
             n = panel.n
-            scale = 0.2
+            scale = 0.1
             n = n.scalar_product(scale)
             ax.scatter(r_cp.x, r_cp.y, r_cp.z, color='k', s=5)
             ax.quiver(r_cp.x, r_cp.y, r_cp.z, n.x, n.y, n.z, color='r')
                 
                 
             
-        
+        set_axes_equal(ax)
         plt.show()
-        
  
+
       
 if __name__=='__main__':
     from matplotlib import pyplot as plt
