@@ -7,13 +7,20 @@ from panel_class import Panel, triPanel, quadPanel
 
 class Mesh:
     
-    def __init__(self, nodes, shells):
+    def __init__(self, nodes:list, shells:list,
+                 shells_id:dict = {},
+                 TrailingEdge:dict={},
+                 shed_wakeShells:dict={}):
         self.nodes = nodes
         self.shells = shells
         self.node_num = len(nodes)
         self.shell_num = len(shells)
 
         self.shell_neighbours = self.find_shell_neighbours()
+        
+        self.shells_id = shells_id
+        self.TrailingEdge = TrailingEdge
+        self.shed_wakeShells = shed_wakeShells
     
     def plot_shells(self):
         ax = plt.axes(projection='3d')
@@ -62,11 +69,17 @@ class Mesh:
 
       
 class PanelMesh(Mesh):
-    def __init__(self, nodes, shells):
-        super().__init__(nodes, shells)
+    def __init__(self, nodes:list, shells:list,
+                 shells_id:dict = {},
+                 TrailingEdge:dict={},
+                 shed_wakeShells:dict={}):
+        super().__init__(nodes, shells,
+                         shells_id, TrailingEdge, shed_wakeShells)
         self.panels = None
         self.panels_num = None
-        self.panel_neighbours = None
+        self.panel_neighbours = self.shell_neighbours
+        self.panels_id = self.shells_id
+        self.shed_wakePanels = self.shed_wakeShells
         self.CreatePanels()
     
     def CreatePanels(self):
@@ -86,7 +99,6 @@ class PanelMesh(Mesh):
             panels[-1].id = shell_id
                 
         self.panels = panels
-        self.panel_neighbours = self.shell_neighbours
         self.panels_num = len(panels)
 
     def give_neighbours(self, panel):
@@ -101,12 +113,12 @@ class PanelMesh(Mesh):
         
         return neighbours_list
 
-    def plot_panels(self):
+    def plot_panels(self, elevation=30, azimuth=-60):
         ax = plt.axes(projection='3d')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
-        # ax.view_init(0, 0)
+        ax.view_init(elevation, azimuth)
         
         for panel in self.panels:
             
