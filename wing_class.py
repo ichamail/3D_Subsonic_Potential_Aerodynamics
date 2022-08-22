@@ -386,7 +386,7 @@ if __name__=="__main__":
     # for shell_id, neighbours in enumerate(mesh.shell_neighbours):
     #     print(shell_id, neighbours)
         
-    body_mesh.plot_panels()
+    body_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 
     ######### wing mesh with wake ###############
@@ -422,7 +422,7 @@ if __name__=="__main__":
     #     print(shell_id, shell)
 
     mesh = PanelMesh(nodes, shells)
-    mesh.plot_panels()
+    mesh.plot_panels(elevation=-150, azimuth=-120)
 
     shells_id = wing.give_shells_id_dict(num_x_bodyShells,
                                          num_x_wakeShells,

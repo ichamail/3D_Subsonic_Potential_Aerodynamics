@@ -113,12 +113,12 @@ class PanelMesh(Mesh):
         
         return neighbours_list
 
-    def plot_panels(self):
+    def plot_panels(self, elevation=30, azimuth=-60):
         ax = plt.axes(projection='3d')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
-        # ax.view_init(0, 0)
+        ax.view_init(elevation, azimuth)
         
         for panel in self.panels:
             
