@@ -9,8 +9,7 @@ from least_squares_method import LeastSquares
 class PanelMethod:
     
     def __init__(self, V_freestream):
-        self.V_fs = V_freestream
-        
+        self.V_fs = V_freestream  
     
     def set_V_fs(self, Velocity, AoA):
         AoA = np.deg2rad(AoA)
@@ -58,7 +57,57 @@ class PanelMethod:
             
             # pressure coefficient calculation
             panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
-                   
+    
+    def solve2(self, mesh:PanelMesh):
+            
+        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        
+        for panel in body_panels:
+            panel.sigma = source_strength(panel, self.V_fs) 
+        
+        A, B, C = influence_coeff_matrices2(mesh)
+        
+        RHS = right_hand_side2(body_panels, B)
+        
+        doublet_strengths = np.linalg.solve(A, RHS)
+        
+        for panel_i in (body_panels):
+            
+            panel_i.mu = doublet_strengths[panel_i.id]
+            
+            if panel_i.id in (mesh.TrailingEdge["suction side"]
+                            + mesh.TrailingEdge["pressure side"]):
+                for id_j in mesh.shed_wakePanels[panel_i.id]:
+                    panel_j = mesh.panels[id_j]
+                    panel_j.mu = doublet_strengths[panel_i.id]
+        
+
+        # compute Velocity and pressure coefficient at panels' control points
+        V_fs_norm = self.V_fs.norm()
+        
+        for panel in body_panels:
+            
+            # Velocity caclulation with least squares approach (faster)
+            
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = panel_velocity(panel, panel_neighbours, self.V_fs)
+            
+          
+            # Velocity calculation with disturbance velocity functions
+            
+            # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
+            # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
+            # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
+            # παρ' ότι πολύ πιο αργή
+            
+            # panel.Velocity = Velocity(panel.r_cp, mesh.panels, self.V_fs)
+            
+            
+            # pressure coefficient calculation
+            panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2                
+
+
+# function definitions for functions used in solve method
 
 def influence_coeff_matrices(panels):
     
@@ -80,14 +129,50 @@ def influence_coeff_matrices(panels):
             C[i][j] = Dblt_influence_coeff(r_cp, panel_j)
             
     return B, C
+
+def influence_coeff_matrices2(mesh:PanelMesh):
     
+    # Compute Influence coefficient matrices
+    # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
+    
+    Nb = len(mesh.panels_id["body"])
+    Nw = len(mesh.panels_id["wake"])
+    B = np.zeros((Nb, Nb))
+    C = np.zeros((Nb, Nb+Nw))
+    A = np.zeros_like(B)
+    
+    # loop all over panels' control points
+    for id_i in mesh.panels_id["body"]:
+        panel_i = mesh.panels[id_i]
+        r_cp = panel_i.r_cp
+        
+        # loop all over panels
+        for id_j in mesh.panels_id["body"]:
+            
+            panel_j = mesh.panels[id_j]
+            B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
+            C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
+            A[id_i][id_j] = C[id_i][id_j]
+            
+            if id_j in mesh.TrailingEdge["suction side"]:
+                for id_k in mesh.shed_wakePanels[id_j]:
+                    panel_k = mesh.panels[id_k]
+                    C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                    A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                    
+            elif id_j in mesh.TrailingEdge["pressure side"]:
+                for id_k in mesh.shed_wakePanels[id_j]:
+                    panel_k = mesh.panels[id_k]
+                    C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                    A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+            
+    return A, B, C
 
 def source_strength(panel, V_fs):
     # Katz & Plotkin eq 9.12
     # Katz & Plotkin defines normal vector n with opposite direction (inward)
     source_strength = - (panel.n * V_fs)
     return source_strength
-
    
 def right_hand_side(panels, B):
     
@@ -104,7 +189,21 @@ def right_hand_side(panels, B):
 
     return RHS
 
-
+def right_hand_side2(body_panels, B):
+    
+    # Calculate right-hand-side 
+    # Katz & Plotkin eq(12.35, 12.36)
+        
+    Nb = len(body_panels)
+    RHS = np.zeros(Nb)
+    
+    for i in range(Nb):
+        RHS[i] = 0
+        for panel in body_panels:
+            RHS[i] = RHS[i] - panel.sigma * B[i][panel.id]
+            
+    return RHS
+        
 def panel_velocity(panel, panel_neighbours, V_fs):
     """
     V = Vx*ex + Vy*ey + Vz*ez or u*i + V*j  + w*k (global coordinate system)
@@ -151,8 +250,7 @@ def panel_velocity(panel, panel_neighbours, V_fs):
     V = V_fs + V_disturb
     
     return V
-
-              
+            
 def Velocity(r_p, panels, V_fs):
     # Velocity calculation with disturbance velocity functions
     
