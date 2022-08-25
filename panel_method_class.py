@@ -63,8 +63,8 @@ class PanelMethod:
         body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
         
         for panel in body_panels:
-            panel.sigma = source_strength(panel, self.V_fs) 
-        
+            panel.sigma = source_strength(panel, self.V_fs)
+               
         A, B, C = influence_coeff_matrices2(mesh)
         
         RHS = right_hand_side2(body_panels, B)
@@ -75,11 +75,15 @@ class PanelMethod:
             
             panel_i.mu = doublet_strengths[panel_i.id]
             
-            if panel_i.id in (mesh.TrailingEdge["suction side"]
-                            + mesh.TrailingEdge["pressure side"]):
-                for id_j in mesh.shed_wakePanels[panel_i.id]:
+            if panel_i.id in mesh.TrailingEdge["suction side"]:
+                for id_j in mesh.wake_sheddingShells[panel_i.id]:
                     panel_j = mesh.panels[id_j]
-                    panel_j.mu = doublet_strengths[panel_i.id]
+                    panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
+                    
+            elif panel_i.id in mesh.TrailingEdge["pressure side"]:
+                for id_j in mesh.wake_sheddingShells[panel_i.id]:
+                    panel_j = mesh.panels[id_j]
+                    panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
         
 
         # compute Velocity and pressure coefficient at panels' control points
@@ -155,13 +159,13 @@ def influence_coeff_matrices2(mesh:PanelMesh):
             A[id_i][id_j] = C[id_i][id_j]
             
             if id_j in mesh.TrailingEdge["suction side"]:
-                for id_k in mesh.shed_wakePanels[id_j]:
+                for id_k in mesh.wake_sheddingShells[id_j]:
                     panel_k = mesh.panels[id_k]
                     C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                     A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
                     
             elif id_j in mesh.TrailingEdge["pressure side"]:
-                for id_k in mesh.shed_wakePanels[id_j]:
+                for id_k in mesh.wake_sheddingShells[id_j]:
                     panel_k = mesh.panels[id_k]
                     C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                     A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]

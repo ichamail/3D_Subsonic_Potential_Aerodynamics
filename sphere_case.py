@@ -10,7 +10,6 @@ num_longitude, num_latitude = 21, 20
 nodes, shells = sphere(radius, num_longitude, num_latitude,
                                     mesh_shell_type='quadrilateral')
 mesh = PanelMesh(nodes, shells)
-mesh.CreatePanels()
 
 V_fs = Vector((1, 0, 0))
 panel_method = PanelMethod(V_fs)
@@ -94,8 +93,6 @@ plt.legend()
 plt.grid()
 plt.show()
 
-from mpl_toolkits.mplot3d import Axes3D
-import matplotlib.cm as cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 shells = []
@@ -106,7 +103,6 @@ for panel in mesh.panels:
     
     shells.append(shell)
 
-from matplotlib import cm 
 C = [panel.Cp for panel in mesh.panels]
 facecolor = plt.cm.coolwarm(C/np.max(C))
 # print(facecolor)
