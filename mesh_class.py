@@ -10,7 +10,7 @@ class Mesh:
     def __init__(self, nodes:list, shells:list,
                  shells_id:dict = {},
                  TrailingEdge:dict={},
-                 shed_wakeShells:dict={}):
+                 wake_sheddingShells:dict={}):
         self.nodes = nodes
         self.shells = shells
         self.node_num = len(nodes)
@@ -20,7 +20,7 @@ class Mesh:
         
         self.shells_id = shells_id
         self.TrailingEdge = TrailingEdge
-        self.shed_wakeShells = shed_wakeShells
+        self.wake_sheddingShells = wake_sheddingShells
     
     def plot_shells(self):
         ax = plt.axes(projection='3d')
@@ -72,14 +72,14 @@ class PanelMesh(Mesh):
     def __init__(self, nodes:list, shells:list,
                  shells_id:dict = {},
                  TrailingEdge:dict={},
-                 shed_wakeShells:dict={}):
+                 wake_sheddingShells:dict={}):
         super().__init__(nodes, shells,
-                         shells_id, TrailingEdge, shed_wakeShells)
+                         shells_id, TrailingEdge, wake_sheddingShells)
         self.panels = None
         self.panels_num = None
         self.panel_neighbours = self.shell_neighbours
         self.panels_id = self.shells_id
-        self.shed_wakePanels = self.shed_wakeShells
+        self.wake_sheddingShells = self.wake_sheddingShells
         self.CreatePanels()
     
     def CreatePanels(self):

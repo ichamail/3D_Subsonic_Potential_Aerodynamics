@@ -1,9 +1,8 @@
-from airfoil_class import Airfoil
 from wing_class import Wing
 from mesh_class import PanelMesh
 
 
-def Wing_panelMesh_generator(wing:Wing, num_x_bodyShells, num_x_wakeShells,
+def generate_WingPanelMesh(wing:Wing, num_x_bodyShells, num_x_wakeShells,
                              num_y_Shells)->PanelMesh:
 
     nodes, shells = wing.generate_mesh(num_x_bodyShells,
@@ -14,10 +13,10 @@ def Wing_panelMesh_generator(wing:Wing, num_x_bodyShells, num_x_wakeShells,
                                         num_x_wakeShells,
                                         num_y_Shells)
 
-    TrailingEdge = wing.TrailingEdge_Shells_id_dict(num_x_bodyShells,
+    TrailingEdge = wing.give_TrailingEdge_Shells_id(num_x_bodyShells,
                                                         num_y_Shells)
 
-    shed_wakeShells = wing.wake_shells_shed_from_TrailingEdge(num_x_wakeShells,
+    shed_wakeShells = wing.give_wake_sheddingShells(num_x_wakeShells,
                                                             TrailingEdge)
 
     wing_mesh = PanelMesh(nodes, shells, shells_id, TrailingEdge, shed_wakeShells)
@@ -26,6 +25,8 @@ def Wing_panelMesh_generator(wing:Wing, num_x_bodyShells, num_x_wakeShells,
 
 
 if __name__=="__main__":
+    from airfoil_class import Airfoil
+    
     
     root_airfoil = Airfoil(name="naca0012", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012", chord_length=0.8)
@@ -35,7 +36,7 @@ if __name__=="__main__":
     num_x_wakeShells = 15
     num_y_Shells = 4
     
-    wing_mesh = Wing_panelMesh_generator(wing, num_x_bodyShells,
+    wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
                                          num_x_wakeShells, num_y_Shells)
     # wing_mesh.plot_panels()
     

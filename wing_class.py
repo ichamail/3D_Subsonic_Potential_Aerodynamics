@@ -313,7 +313,7 @@ class Wing:
         return shells_id_dict
         
     @staticmethod
-    def TrailingEdge_Shells_id_dict(num_x_bodyShells:int, num_y_Shells:int):
+    def give_TrailingEdge_Shells_id(num_x_bodyShells:int, num_y_Shells:int):
         
         SS_TE_shell_id_list = []
         PS_TE_shell_id_list = []
@@ -330,23 +330,23 @@ class Wing:
         return TrailingEdge
     
     @staticmethod
-    def wake_shells_shed_from_TrailingEdge(num_x_wakeShells:int,
+    def give_wake_sheddingShells(num_x_wakeShells:int,
                                            TrailingEdge: dict):
         
         num_y_Shells = TrailingEdge["suction side"][-1] + 1
         last_id = TrailingEdge["pressure side"][-1] + 1
         
-        shed_wakeShells = {}
+        wake_sheddingShells_id = {}
         for j in range(num_y_Shells):
             id_list = []
             id = last_id + j
             for i in range(num_x_wakeShells):
                 id_list.append(id + num_y_Shells*i)
             
-            shed_wakeShells[TrailingEdge["suction side"][j]] = id_list
-            shed_wakeShells[TrailingEdge["pressure side"][j]] = id_list
+            wake_sheddingShells_id[TrailingEdge["suction side"][j]] = id_list
+            wake_sheddingShells_id[TrailingEdge["pressure side"][j]] = id_list
         
-        return shed_wakeShells
+        return wake_sheddingShells_id
     
 def DenserAtBoundaries(start, end, num_points, alpha):
         '''
@@ -390,7 +390,7 @@ if __name__=="__main__":
 
 
     ######### wing mesh with wake ###############
-
+    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=15, dihedral=10)
     num_x_bodyShells = 8
     num_x_wakeShells = 15
     num_y_Shells = 4
@@ -431,26 +431,28 @@ if __name__=="__main__":
     # print(shells_id["wake"])
 
 
-    TrailingEdge = wing.TrailingEdge_Shells_id_dict(num_x_bodyShells,
+    TrailingEdge = wing.give_TrailingEdge_Shells_id(num_x_bodyShells,
                                                     num_y_Shells)
 
-    shed_wakeShells = wing.wake_shells_shed_from_TrailingEdge(num_x_wakeShells,
+    wake_sheddingShells = wing.give_wake_sheddingShells(num_x_wakeShells,
                                                               TrailingEdge)
 
 
-    # for trailing_edge_shell_id in shed_wake_shells:
-    #     print(trailing_edge_shell_id, shed_wake_shells[trailing_edge_shell_id])
+    # for trailing_edge_shell_id in wake_sheddingShells:
+    #     print(trailing_edge_shell_id,
+    #           wake_sheddingShells[trailing_edge_shell_id])
 
     # for shell_id in TrailingEdge["pressure side"]:
-    #     print(shed_wake_shells[shell_id])
+    #     print(wake_sheddingShells[shell_id])
     
-    mesh = PanelMesh(nodes, shells, shells_id, TrailingEdge, shed_wakeShells)
+    mesh = PanelMesh(nodes, shells, shells_id, TrailingEdge,
+                     wake_sheddingShells)
     # print(mesh.panels_id)
     # print(mesh.TrailingEdge)    
-    # print(mesh.shed_wakePanels)
+    # print(mesh.wake_sheddingShells)
     
     # for id in mesh.panels_id["body"]:
     #     print(mesh.panels[id].id, id)
     #     if mesh.panels[id].id in mesh.TrailingEdge["suction side"]:
     #         print(True)
-    #         print(mesh.shed_wakePanels[id])
+    #         print(mesh.wake_sheddingShells[id])

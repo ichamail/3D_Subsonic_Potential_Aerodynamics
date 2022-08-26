@@ -9,8 +9,7 @@ from least_squares_method import LeastSquares
 class PanelMethod:
     
     def __init__(self, V_freestream):
-        self.V_fs = V_freestream
-        
+        self.V_fs = V_freestream  
     
     def set_V_fs(self, Velocity, AoA):
         AoA = np.deg2rad(AoA)
@@ -18,14 +17,19 @@ class PanelMethod:
         Vy = Velocity * np.sin(AoA)
         Vz = 0
         self.V_fs = Vector((Vx, Vy, Vz))
-        
+
+
+class Steady_Wakeless_PanelMethod(PanelMethod):
+    
+    def __init__(self, V_freestream):
+        super().__init__(V_freestream)
+    
     def solve(self, mesh:PanelMesh):
-        
         
         for panel in mesh.panels:
             panel.sigma = source_strength(panel, self.V_fs) 
         
-        B, C = influence_coeff_matrices(mesh.panels)
+        B, C = self.influence_coeff_matrices(mesh.panels)
         
         RHS = right_hand_side(mesh.panels, B)
         
@@ -34,7 +38,7 @@ class PanelMethod:
         for panel_id, panel in enumerate(mesh.panels):
             panel.mu = doublet_strengths[panel_id]
         
-
+        
         # compute Velocity and pressure coefficient at panels' control points
         V_fs_norm = self.V_fs.norm()
         
@@ -58,29 +62,128 @@ class PanelMethod:
             
             # pressure coefficient calculation
             panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
-                   
-
-def influence_coeff_matrices(panels):
     
-    # Compute Influence coefficient matrices
-    # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
-    
-    n = len(panels)
-    B = np.zeros((n, n))
-    C = np.zeros_like(B)
-    
-    # loop all over panels' control points
-    for i, panel_i in enumerate(panels):
+    @staticmethod
+    def influence_coeff_matrices(panels):
         
-        r_cp = panel_i.r_cp
+        # Compute Influence coefficient matrices
+        # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
         
-        # loop all over panels
-        for j, panel_j in enumerate(panels):
-            B[i][j] = Src_influence_coeff(r_cp, panel_j)
-            C[i][j] = Dblt_influence_coeff(r_cp, panel_j)
+        n = len(panels)
+        B = np.zeros((n, n))
+        C = np.zeros_like(B)
+        
+        # loop all over panels' control points
+        for i, panel_i in enumerate(panels):
             
-    return B, C
+            r_cp = panel_i.r_cp
+            
+            # loop all over panels
+            for j, panel_j in enumerate(panels):
+                B[i][j] = Src_influence_coeff(r_cp, panel_j)
+                C[i][j] = Dblt_influence_coeff(r_cp, panel_j)
+                
+        return B, C
+
+
+class Steady_PanelMethod(PanelMethod):
     
+    def __init__(self, V_freestream):
+        super().__init__(V_freestream)
+    
+    def solve(self, mesh:PanelMesh):
+            
+        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        
+        for panel in body_panels:
+            panel.sigma = source_strength(panel, self.V_fs)
+               
+        A, B, C = self.influence_coeff_matrices(mesh)
+        
+        RHS = right_hand_side(body_panels, B)
+        
+        doublet_strengths = np.linalg.solve(A, RHS)
+        
+        for panel_i in (body_panels):
+            
+            panel_i.mu = doublet_strengths[panel_i.id]
+            
+            if panel_i.id in mesh.TrailingEdge["suction side"]:
+                for id_j in mesh.wake_sheddingShells[panel_i.id]:
+                    panel_j = mesh.panels[id_j]
+                    panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
+                    
+            elif panel_i.id in mesh.TrailingEdge["pressure side"]:
+                for id_j in mesh.wake_sheddingShells[panel_i.id]:
+                    panel_j = mesh.panels[id_j]
+                    panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
+        
+
+        # compute Velocity and pressure coefficient at panels' control points
+        V_fs_norm = self.V_fs.norm()
+        
+        for panel in body_panels:
+            
+            # Velocity caclulation with least squares approach (faster)
+            
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = panel_velocity(panel, panel_neighbours, self.V_fs)
+            
+          
+            # Velocity calculation with disturbance velocity functions
+            
+            # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
+            # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
+            # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
+            # παρ' ότι πολύ πιο αργή
+            
+            # panel.Velocity = Velocity(panel.r_cp, mesh.panels, self.V_fs)
+            
+            
+            # pressure coefficient calculation
+            panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
+
+    @staticmethod
+    def influence_coeff_matrices(mesh:PanelMesh):
+        
+        # Compute Influence coefficient matrices
+        # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
+        
+        Nb = len(mesh.panels_id["body"])
+        Nw = len(mesh.panels_id["wake"])
+        B = np.zeros((Nb, Nb))
+        C = np.zeros((Nb, Nb+Nw))
+        A = np.zeros_like(B)
+        
+        # loop all over panels' control points
+        for id_i in mesh.panels_id["body"]:
+            panel_i = mesh.panels[id_i]
+            r_cp = panel_i.r_cp
+            
+            # loop all over panels
+            for id_j in mesh.panels_id["body"]:
+                
+                panel_j = mesh.panels[id_j]
+                B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
+                C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
+                A[id_i][id_j] = C[id_i][id_j]
+                
+                if id_j in mesh.TrailingEdge["suction side"]:
+                    for id_k in mesh.wake_sheddingShells[id_j]:
+                        panel_k = mesh.panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                        
+                elif id_j in mesh.TrailingEdge["pressure side"]:
+                    for id_k in mesh.wake_sheddingShells[id_j]:
+                        panel_k = mesh.panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                
+        return A, B, C
+
+   
+# function definitions for functions used in solve method
 
 def source_strength(panel, V_fs):
     # Katz & Plotkin eq 9.12
@@ -88,23 +191,26 @@ def source_strength(panel, V_fs):
     source_strength = - (panel.n * V_fs)
     return source_strength
 
-   
-def right_hand_side(panels, B):
+def right_hand_side(body_panels, B):
     
     # Calculate right-hand-side 
     # Katz & Plotkin eq(12.35, 12.36)
         
-    n = len(panels)
-    RHS = np.zeros(n)
+    Nb = len(body_panels)
+    RHS = np.zeros(Nb)
     
-    for i in range(n):
-        RHS[i] = 0
-        for j, panel in enumerate(panels):
-            RHS[i] = RHS[i] - panel.sigma * B[i][j]
-
+    # loop all over panels' control points
+    for panel_i in body_panels:
+        id_i = panel_i.id
+        RHS[id_i] = 0
+        
+        # loop all over panels
+        for panel_j in body_panels:
+            id_j = panel_j.id
+            RHS[id_i] = RHS[id_i] - panel_j.sigma * B[id_i][id_j]
+            
     return RHS
-
-
+        
 def panel_velocity(panel, panel_neighbours, V_fs):
     """
     V = Vx*ex + Vy*ey + Vz*ez or u*i + V*j  + w*k (global coordinate system)
@@ -151,8 +257,7 @@ def panel_velocity(panel, panel_neighbours, V_fs):
     V = V_fs + V_disturb
     
     return V
-
-              
+            
 def Velocity(r_p, panels, V_fs):
     # Velocity calculation with disturbance velocity functions
     
@@ -172,102 +277,20 @@ def Velocity(r_p, panels, V_fs):
     
     
     return velocity
-
-
-               
+            
         
 if __name__ == "__main__":
-    from matplotlib import pyplot as plt
     from mesh_class import PanelMesh
     from sphere import sphere
+    from plot_functions import plot_Cp_SurfaceContours
     
     radius = 1
     num_longitude, num_latitude = 21, 20
     nodes, shells = sphere(radius, num_longitude, num_latitude,
                                      mesh_shell_type='quadrilateral')
     mesh = PanelMesh(nodes, shells)
-    mesh.CreatePanels()
-    
     V_fs = Vector((1, 0, 0))
-    panel_method = PanelMethod(V_fs)
+    panel_method = Steady_Wakeless_PanelMethod(V_fs)
     panel_method.solve(mesh)
-    
-    
-    
-    # ax = plt.axes(projection='3d')
-    # ax.set_xlabel('x')
-    # ax.set_ylabel('y')
-    # ax.set_zlabel('z')
-    # ax.view_init(0, 0)
-    
-    # for panel in mesh.panels:
-            
-    #     r_vertex = panel.r_vertex
+    plot_Cp_SurfaceContours(mesh.panels)
         
-    #     # plot panels
-    #     if panel.num_vertices == 3:
-    #         x = [r_vertex[0].x, r_vertex[1].x, r_vertex[2].x, r_vertex[0].x]
-    #         y = [r_vertex[0].y, r_vertex[1].y, r_vertex[2].y, r_vertex[0].y]
-    #         z = [r_vertex[0].z, r_vertex[1].z, r_vertex[2].z, r_vertex[0].z]
-    #         ax.plot3D(x, y, z, color='k')
-            
-    #     elif panel.num_vertices == 4:
-            
-    #         x = [r_vertex[0].x, r_vertex[1].x, r_vertex[2].x, r_vertex[3].x,
-    #             r_vertex[0].x]
-    #         y = [r_vertex[0].y, r_vertex[1].y, r_vertex[2].y, r_vertex[3].y,
-    #             r_vertex[0].y]
-    #         z = [r_vertex[0].z, r_vertex[1].z, r_vertex[2].z, r_vertex[3].z,
-    #             r_vertex[0].z]
-    #         ax.plot3D(x, y, z, color='k') 
-            
-    #     # plot normal vectors
-    #     r_cp = panel.r_cp
-    #     n = panel.n
-    #     scale = 0.2
-    #     n = n.scalar_product(scale)
-    #     if abs(r_cp.z) <= 10**(-5):
-    #         ax.scatter(r_cp.x, r_cp.y, r_cp.z, color='b', s=5)
-    #         ax.quiver(r_cp.x, r_cp.y, r_cp.z, n.x, n.y, n.z, color='b')
-            
-    #     else:
-    #         ax.scatter(r_cp.x, r_cp.y, r_cp.z, color='k', s=5)
-    #         ax.quiver(r_cp.x, r_cp.y, r_cp.z, n.x, n.y, n.z, color='r')
-            
-    # plt.show()
-    
-    
-    saved_ids = []
-    for panel in mesh.panels:
-        if abs(panel.r_cp.z) <= 10**(-3):
-            saved_ids.append(panel.id)
-    
-    
-    r = 1 # sphere radius
-    x0, y0 = 0, 0 # center of sphere
-    analytical_theta = np.linspace(-np.pi, np.pi, 200)
-    analytical_cp = 1 - (3/2*np.sin(analytical_theta))**2
-    fig = plt.figure()
-    plt.plot(analytical_theta*(180/np.pi), analytical_cp ,'b-',
-             label='Analytical - sphere')
-    analytical_cp = 1 - 4 * np.sin(analytical_theta)**2
-    plt.plot(analytical_theta*(180/np.pi), analytical_cp ,'g-',
-             label='Analytical - cylinder')
-    
-    
-    thetas = []
-    Cp = []
-    for id in saved_ids:
-        # print(mesh.panels[id].r_cp)
-        theta = np.arctan2(mesh.panels[id].r_cp.y, mesh.panels[id].r_cp.x)
-        thetas.append(np.rad2deg(theta))
-        Cp.append(mesh.panels[id].Cp)
-        
-       
-    plt.plot(thetas, Cp, 'ks', markerfacecolor='r',
-             label='Panel Method - Sphere')
-    
-    plt.legend()
-    plt.grid()
-    plt.show()
-    
