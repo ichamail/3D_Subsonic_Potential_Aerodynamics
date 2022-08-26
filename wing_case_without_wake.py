@@ -27,10 +27,10 @@ V_fs = Vector((1, 0, 0))
 panel_method = Steady_Wakeless_PanelMethod(V_fs)
 panel_method.solve(wing_mesh)
 
-
+# search for panels near wing's root
 saved_ids = []
 for panel in wing_mesh.panels:
-    if 0 < panel.r_cp.y < 0.5:
+    if 0 < panel.r_cp.y < 0.1:
         saved_ids.append(panel.id)
 Cp = []
 x = []
@@ -45,5 +45,4 @@ plt.grid()
 plt.show()
 
 # Surface Contour plot
-body_panels = [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]
-plot_Cp_SurfaceContours(body_panels, elevation=-150, azimuth=-120)
+plot_Cp_SurfaceContours(wing_mesh.panels, elevation=-150, azimuth=-120)

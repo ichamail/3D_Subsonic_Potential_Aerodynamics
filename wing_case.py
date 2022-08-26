@@ -24,7 +24,7 @@ wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
 
-# save ids of panels on root chord
+# search for panels near wing's root
 saved_ids = []
 for panel in [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]:
     if 0 < panel.r_cp.y < 0.1:
