@@ -27,7 +27,7 @@ wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 V_fs = Vector((1, 0, 0))
 panel_method = PanelMethod(V_fs)
-panel_method.solve(wing_mesh)
+panel_method.solve_non_lifting_case(wing_mesh)
 
 
 saved_ids = []
