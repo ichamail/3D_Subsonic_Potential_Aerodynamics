@@ -11,11 +11,12 @@ class PanelMethod:
     def __init__(self, V_freestream):
         self.V_fs = V_freestream  
     
-    def set_V_fs(self, Velocity, AoA):
-        AoA = np.deg2rad(AoA)
-        Vx = Velocity * np.cos(AoA)
-        Vy = Velocity * np.sin(AoA)
-        Vz = 0
+    def set_V_fs(self, Velocity, AngleOfAttack, SideslipAngle):
+        alpha = np.deg2rad(AngleOfAttack)
+        beta = np.deg2rad(SideslipAngle)
+        Vx = Velocity * np.cos(alpha) * np.cos(beta)
+        Vy = Velocity * np.cos(alpha) * np.sin(beta)
+        Vz = - Velocity * np.sin(alpha)
         self.V_fs = Vector((Vx, Vy, Vz))
 
 

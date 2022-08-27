@@ -23,6 +23,7 @@ wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
+panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
 
 # search for panels near wing's root
 saved_ids = []
@@ -37,9 +38,10 @@ for id in saved_ids:
     Cp.append(wing_mesh.panels[id].Cp)
     x.append([wing_mesh.panels[id].r_cp.x])
 
-plt.plot(x, Cp, 'ks', markerfacecolor='r', label='Panel Method')
+plt.plot(x, Cp, 'ks--', markerfacecolor='r', label='Panel Method')
 plt.legend()
 plt.grid()
+plt.gca().invert_yaxis()
 plt.show()
 
 
