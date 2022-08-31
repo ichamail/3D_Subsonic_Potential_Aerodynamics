@@ -86,7 +86,9 @@ for id in saved_ids:
     
 plt.plot(thetas, Cp, 'ks', markerfacecolor='r',
             label='Panel Method - Sphere')
-
+plt.xlabel("angle [degrees]")
+plt.ylabel("Cp")
+plt.title("Cp distribution along the great circle of a sphere")
 plt.legend()
 plt.grid()
 plt.show()

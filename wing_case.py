@@ -18,12 +18,12 @@ num_y_Shells = 20
 
 wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
                                         num_x_wakeShells, num_y_Shells)
-wing_mesh.plot_panels(elevation=-150, azimuth=-120)
+# wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=-10, SideslipAngle=0)
 
 # search for panels near wing's root
 saved_ids = []
@@ -36,9 +36,12 @@ Cp = []
 x = []
 for id in saved_ids:
     Cp.append(wing_mesh.panels[id].Cp)
-    x.append([wing_mesh.panels[id].r_cp.x])
+    x.append((wing_mesh.panels[id].r_cp.x)/(wing.root_airfoil.chord))
 
 plt.plot(x, Cp, 'ks--', markerfacecolor='r', label='Panel Method')
+plt.xlabel("x/c")
+plt.ylabel("Cp")
+plt.title("Pressure Coefficient plot")
 plt.legend()
 plt.grid()
 plt.gca().invert_yaxis()

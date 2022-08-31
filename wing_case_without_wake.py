@@ -18,6 +18,7 @@ num_x_bodyShells = 20
 num_y_Shells = 20
 
 nodes, shells = wing.generate_bodyMesh2(num_x_bodyShells, num_y_Shells)
+# nodes, shells = wing.generate_bodyMesh(num_x_bodyShells, num_y_Shells)
 wing_mesh = PanelMesh(nodes, shells)
 
 wing_mesh.plot_panels(elevation=-150, azimuth=-120)
@@ -39,9 +40,10 @@ for id in saved_ids:
     x.append([wing_mesh.panels[id].r_cp.x])
 
 
-plt.plot(x, Cp, 'ks', markerfacecolor='r', label='Panel Method')
+plt.plot(x, Cp, 'ks--', markerfacecolor='r', label='Panel Method')
 plt.legend()
 plt.grid()
+plt.gca().invert_yaxis()
 plt.show()
 
 # Surface Contour plot
