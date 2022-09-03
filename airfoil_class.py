@@ -18,17 +18,12 @@ class Airfoil:
         else:   
             self.x_coords =  np.asarray(x_coords)
             self.y_coords = np.asarray(y_coords)
-        
-        self.z_coords = np.zeros_like(self.x_coords)
     
     def get_from_data_base(self):
         
         fileName = self.name + ".dat"
         self.x_coords, self.y_coords = self.load_airfoil(self.filePath,
                                                          fileName)
-    
-    def set_z_coords(self, z_coords):
-        self.z_coords = np.asarray(z_coords)
     
     @staticmethod
     def load_airfoil(filePath, fileName, header_lines=1):
@@ -52,14 +47,10 @@ class Airfoil:
         plt.title(self.name)
         plt.show()
     
-    def new_x_spacing(self, num_x_points, indexing='xy'):
-        if indexing == 'xy':
-            x, y, = self.x_coords, self.y_coords
+    def new_x_spacing(self, num_x_points):
         
-        elif indexing == 'xz':
-            x, y, = self.x_coords, -self.z_coords
-            
-            
+        x, y, = self.x_coords, self.y_coords
+          
         # Circle creation with diameter equal to airfoil chord
         x_max, x_min = max(x), min(x)
         R = (x_max - x_min)/2
@@ -89,14 +80,7 @@ class Airfoil:
         
         X, Y = x_project, y_project
         
-        if indexing == 'xy':
-            self.x_coords , self.y_coords = X, Y
-            self.z_coords = self.z_coords[0] * np.ones_like(X)
-            
-        elif indexing == 'xz':
-            self.x_coords , self.z_coords = X, -Y
-            self.y_coords = self.y_coords[0] * np.ones_like(X)
-            
+        self.x_coords , self.y_coords = X, Y  
            
 
 if __name__=="__main__":

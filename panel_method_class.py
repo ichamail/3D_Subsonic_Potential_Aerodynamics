@@ -3,7 +3,7 @@ from vector_class import Vector
 from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff
 from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
 from mesh_class import PanelMesh
-from least_squares_method import LeastSquares
+from Algorithms import LeastSquares
 
 
 class PanelMethod:
