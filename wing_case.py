@@ -23,7 +23,7 @@ wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=-10, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
 
 # search for panels near wing's root
 saved_ids = []
@@ -51,3 +51,9 @@ plt.show()
 # Surface Contour plot
 body_panels = [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]
 plot_Cp_SurfaceContours(body_panels, elevation=-150, azimuth=-120)
+
+CL = panel_method.LiftCoeff(wing_mesh.panels, wing.RefArea)
+CD = panel_method.inducedDragCoeff(wing_mesh.panels, wing.RefArea)
+
+print("CL = " + str(CL))
+print("CD = " + str(CD))

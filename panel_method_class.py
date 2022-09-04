@@ -19,6 +19,18 @@ class PanelMethod:
         Vz = - Velocity * np.sin(alpha)
         self.V_fs = Vector((Vx, Vy, Vz))
 
+    def LiftCoeff(self, panels, ReferenceArea):
+        C_force = AerodynamicForce(panels, ReferenceArea)
+        CL_vec = LiftCoefficient(C_force, self.V_fs)
+        CL = CL_vec.norm()
+        return CL
+
+    def inducedDragCoeff(self, panels, ReferenceArea):
+        C_force = AerodynamicForce(panels, ReferenceArea)
+        CD_vec = inducedDragCoefficient(C_force, self.V_fs)
+        CD = CD_vec.norm()
+        return CD
+    
 
 class Steady_Wakeless_PanelMethod(PanelMethod):
     
@@ -278,7 +290,26 @@ def Velocity(r_p, panels, V_fs):
     
     
     return velocity
-            
+
+def AerodynamicForce(panels, ReferenceArea):
+    ref_area = ReferenceArea
+    C_force = Vector((0, 0, 0))
+    for panel in panels:
+        C_force = C_force + (-panel.Cp*panel.area/ref_area)*panel.n
+    
+    return C_force
+
+def inducedDragCoefficient(AerodynamicForce, V_fs):
+    C_force = AerodynamicForce
+    CD_vector = (C_force * V_fs/V_fs.norm()) * V_fs/V_fs.norm()
+    return CD_vector
+
+def LiftCoefficient(AerodynamicForce, V_fs):
+    C_force = AerodynamicForce
+    CD_vector = inducedDragCoefficient(C_force, V_fs)
+    CL_vector = C_force - CD_vector
+    return CL_vector
+
         
 if __name__ == "__main__":
     from mesh_class import PanelMesh

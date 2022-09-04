@@ -1,6 +1,6 @@
 import numpy as np
 from vector_class import Vector
-from Algorithms import DenserAtBoundaries
+from Algorithms import DenserAtBoundaries, cubic_function
 from airfoil_class import Airfoil
 
 
@@ -17,7 +17,31 @@ class Wing:
         self.root_airfoil = root_airfoil
         self.tip_airfoil = tip_airfoil
         self.taper_ratio = self.tip_airfoil.chord/self.root_airfoil.chord
+        self.RefArea = 0
+        self.set_referenceArea()
     
+    def set_referenceArea(self):
+        C_r = self.root_airfoil.chord
+        C_t = self.tip_airfoil.chord
+        half_span = self.semi_span
+        
+        # ref_area = 2 * ((C_r + C_t) * half_span)/2
+        
+        # precise way
+        
+        twist = np.deg2rad(self.twist)
+        twist_location = (0.25*C_t, 0)
+        x_tip, z_tip = self.tip_airfoil.x_coords, - self.tip_airfoil.y_coords
+        x_tip_twist, z_tip_twist = self.rotate(x_tip, z_tip, twist_location,
+                                               twist)
+        C_t = x_tip_twist.max() - x_tip_twist.min() 
+        
+        Gamma = np.deg2rad(self.dihedral)
+        half_span = half_span - half_span*(1-np.cos(Gamma))
+        
+        ref_area = 2 * ((C_r + C_t) * half_span)/2
+        self.RefArea = ref_area
+        
     def new_x_spacing(self, num_x_points):
         self.root_airfoil.new_x_spacing(num_x_points)
         self.tip_airfoil.new_x_spacing(num_x_points)       
@@ -69,13 +93,20 @@ class Wing:
         for j in range(ny):
             C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
             
+            # linear interpolation
             # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
             # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
             # x = x_root + y/y_tip * (x_tip - x_root)
         
-            x_coords = x_root + (x_tip-x_root)*abs(y[j]) 
-            z_coords = z_root + (z_tip-z_root)*abs(y[j])
-            twist = root_twist + (tip_twist - root_twist)*abs(y[j])
+            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
+            z_coords = z_root + (z_tip-z_root) * abs(y[j])
+            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
+            
+            # interpolation using cubic function
+            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
+            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
+            # twist = root_twist + (tip_twist
+            #                       - root_twist) * cubic_function(abs(y[j])) 
             
             x, z = self.rotate(x_coords, z_coords, (0.25, 0), twist)
             
@@ -180,13 +211,20 @@ class Wing:
             
             C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
             
+            # linear interpolation
             # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
             # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
             # x = x_root + y/y_tip * (x_tip - x_root)
+        
+            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
+            z_coords = z_root + (z_tip-z_root) * abs(y[j])
+            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
             
-            x_coords = x_root + (x_tip-x_root)*abs(y[j]) 
-            z_coords = z_root + (z_tip-z_root)*abs(y[j]) 
-            twist = root_twist + (tip_twist - root_twist)*abs(y[j])
+            # interpolation using cubic function
+            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
+            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
+            # twist = root_twist + (tip_twist
+            #                       - root_twist) * cubic_function(abs(y[j]))
             
             x, z = self.rotate(x_coords, z_coords, (0.25, 0), twist)
             
@@ -268,13 +306,20 @@ class Wing:
             
             C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
             
+            # linear interpolation
             # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
             # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
             # x = x_root + y/y_tip * (x_tip - x_root)
         
-            x_coords = x_root + (x_tip-x_root)*abs(y[j]) 
-            z_coords = z_root + (z_tip-z_root)*abs(y[j])
-            twist = root_twist + (tip_twist - root_twist)*abs(y[j])
+            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
+            z_coords = z_root + (z_tip-z_root) * abs(y[j])
+            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
+            
+            # interpolation using cubic function
+            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
+            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
+            # twist = root_twist + (tip_twist
+            #                       - root_twist) * cubic_function(abs(y[j]))
             
             x, z = self.rotate(x_coords, z_coords, (0.25, 0), twist)
             

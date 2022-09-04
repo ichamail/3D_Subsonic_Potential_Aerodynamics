@@ -8,7 +8,6 @@ def LeastSquares(A, b):
     x = (inverted @ transposed) @ b
     return x
 
-
 def DenserAtBoundaries(start, end, num_points, alpha):
     '''
     alpha exists in (-oo, +oo)
@@ -20,7 +19,16 @@ def DenserAtBoundaries(start, end, num_points, alpha):
     a = b = 2-alpha
     return start + beta.cdf(x, a, b) * (end-start)
 
-
+def cubic_function(x):
+    
+    """
+    cubic function used for airfoil interpolations
+    
+    from
+    May-Fun Liou, Hyoungjin Kim, ByungJoon Lee, and Meng-Sing Liou
+    "Aerodynamic Design of the Hybrid Wing Body Propulsion-Airframe Integration"
+    """
+    return x**2 * (3 - 2*x)
 
 if __name__ == "__main__":
     A = np.array([[0, 1],
