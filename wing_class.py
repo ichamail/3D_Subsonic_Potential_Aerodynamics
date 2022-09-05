@@ -43,8 +43,8 @@ class Wing:
         self.RefArea = ref_area
         
     def new_x_spacing(self, num_x_points):
-        self.root_airfoil.new_x_spacing(num_x_points)
-        self.tip_airfoil.new_x_spacing(num_x_points)       
+        self.root_airfoil.new_x_spacing2(num_x_points)
+        self.tip_airfoil.new_x_spacing2(num_x_points)       
 
     def generate_bodyMesh(self, num_x_shells:int, num_y_shells:int,
                           mesh_shell_type:str='quadrilateral'):
@@ -128,24 +128,94 @@ class Wing:
                      
         if mesh_shell_type=="quadrilateral":
             
-            # for j in range(nx):
+            # wing tip shells
+            for i in [0, ny-1]:
+                for j in range(int((nx-1)/2)):
+                    if i == 0:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx-1 -j-1)*ny)])
+                            
+                        elif j==(int((nx-1)/2)-1):
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx-1-j)*ny)])
+                        else:
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx-1 -j-1)*ny),
+                                           (i+(nx-1 - j)*ny)])
+                                      
+                    else:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                           (i+(nx-1 -j-1)*ny),
+                                           (i+(j+1)*ny)])
+                            
+                        elif j==(int((nx-1)/2)-1):
+                            shells.append([(i+j*ny),
+                                           (i+(nx-1 - j)*ny),
+                                           (i+(nx-1 -j-1)*ny)])
+                        else:
+                            shells.append([(i+j*ny),
+                                           (i+(nx-1 - j)*ny),
+                                           (i+(nx-1 -j-1)*ny),
+                                           (i+(j+1)*ny)])
+            
+            # pressure and suction sides
             for j in range(nx-1):
-                for i in range(ny-1):
-                                    
-                    # shells.append([(i+j*ny),
-                    #             (i+j*ny)+1,
-                    #             ((i+j*ny)+1 + ny)%len(nodes),
-                    #             ((i+j*ny)+ny)%len(nodes)])
-                    
+                for i in range(ny-1):                    
                     shells.append([(i+j*ny),
                                    (i+j*ny)+1,
                                    ((i+j*ny)+1 + ny),
                                    ((i+j*ny)+ny)])
-        
                     
         elif mesh_shell_type=="triangular":
             
-            # for j in range(nx):
+            # wing tip shells 
+            for i in [0, ny-1]:
+                for j in range(int((nx-1)/2)):
+                    if i == 0:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                        (i+(j+1)*ny),
+                                        (i+(nx-1 -j-1)*ny)])
+                              
+                        elif j==(int((nx-1)/2)-1):
+                            shells.append([(i+j*ny),
+                                        (i+(j+1)*ny),
+                                        (i+(nx-1-j)*ny)])
+
+                        else:
+                            shells.append([(i+j*ny),
+                                        (i+(j+1)*ny),
+                                        (i+(nx-1 - j)*ny)])
+                            
+                            shells.append([(i+(j+1)*ny),
+                                        (i+(nx-1 -j-1)*ny),
+                                        (i+(nx-1 - j)*ny)])
+                              
+                    else:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                           (i+(nx-1 -j-1)*ny),
+                                           (i+(j+1)*ny)])
+                            
+                        elif j==(int((nx-1)/2)-1):
+                            shells.append([(i+j*ny),
+                                           (i+(nx-1 - j)*ny),
+                                           (i+(nx-1 -j-1)*ny)])
+                        else:
+                            shells.append([(i+j*ny),
+                                           (i+(nx-1 - j)*ny),
+                                           (i+(j+1)*ny)])
+                            
+                            shells.append([(i+(nx-1 - j)*ny),
+                                           (i+(nx-1 -j-1)*ny),
+                                           (i+(j+1)*ny)])
+            
+            # pressure and suction sides
             for j in range(nx-1):
                 for i in range(ny-1):
                     
@@ -244,16 +314,95 @@ class Wing:
                
         shells = []
         if mesh_shell_type=="quadrilateral":
-    
+            
+            # wing tip shells 
+            for i in [0, ny-1]:
+                for j in range(int(nx/2)):
+                    if i == 0:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx -j-1)*ny)])
+                            
+                        elif j==(int(nx/2)-1):
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx-j)*ny)])
+                        else:
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx -j-1)*ny),
+                                           (i+(nx - j)*ny)])
+                                      
+                    else:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                           (i+(nx -j-1)*ny),
+                                           (i+(j+1)*ny)])
+                            
+                        elif j==(int(nx/2)-1):
+                            shells.append([(i+j*ny),
+                                           (i+(nx - j)*ny),
+                                           (i+(nx -j-1)*ny)])
+                        else:
+                            shells.append([(i+j*ny),
+                                           (i+(nx - j)*ny),
+                                           (i+(nx -j-1)*ny),
+                                           (i+(j+1)*ny)])
+                            
+            # pressure and suction sides
             for j in range(nx):
                 for i in range(ny-1):
                     shells.append([(i+j*ny),
-                                (i+j*ny)+1,
-                                ((i+j*ny)+1 + ny)%len(nodes),
-                                ((i+j*ny)+ny)%len(nodes)])       
-        
+                                   (i+j*ny)+1,
+                                   ((i+j*ny)+1 + ny)%len(nodes),
+                                   ((i+j*ny)+ny)%len(nodes)])
+            
         elif mesh_shell_type=="triangular":
             
+            # wing tips 
+            for i in [0, ny-1]:
+                for j in range(int(nx/2)):
+                    if i == 0:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx-j-1)*ny)])
+                              
+                        elif j==(int(nx/2)-1):
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx-j)*ny)])
+
+                        else:
+                            shells.append([(i+j*ny),
+                                           (i+(j+1)*ny),
+                                           (i+(nx-j)*ny)])
+                            
+                            shells.append([(i+(j+1)*ny),
+                                           (i+(nx-j-1)*ny),
+                                           (i+(nx-j)*ny)])
+                              
+                    else:
+                        if j==0:
+                            shells.append([(i+j*ny),
+                                           (i+(nx-j-1)*ny),
+                                           (i+(j+1)*ny)])
+                            
+                        elif j==(int(nx/2)-1):
+                            shells.append([(i+j*ny),
+                                           (i+(nx-j)*ny),
+                                           (i+(nx-j-1)*ny)])
+                        else:
+                            shells.append([(i+j*ny),
+                                           (i+(nx-j)*ny),
+                                           (i+(j+1)*ny)])
+                            
+                            shells.append([(i+(nx-j)*ny),
+                                           (i+(nx-j-1)*ny),
+                                           (i+(j+1)*ny)])
+            
+            # pressure and suction sides
             for j in range(nx):
                 for i in range(ny-1):
                     
@@ -265,7 +414,7 @@ class Wing:
                                    ((i+j*ny)+ny)%len(nodes),
                                    (i+j*ny)])
                        
-        return nodes, shells    
+        return nodes, shells         
                         
     def generate_wakeMesh(self, num_x_shells:int, num_y_shells:int,
                           mesh_shell_type:str='quadrilateral'):
@@ -414,18 +563,29 @@ class Wing:
     def give_shells_id_dict(num_x_bodyShells, num_x_wakeShells,
                             num_y_Shells, mesh_shell_type="quadrilateral"):
         
+        # x shells on Suction side + x shells on Pressure side
+        num_x_bodyShells = 2 * num_x_bodyShells
+        
         if mesh_shell_type == "quadrilateral":
-            c = 1
+            num_UpperLower_Shells = num_x_bodyShells * num_y_Shells
+            num_wing_tip_Shells = num_x_bodyShells
+            num_bodyShells = num_UpperLower_Shells + num_wing_tip_Shells
+            num_wakeShells = num_x_wakeShells * num_y_Shells
+            
         elif mesh_shell_type == "triangular":
-            c = 2
+            num_UpperLower_Shells = num_x_bodyShells * num_y_Shells * 2
+            num_wing_tip_Shells = 2 * num_x_bodyShells - 4
+            num_bodyShells = num_UpperLower_Shells + num_wing_tip_Shells
+            num_wakeShells = num_x_wakeShells * num_y_Shells * 2
+            
+        
         
         bodyShells_id_list = []
         wakeShells_id_list = []
                 
-        for id in range((num_x_bodyShells
-                         + num_x_wakeShells) * num_y_Shells * c):
+        for id in range(num_bodyShells + num_wakeShells):
             
-            if id < (num_x_bodyShells * num_y_Shells * c):
+            if id < (num_bodyShells):
                 bodyShells_id_list.append(id)
             else:
                 wakeShells_id_list.append(id)
@@ -438,6 +598,9 @@ class Wing:
     def give_TrailingEdge_Shells_id(num_x_bodyShells:int, num_y_Shells:int,
                                     mesh_shell_type:str="quadrilateral"):
         
+        # x shells on Suction side + x shells on Pressure side
+        num_x_bodyShells = 2 * num_x_bodyShells 
+        
         if mesh_shell_type == "quadrilateral":
             c1 = 0
             c2 = 1
@@ -446,10 +609,13 @@ class Wing:
             c1 = 1
             c2 = 2
         
+        num_WingTipShells = num_x_bodyShells * c2 - 4*c1
+        
         SS_TE_shell_id_list = []
         PS_TE_shell_id_list = []
+
         for i in range(num_y_Shells):
-            id = i * c2
+            id = i * c2 + num_WingTipShells
             SS_TE_shell_id_list.append(id)
             
             id = (num_x_bodyShells - 1) * num_y_Shells * c2 + id + c1
@@ -472,13 +638,22 @@ class Wing:
         num_y_Shells = len(TrailingEdge["suction side"])
         last_id = TrailingEdge["pressure side"][-1] + 1
         
+        # wake_sheddingShells_id = {}
+        # for j in range(num_y_Shells):
+        #     id_list = []
+        #     for k in range(c):
+        #         id = last_id + j + k
+        #         for i in range(num_x_wakeShells):
+        #             id_list.append(id + c*num_y_Shells*i)
+        
         wake_sheddingShells_id = {}
         for j in range(num_y_Shells):
             id_list = []
-            for k in range(c):
-                id = last_id + j + k
-                for i in range(num_x_wakeShells):
+            for i in range(num_x_wakeShells):
+                for k in range(c):
+                    id = last_id + j + k
                     id_list.append(id + c*num_y_Shells*i)
+            last_id = last_id + k
             
             wake_sheddingShells_id[TrailingEdge["suction side"][j]] = id_list
             wake_sheddingShells_id[TrailingEdge["pressure side"][j]] = id_list
@@ -521,9 +696,8 @@ if __name__=="__main__":
     tip_airfoil = Airfoil(name="naca0012", chord_length=0.8)
     wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=10, dihedral=0,
                 twist=10)
-
-    body_nodes, body_shells = wing.generate_bodyMesh(8, 4,
-                                                     mesh_shell_type="triangular")
+    
+    body_nodes, body_shells = wing.generate_bodyMesh2(4, 4, "triangular")
 
     # for node_id, node in enumerate(body_nodes):
     #     print(node_id, node)
@@ -541,7 +715,7 @@ if __name__=="__main__":
     ######### wing mesh with wake ###############
     wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=10, dihedral=10,
                 twist=2)
-    num_x_bodyShells = 8
+    num_x_bodyShells = 4
     num_x_wakeShells = 4
     num_y_Shells = 4
 
