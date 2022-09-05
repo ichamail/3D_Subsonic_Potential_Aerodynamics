@@ -128,41 +128,6 @@ class Wing:
                      
         if mesh_shell_type=="quadrilateral":
             
-            # wing tip shells
-            for i in [0, ny-1]:
-                for j in range(int((nx-1)/2)):
-                    if i == 0:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx-1 -j-1)*ny)])
-                            
-                        elif j==(int((nx-1)/2)-1):
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx-1-j)*ny)])
-                        else:
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx-1 -j-1)*ny),
-                                           (i+(nx-1 - j)*ny)])
-                                      
-                    else:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                           (i+(nx-1 -j-1)*ny),
-                                           (i+(j+1)*ny)])
-                            
-                        elif j==(int((nx-1)/2)-1):
-                            shells.append([(i+j*ny),
-                                           (i+(nx-1 - j)*ny),
-                                           (i+(nx-1 -j-1)*ny)])
-                        else:
-                            shells.append([(i+j*ny),
-                                           (i+(nx-1 - j)*ny),
-                                           (i+(nx-1 -j-1)*ny),
-                                           (i+(j+1)*ny)])
-            
             # pressure and suction sides
             for j in range(nx-1):
                 for i in range(ny-1):                    
@@ -172,48 +137,6 @@ class Wing:
                                    ((i+j*ny)+ny)])
                     
         elif mesh_shell_type=="triangular":
-            
-            # wing tip shells 
-            for i in [0, ny-1]:
-                for j in range(int((nx-1)/2)):
-                    if i == 0:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                        (i+(j+1)*ny),
-                                        (i+(nx-1 -j-1)*ny)])
-                              
-                        elif j==(int((nx-1)/2)-1):
-                            shells.append([(i+j*ny),
-                                        (i+(j+1)*ny),
-                                        (i+(nx-1-j)*ny)])
-
-                        else:
-                            shells.append([(i+j*ny),
-                                        (i+(j+1)*ny),
-                                        (i+(nx-1 - j)*ny)])
-                            
-                            shells.append([(i+(j+1)*ny),
-                                        (i+(nx-1 -j-1)*ny),
-                                        (i+(nx-1 - j)*ny)])
-                              
-                    else:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                           (i+(nx-1 -j-1)*ny),
-                                           (i+(j+1)*ny)])
-                            
-                        elif j==(int((nx-1)/2)-1):
-                            shells.append([(i+j*ny),
-                                           (i+(nx-1 - j)*ny),
-                                           (i+(nx-1 -j-1)*ny)])
-                        else:
-                            shells.append([(i+j*ny),
-                                           (i+(nx-1 - j)*ny),
-                                           (i+(j+1)*ny)])
-                            
-                            shells.append([(i+(nx-1 - j)*ny),
-                                           (i+(nx-1 -j-1)*ny),
-                                           (i+(j+1)*ny)])
             
             # pressure and suction sides
             for j in range(nx-1):
@@ -315,41 +238,6 @@ class Wing:
         shells = []
         if mesh_shell_type=="quadrilateral":
             
-            # wing tip shells 
-            for i in [0, ny-1]:
-                for j in range(int(nx/2)):
-                    if i == 0:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx -j-1)*ny)])
-                            
-                        elif j==(int(nx/2)-1):
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx-j)*ny)])
-                        else:
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx -j-1)*ny),
-                                           (i+(nx - j)*ny)])
-                                      
-                    else:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                           (i+(nx -j-1)*ny),
-                                           (i+(j+1)*ny)])
-                            
-                        elif j==(int(nx/2)-1):
-                            shells.append([(i+j*ny),
-                                           (i+(nx - j)*ny),
-                                           (i+(nx -j-1)*ny)])
-                        else:
-                            shells.append([(i+j*ny),
-                                           (i+(nx - j)*ny),
-                                           (i+(nx -j-1)*ny),
-                                           (i+(j+1)*ny)])
-                            
             # pressure and suction sides
             for j in range(nx):
                 for i in range(ny-1):
@@ -359,48 +247,6 @@ class Wing:
                                    ((i+j*ny)+ny)%len(nodes)])
             
         elif mesh_shell_type=="triangular":
-            
-            # wing tips 
-            for i in [0, ny-1]:
-                for j in range(int(nx/2)):
-                    if i == 0:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx-j-1)*ny)])
-                              
-                        elif j==(int(nx/2)-1):
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx-j)*ny)])
-
-                        else:
-                            shells.append([(i+j*ny),
-                                           (i+(j+1)*ny),
-                                           (i+(nx-j)*ny)])
-                            
-                            shells.append([(i+(j+1)*ny),
-                                           (i+(nx-j-1)*ny),
-                                           (i+(nx-j)*ny)])
-                              
-                    else:
-                        if j==0:
-                            shells.append([(i+j*ny),
-                                           (i+(nx-j-1)*ny),
-                                           (i+(j+1)*ny)])
-                            
-                        elif j==(int(nx/2)-1):
-                            shells.append([(i+j*ny),
-                                           (i+(nx-j)*ny),
-                                           (i+(nx-j-1)*ny)])
-                        else:
-                            shells.append([(i+j*ny),
-                                           (i+(nx-j)*ny),
-                                           (i+(j+1)*ny)])
-                            
-                            shells.append([(i+(nx-j)*ny),
-                                           (i+(nx-j-1)*ny),
-                                           (i+(j+1)*ny)])
             
             # pressure and suction sides
             for j in range(nx):
@@ -567,15 +413,11 @@ class Wing:
         num_x_bodyShells = 2 * num_x_bodyShells
         
         if mesh_shell_type == "quadrilateral":
-            num_UpperLower_Shells = num_x_bodyShells * num_y_Shells
-            num_wing_tip_Shells = num_x_bodyShells
-            num_bodyShells = num_UpperLower_Shells + num_wing_tip_Shells
+            num_bodyShells = num_x_bodyShells * num_y_Shells
             num_wakeShells = num_x_wakeShells * num_y_Shells
             
         elif mesh_shell_type == "triangular":
-            num_UpperLower_Shells = num_x_bodyShells * num_y_Shells * 2
-            num_wing_tip_Shells = 2 * num_x_bodyShells - 4
-            num_bodyShells = num_UpperLower_Shells + num_wing_tip_Shells
+            num_bodyShells = num_x_bodyShells * num_y_Shells * 2
             num_wakeShells = num_x_wakeShells * num_y_Shells * 2
             
         
@@ -609,13 +451,11 @@ class Wing:
             c1 = 1
             c2 = 2
         
-        num_WingTipShells = num_x_bodyShells * c2 - 4*c1
-        
         SS_TE_shell_id_list = []
         PS_TE_shell_id_list = []
 
         for i in range(num_y_Shells):
-            id = i * c2 + num_WingTipShells
+            id = i * c2
             SS_TE_shell_id_list.append(id)
             
             id = (num_x_bodyShells - 1) * num_y_Shells * c2 + id + c1

@@ -44,7 +44,7 @@ if __name__=="__main__":
     
     wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
                                          num_x_wakeShells, num_y_Shells,
-                                         mesh_shell_type="quadrilateral")
+                                         mesh_shell_type="triangular")
     wing_mesh.plot_panels()
     
     # print(wing_mesh.panels_id)
