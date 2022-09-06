@@ -1,3 +1,4 @@
+from vector_class import Vector
 from wing_class import Wing
 from mesh_class import PanelMesh
 
@@ -7,13 +8,13 @@ def generate_WingPanelMesh(wing:Wing, num_x_bodyShells:int,
                            mesh_shell_type:str="quadrilateral")->PanelMesh:
 
     nodes, shells = wing.generate_mesh(num_x_bodyShells,
-                                    num_x_wakeShells,
-                                    num_y_Shells,
-                                    mesh_shell_type)
+                                       num_x_wakeShells,
+                                       num_y_Shells,
+                                       mesh_shell_type)
 
     shells_id = wing.give_shells_id_dict(num_x_bodyShells,
-                                        num_x_wakeShells,
-                                        num_y_Shells, mesh_shell_type)
+                                         num_x_wakeShells,
+                                         num_y_Shells, mesh_shell_type)
 
     TrailingEdge = wing.give_TrailingEdge_Shells_id(num_x_bodyShells,
                                                     num_y_Shells,
@@ -26,8 +27,36 @@ def generate_WingPanelMesh(wing:Wing, num_x_bodyShells:int,
     wing_mesh = PanelMesh(nodes, shells, shells_id, TrailingEdge,
                           wake_sheddingShells)
     
+    wing_mesh.free_TrailingEdge()
+    
     return wing_mesh
 
+def generate_WingPanelMesh2(V_fs:Vector, wing:Wing, num_x_bodyShells:int,
+                           num_x_wakeShells:int, num_y_Shells:int,
+                           mesh_shell_type:str="quadrilateral")->PanelMesh:
+
+    nodes, shells = wing.generate_mesh2(V_fs, num_x_bodyShells,
+                                       num_x_wakeShells,
+                                       num_y_Shells,
+                                       mesh_shell_type)
+
+    shells_id = wing.give_shells_id_dict(num_x_bodyShells,
+                                         num_x_wakeShells,
+                                         num_y_Shells, mesh_shell_type)
+
+    TrailingEdge = wing.give_TrailingEdge_Shells_id(num_x_bodyShells,
+                                                    num_y_Shells,
+                                                    mesh_shell_type)
+
+    wake_sheddingShells = wing.give_wake_sheddingShells(num_x_wakeShells,
+                                                    TrailingEdge,
+                                                    mesh_shell_type)
+
+    wing_mesh = PanelMesh(nodes, shells, shells_id, TrailingEdge,
+                          wake_sheddingShells)
+    
+    wing_mesh.free_TrailingEdge()
+    return wing_mesh
 
 if __name__=="__main__":
     from airfoil_class import Airfoil
@@ -38,13 +67,13 @@ if __name__=="__main__":
     wing = Wing(root_airfoil, tip_airfoil,
                 semi_span=1, sweep=15, dihedral=10, twist=0)
 
-    num_x_bodyShells = 4
-    num_x_wakeShells = 4
-    num_y_Shells = 4
+    num_x_bodyShells = 10
+    num_x_wakeShells = 15
+    num_y_Shells = 20
     
     wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
-                                         num_x_wakeShells, num_y_Shells,
-                                         mesh_shell_type="quadrilateral")
+                                       num_x_wakeShells, num_y_Shells,
+                                       mesh_shell_type="quadrilateral")
     wing_mesh.plot_panels()
     
     # print(wing_mesh.panels_id)
@@ -59,5 +88,5 @@ if __name__=="__main__":
     #     print(wing_mesh.panels[id_i].id == id_i)
     #     for id_j in wing_mesh.wake_sheddingShells[id_i]:
     #         print(wing_mesh.panels[id_j].id == id_j)
-            
-    pass
+    
+    pass    

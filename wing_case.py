@@ -1,6 +1,6 @@
 from airfoil_class import Airfoil
 from wing_class import Wing
-from wing_mesh_generator import generate_WingPanelMesh
+from wing_mesh_generator import generate_WingPanelMesh, generate_WingPanelMesh2
 from panel_method_class import PanelMethod, Steady_PanelMethod
 from vector_class import Vector
 from matplotlib import pyplot as plt
@@ -24,7 +24,13 @@ wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
+
+# wing_mesh = generate_WingPanelMesh2(panel_method.V_fs, wing, num_x_bodyShells,
+#                                    num_x_wakeShells, num_y_Shells,
+#                                    mesh_shell_type="quadrilateral")
+
+# wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 # search for panels near wing's root
 saved_ids = []
@@ -58,3 +64,6 @@ CD = panel_method.inducedDragCoeff(wing_mesh.panels, wing.RefArea)
 
 print("CL = " + str(CL))
 print("CD = " + str(CD))
+
+print([panel.Cp for panel in [wing_mesh.panels[id]
+                              for id in wing_mesh.panels_id["body"]]])

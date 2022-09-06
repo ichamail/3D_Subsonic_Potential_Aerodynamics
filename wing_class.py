@@ -535,20 +535,164 @@ class Wing:
                 
         return wake_nodes, wake_shells
     
-    def generate_mesh(self, num_x_bodyShells, num_x_wakeShells, num_y_Shells,
+    def generate_wakeMesh2(self, V_fs:Vector,
+                           num_x_shells:int, 
+                           num_y_shells:int,
+                           mesh_shell_type:str='quadrilateral'):
+        
+        """
+        generate_wakeMesh generates a steady wake in the same direction as the bisector vector of trailing edge
+        
+        generate_wakeMesh2 generates a plane steady wake in free stream's vector direction
+        """
+        
+        wake_direction_unit_vec = V_fs/V_fs.norm()
+        vec = 10 * self.root_airfoil.chord * wake_direction_unit_vec
+        
+        # wing's coordinate system:
+        # origin: root airfoils leading edge
+        # x-axis: chord wise direction from leading edge to trailing edge
+        # y-axis: spanwise direction form root to tip
+        # z-axis: from top to bottom
+        
+        x_root = self.root_airfoil.x_coords
+        z_root = - self.root_airfoil.y_coords
+        x_tip = self.tip_airfoil.x_coords
+        z_tip = - self.tip_airfoil.y_coords
+        
+        y = DenserAtBoundaries(self.semi_span, -self.semi_span, num_y_shells+1,
+                               alpha=0.3)
+        
+        X = np.zeros((num_x_shells + 1, num_y_shells + 1))
+        Y = np.zeros((num_x_shells + 1, num_y_shells + 1))
+        Z = np.zeros((num_x_shells + 1, num_y_shells + 1))
+        
+        C_r = self.root_airfoil.chord
+        C_t = self.tip_airfoil.chord
+        lamda = self.taper_ratio
+        half_span = self.semi_span
+        
+        # dimensionless coords
+        x_root = x_root/C_r
+        z_root = z_root/C_r
+        x_tip = x_tip/C_t
+        z_tip = z_tip/C_t
+        y = y/half_span
+        root_twist = 0
+        tip_twist = np.deg2rad(self.twist)
+        
+        for j in range(num_y_shells + 1):
+            
+            C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
+            
+            # linear interpolation
+            # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
+            # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
+            # x = x_root + y/y_tip * (x_tip - x_root)
+        
+            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
+            z_coords = z_root + (z_tip-z_root) * abs(y[j])
+            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
+            
+            # interpolation using cubic function
+            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
+            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
+            # twist = root_twist + (tip_twist
+            #                       - root_twist) * cubic_function(abs(y[j]))
+            
+            x, z = self.rotate(x_coords, z_coords, (0.25, 0), twist)
+            
+            x = x * C_y
+            y[j] = y[j] * half_span
+            z = z * C_y
+                        
+            X[:, j] = np.linspace(x[0], x[0] + vec.x, num_x_shells+1)
+            Y[:, j] = y[j]
+            Z[:, j] = np.linspace(z[0], z[0]+ vec.z, num_x_shells+1)
+        
+        wake_nodes = []
+               
+        delta = np.deg2rad(self.sweep)
+        gamma = np.deg2rad(self.dihedral)
+        for i in range(num_x_shells + 1):
+            for j in range(num_y_shells + 1):
+                x_ij = X[i][j] + abs(Y[i][j]) * np.tan(delta)
+                y_ij = Y[i][j] - Y[i][j] * (1 - np.cos(gamma))
+                z_ij = Z[i][j] + abs(Y[i][j]) * np.sin(gamma)
+                wake_nodes.append([x_ij, y_ij, z_ij])
+                
+        wake_shells = []
+        nx = num_x_shells + 1
+        ny = num_y_shells + 1
+                        
+        if mesh_shell_type=="quadrilateral":
+            
+            for j in range(nx-1):
+                for i in range(ny-1):
+                                   
+                    wake_shells.append([(i+j*ny),
+                                        ((i+j*ny)+ny),
+                                        ((i+j*ny)+1 + ny),
+                                        (i+j*ny)+1])
+                    
+        elif mesh_shell_type=="triangular":
+            
+            for j in range(nx-1):
+                for i in range(ny-1):
+                    
+                    wake_shells.append([(i+j*ny),
+                                        ((i+j*ny)+ny),
+                                        (i+j*ny)+1])
+                    
+                    wake_shells.append([((i+j*ny)+ny),
+                                        ((i+j*ny)+1 + ny),
+                                        (i+j*ny)+1])
+                
+        return wake_nodes, wake_shells
+        
+        pass
+    
+    def generate_mesh(self, num_x_bodyShells,
+                      num_x_wakeShells, num_y_Shells,
                       mesh_shell_type:str="quadrilateral"):
         
-        body_nodes, body_shells = self.generate_bodyMesh(num_x_bodyShells,
-                                                         num_y_Shells,
-                                                         mesh_shell_type)
-        
-        # body_nodes, body_shells = self.generate_bodyMesh2(num_x_bodyShells,
+        # body_nodes, body_shells = self.generate_bodyMesh(num_x_bodyShells,
         #                                                  num_y_Shells,
         #                                                  mesh_shell_type)
+        
+        body_nodes, body_shells = self.generate_bodyMesh2(num_x_bodyShells,
+                                                         num_y_Shells,
+                                                         mesh_shell_type)
         
         wake_nodes, wake_shells = self.generate_wakeMesh(num_x_wakeShells,
                                                          num_y_Shells,
                                                          mesh_shell_type)
+        
+        for i, wake_shell in enumerate(wake_shells):
+            for j in range(len(wake_shell)):
+                wake_shells[i][j] = wake_shells[i][j] + len(body_nodes)
+    
+        nodes = [*body_nodes, *wake_nodes]
+        shells = [*body_shells, *wake_shells]
+        
+        return nodes, shells
+    
+    def generate_mesh2(self, V_fs:Vector, num_x_bodyShells,
+                       num_x_wakeShells, num_y_Shells,
+                       mesh_shell_type:str="quadrilateral"):
+        
+        # body_nodes, body_shells = self.generate_bodyMesh(num_x_bodyShells,
+        #                                                  num_y_Shells,
+        #                                                  mesh_shell_type)
+        
+        body_nodes, body_shells = self.generate_bodyMesh2(num_x_bodyShells,
+                                                         num_y_Shells,
+                                                         mesh_shell_type)
+        
+        wake_nodes, wake_shells = self.generate_wakeMesh2(V_fs,
+                                                          num_x_wakeShells,
+                                                          num_y_Shells,
+                                                          mesh_shell_type)
         
         for i, wake_shell in enumerate(wake_shells):
             for j in range(len(wake_shell)):
@@ -697,7 +841,7 @@ if __name__=="__main__":
     wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=10, dihedral=0,
                 twist=10)
     
-    body_nodes, body_shells = wing.generate_bodyMesh2(4, 4, "triangular")
+    body_nodes, body_shells = wing.generate_bodyMesh2(4, 4, "quadrilateral")
 
     # for node_id, node in enumerate(body_nodes):
     #     print(node_id, node)
