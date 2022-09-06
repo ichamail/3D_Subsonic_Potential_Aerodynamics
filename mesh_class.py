@@ -67,6 +67,23 @@ class Mesh:
         
         return neighbours
 
+    def free_TrailingEdge(self):
+        """
+        if trailing edge shells (or panels) share trailing edge nodes then
+        the method "find_shell_neighbours" will assume that suction side trailing shells and pressure side trailing shells are neighbours.
+        In panel methods we assume that traling edge is a free edge.
+        "free_TrailingEdge" method will remove false neighbour ids from the attribute shell_neighbour
+        """
+        
+        for id in self.TrailingEdge["suction side"]:
+            for neighbour_id in self.shell_neighbours[id]:
+                if neighbour_id in self.TrailingEdge["pressure side"]:
+                    self.shell_neighbours[id].remove(neighbour_id)
+    
+        for id in self.TrailingEdge["pressure side"]:
+            for neighbour_id in self.shell_neighbours[id]:
+                if neighbour_id in self.TrailingEdge["suction side"]:
+                    self.shell_neighbours[id].remove(neighbour_id)
       
 class PanelMesh(Mesh):
     def __init__(self, nodes:list, shells:list,
@@ -112,7 +129,11 @@ class PanelMesh(Mesh):
         neighbours_list = [self.panels[id] for id in neighbours_id_list]
         
         return neighbours_list
-
+    
+    def free_TrailingEdge(self):
+        super().free_TrailingEdge()
+        self.panel_neighbours = self.shell_neighbours
+        
     def plot_panels(self, elevation=30, azimuth=-60):
         ax = plt.axes(projection='3d')
         ax.set_xlabel('x')
