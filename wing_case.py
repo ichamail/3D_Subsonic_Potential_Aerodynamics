@@ -24,7 +24,7 @@ wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
 
 # wing_mesh = generate_WingPanelMesh2(panel_method.V_fs, wing, num_x_bodyShells,
 #                                    num_x_wakeShells, num_y_Shells,
