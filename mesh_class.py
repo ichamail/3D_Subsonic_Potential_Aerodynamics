@@ -10,7 +10,8 @@ class Mesh:
     def __init__(self, nodes:list, shells:list,
                  shells_id:dict = {},
                  TrailingEdge:dict={},
-                 wake_sheddingShells:dict={}):
+                 wake_sheddingShells:dict={},
+                 WingTip:dict={}):
         self.nodes = nodes
         self.shells = shells
         self.node_num = len(nodes)
@@ -21,6 +22,7 @@ class Mesh:
         self.shells_id = shells_id
         self.TrailingEdge = TrailingEdge
         self.wake_sheddingShells = wake_sheddingShells
+        self.WingTip = WingTip
     
     def plot_shells(self):
         ax = plt.axes(projection='3d')
@@ -84,14 +86,30 @@ class Mesh:
             for neighbour_id in self.shell_neighbours[id]:
                 if neighbour_id in self.TrailingEdge["suction side"]:
                     self.shell_neighbours[id].remove(neighbour_id)
-      
+
+    def WingTip_add_extra_neighbours(self):
+         
+        old_shell_neighbours = {}
+        for id_i in self.WingTip["left"] + self.WingTip["right"]:
+            old_shell_neighbours[id_i] = self.shell_neighbours[id_i].copy()
+            for id_j in self.shell_neighbours[id_i]:
+                old_shell_neighbours[id_j] = self.shell_neighbours[id_j].copy()
+        
+        for id_i in self.WingTip["left"] + self.WingTip["right"]:
+            for id_j in old_shell_neighbours[id_i]:
+                for id_k in old_shell_neighbours[id_j]: 
+                    if id_k!=id_i and id_k not in self.shell_neighbours[id_i]:
+                        self.shell_neighbours[id_i].append(id_k)      
+        
+                
 class PanelMesh(Mesh):
     def __init__(self, nodes:list, shells:list,
                  shells_id:dict = {},
                  TrailingEdge:dict={},
-                 wake_sheddingShells:dict={}):
+                 wake_sheddingShells:dict={},
+                 WingTip:dict={}):
         super().__init__(nodes, shells,
-                         shells_id, TrailingEdge, wake_sheddingShells)
+                         shells_id, TrailingEdge, wake_sheddingShells, WingTip)
         self.panels = None
         self.panels_num = None
         self.panel_neighbours = self.shell_neighbours
@@ -133,7 +151,11 @@ class PanelMesh(Mesh):
     def free_TrailingEdge(self):
         super().free_TrailingEdge()
         self.panel_neighbours = self.shell_neighbours
-        
+    
+    def WingTip_add_extra_neighbours(self):
+        super().WingTip_add_extra_neighbours()
+        self.panel_neighbours = self.shell_neighbours
+      
     def plot_panels(self, elevation=30, azimuth=-60):
         ax = plt.axes(projection='3d')
         ax.set_xlabel('x')

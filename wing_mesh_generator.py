@@ -23,11 +23,14 @@ def generate_WingPanelMesh(wing:Wing, num_x_bodyShells:int,
     wake_sheddingShells = wing.give_wake_sheddingShells(num_x_wakeShells,
                                                     TrailingEdge,
                                                     mesh_shell_type)
+    
+    WingTip = wing.give_WingTip_Shells_id(num_x_bodyShells, mesh_shell_type)
 
     wing_mesh = PanelMesh(nodes, shells, shells_id, TrailingEdge,
-                          wake_sheddingShells)
+                          wake_sheddingShells, WingTip)
     
     wing_mesh.free_TrailingEdge()
+    # wing_mesh.WingTip_add_extra_neighbours()
     
     return wing_mesh
 
@@ -67,9 +70,9 @@ if __name__=="__main__":
     wing = Wing(root_airfoil, tip_airfoil,
                 semi_span=1, sweep=15, dihedral=10, twist=0)
 
-    num_x_bodyShells = 10
-    num_x_wakeShells = 15
-    num_y_Shells = 20
+    num_x_bodyShells = 4
+    num_x_wakeShells = 4
+    num_y_Shells = 4
     
     wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
                                        num_x_wakeShells, num_y_Shells,
@@ -89,4 +92,7 @@ if __name__=="__main__":
     #     for id_j in wing_mesh.wake_sheddingShells[id_i]:
     #         print(wing_mesh.panels[id_j].id == id_j)
     
+    
+    for id in wing_mesh.panels_id["body"]:
+        print(id, wing_mesh.panel_neighbours[id])
     pass    
