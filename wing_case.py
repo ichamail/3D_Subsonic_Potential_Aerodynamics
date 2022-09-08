@@ -5,6 +5,7 @@ from panel_method_class import PanelMethod, Steady_PanelMethod
 from vector_class import Vector
 from matplotlib import pyplot as plt
 from plot_functions import plot_Cp_SurfaceContours
+import time
 
 # create wing object   
 root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
@@ -24,7 +25,7 @@ wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
 
 # wing_mesh = generate_WingPanelMesh2(panel_method.V_fs, wing, num_x_bodyShells,
 #                                    num_x_wakeShells, num_y_Shells,
@@ -37,8 +38,11 @@ saved_ids = []
 for panel in [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]:
     if 0 < panel.r_cp.y < 0.1:
         saved_ids.append(panel.id)
-        
+t_start = time.time()        
 panel_method.solve(wing_mesh)
+t_end = time.time()
+solution_time = t_end-t_start
+print("solution time = " + str(solution_time))
 Cp = []
 x = []
 for id in saved_ids:
