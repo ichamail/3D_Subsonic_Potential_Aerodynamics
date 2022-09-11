@@ -30,7 +30,6 @@ def generate_WingPanelMesh(wing:Wing, num_x_bodyShells:int,
                           wake_sheddingShells, WingTip)
     
     wing_mesh.free_TrailingEdge()
-    # wing_mesh.WingTip_add_extra_neighbours()
     
     return wing_mesh
 
@@ -55,8 +54,10 @@ def generate_WingPanelMesh2(V_fs:Vector, wing:Wing, num_x_bodyShells:int,
                                                     TrailingEdge,
                                                     mesh_shell_type)
 
+    WingTip = wing.give_WingTip_Shells_id(num_x_bodyShells, mesh_shell_type)
+
     wing_mesh = PanelMesh(nodes, shells, shells_id, TrailingEdge,
-                          wake_sheddingShells)
+                          wake_sheddingShells, WingTip)
     
     wing_mesh.free_TrailingEdge()
     return wing_mesh
@@ -64,35 +65,24 @@ def generate_WingPanelMesh2(V_fs:Vector, wing:Wing, num_x_bodyShells:int,
 if __name__=="__main__":
     from airfoil_class import Airfoil
     
-    
     root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012_new", chord_length=0.8)
     wing = Wing(root_airfoil, tip_airfoil,
-                semi_span=1, sweep=15, dihedral=10, twist=0)
+                semi_span=1, sweep=15, dihedral=10, twist=10)
 
     num_x_bodyShells = 4
-    num_x_wakeShells = 4
-    num_y_Shells = 4
+    num_x_wakeShells = 2
+    num_y_Shells = 2
     
     wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
                                        num_x_wakeShells, num_y_Shells,
-                                       mesh_shell_type="quadrilateral")
-    wing_mesh.plot_panels()
+                                       mesh_shell_type="triangular")
+    # wing_mesh.plot_panels()
     
     # print(wing_mesh.panels_id)
     # print(wing_mesh.TrailingEdge)    
     # print(wing_mesh.wake_sheddingShells)
-    
-    # for id in wing_mesh.panels_id["body"] + wing_mesh.panels_id["wake"]:
-    #     print(wing_mesh.panels[id].id == id)
-    
-    # for id_i in (wing_mesh.TrailingEdge["suction side"]
-    #              + wing_mesh.TrailingEdge["pressure side"]):
-    #     print(wing_mesh.panels[id_i].id == id_i)
-    #     for id_j in wing_mesh.wake_sheddingShells[id_i]:
-    #         print(wing_mesh.panels[id_j].id == id_j)
-    
-    
-    for id in wing_mesh.panels_id["body"]:
-        print(id, wing_mesh.panel_neighbours[id])
+        
+    # for id in wing_mesh.panels_id["body"]:
+    #     print(id, wing_mesh.panel_neighbours[id])
     pass    

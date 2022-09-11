@@ -1,4 +1,6 @@
 from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from Algorithms import light_vector
 from plot_functions import set_axes_equal
 import numpy as np
 from vector_class import Vector
@@ -24,12 +26,12 @@ class Mesh:
         self.wake_sheddingShells = wake_sheddingShells
         self.WingTip = WingTip
     
-    def plot_shells(self):
+    def plot_shells(self, elevation=30, azimuth=-60):
         ax = plt.axes(projection='3d')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
-        ax.view_init(0, 0)
+        ax.view_init(elevation, azimuth)
         for shell in self.shells:
             x, y, z = [], [], []
             for id in shell:
@@ -45,8 +47,9 @@ class Mesh:
             z.append(z_i)    
             ax.plot3D(x, y, z, color='k')    
         
-        plt.show()    
-             
+        set_axes_equal(ax)
+        plt.show()       
+            
     @staticmethod
     def do_intersect(shell_i, shell_j):
         intersections = 0
@@ -87,15 +90,15 @@ class Mesh:
                 if neighbour_id in self.TrailingEdge["suction side"]:
                     self.shell_neighbours[id].remove(neighbour_id)
 
-    def WingTip_add_extra_neighbours(self):
+    def add_extra_neighbours(self):
          
         old_shell_neighbours = {}
-        for id_i in self.WingTip["left"] + self.WingTip["right"]:
+        for id_i in self.shells_id["body"]:
             old_shell_neighbours[id_i] = self.shell_neighbours[id_i].copy()
             for id_j in self.shell_neighbours[id_i]:
                 old_shell_neighbours[id_j] = self.shell_neighbours[id_j].copy()
         
-        for id_i in self.WingTip["left"] + self.WingTip["right"]:
+        for id_i in self.shells_id["body"]:
             for id_j in old_shell_neighbours[id_i]:
                 for id_k in old_shell_neighbours[id_j]: 
                     if id_k!=id_i and id_k not in self.shell_neighbours[id_i]:
@@ -196,8 +199,47 @@ class PanelMesh(Mesh):
             
         set_axes_equal(ax)
         plt.show()
- 
 
+    def plot_mesh(self, elevation=30, azimuth=-60):
+        shells = []
+        vert_coords = []
+        for panel in self.panels:
+            shell=[]
+            for r_vertex in panel.r_vertex:
+                shell.append((r_vertex.x, r_vertex.y, r_vertex.z))
+                vert_coords.append([r_vertex.x, r_vertex.y, r_vertex.z])
+            shells.append(shell)
+        
+        
+        light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
+        face_normals = [panel.n for panel in self.panels]
+        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        min = np.min(dot_prods)
+        max = np.max(dot_prods)
+        target_min = 0.2 # darker gray
+        target_max = 0.6 # lighter gray
+        shading = [(dot_prod - min)/(max - min) *(target_max - target_min) 
+                   + target_min
+                   for dot_prod in dot_prods]
+        facecolor = plt.cm.gray(shading)
+        
+        ax = plt.axes(projection='3d')
+        poly3 = Poly3DCollection(shells, facecolor=facecolor)
+        ax.add_collection(poly3)
+        ax.view_init(elevation, azimuth)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        vert_coords = np.array(vert_coords)
+        x, y, z = vert_coords[:, 0], vert_coords[:, 1], vert_coords[:, 2]
+        ax.set_xlim3d(x.min(), x.max())
+        ax.set_ylim3d(y.min(), y.max())
+        ax.set_zlim3d(z.min(), z.max())
+        set_axes_equal(ax)
+        
+        plt.show()
+        
       
 if __name__=='__main__':
     from matplotlib import pyplot as plt
