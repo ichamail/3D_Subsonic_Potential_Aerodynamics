@@ -33,21 +33,18 @@ panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
 
 # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
-# search for panels near wing's root
-saved_ids = []
-for panel in [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]:
-    if 0 < panel.r_cp.y < 0.1:
-        saved_ids.append(panel.id)
 t_start = time.time()        
 panel_method.solve(wing_mesh)
 t_end = time.time()
 solution_time = t_end-t_start
 print("solution time = " + str(solution_time))
-Cp = []
-x = []
-for id in saved_ids:
-    Cp.append(wing_mesh.panels[id].Cp)
-    x.append((wing_mesh.panels[id].r_cp.x)/(wing.root_airfoil.chord))
+
+################ Results ###############
+
+# Pressure Coefficient Distribution across root's airfoil section 
+near_root_panels = wing_mesh.give_leftSide_near_root_panels()
+Cp = [panel.Cp for panel in near_root_panels]
+x = [panel.r_cp.x/wing.root_airfoil.chord for panel in near_root_panels]
 
 plt.plot(x, Cp, 'ks--', markerfacecolor='r', label='Panel Method')
 plt.xlabel("x/c")
@@ -68,6 +65,3 @@ CD = panel_method.inducedDragCoeff(wing_mesh.panels, wing.RefArea)
 
 print("CL = " + str(CL))
 print("CD = " + str(CD))
-
-print([panel.Cp for panel in [wing_mesh.panels[id]
-                              for id in wing_mesh.panels_id["body"]]])

@@ -103,7 +103,23 @@ class Mesh:
                 for id_k in old_shell_neighbours[id_j]: 
                     if id_k!=id_i and id_k not in self.shell_neighbours[id_i]:
                         self.shell_neighbours[id_i].append(id_k)      
+
+    def give_near_root_shells_id(self):
         
+        near_root_nodes_id = []
+        for node_id, node in enumerate(self.nodes):
+            if node[1] == 0:
+                near_root_nodes_id.append(node_id)
+        
+        near_root_shells_id = []
+        for shell_id in self.shells_id["body"]:
+            for node_id in self.shells[shell_id]:
+                if node_id in near_root_nodes_id:
+                    near_root_shells_id.append(shell_id)
+                    break
+        
+        return near_root_shells_id
+                                      
                 
 class PanelMesh(Mesh):
     def __init__(self, nodes:list, shells:list,
@@ -203,7 +219,13 @@ class PanelMesh(Mesh):
     def plot_mesh(self, elevation=30, azimuth=-60):
         shells = []
         vert_coords = []
-        for panel in self.panels:
+        
+        if self.shells_id:
+            body_panels = [self.panels[id] for id in self.shells_id["body"]]
+        else:
+            body_panels = self.panels
+        
+        for panel in body_panels:
             shell=[]
             for r_vertex in panel.r_vertex:
                 shell.append((r_vertex.x, r_vertex.y, r_vertex.z))
@@ -212,7 +234,7 @@ class PanelMesh(Mesh):
         
         
         light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
-        face_normals = [panel.n for panel in self.panels]
+        face_normals = [panel.n for panel in body_panels]
         dot_prods = [-light_vec * face_normal for face_normal in face_normals]
         min = np.min(dot_prods)
         max = np.max(dot_prods)
@@ -240,11 +262,30 @@ class PanelMesh(Mesh):
         
         plt.show()
         
-      
+    def give_near_root_panels(self):
+        near_root_shells_id = super().give_near_root_shells_id()
+        near_root_panels = []
+        for id in near_root_shells_id:
+            near_root_panels.append(self.panels[id])
+        
+        return near_root_panels
+    
+    def give_leftSide_near_root_panels(self):
+        
+        near_root_panels = self.give_near_root_panels()
+        
+        for panel in near_root_panels:
+            if panel.r_cp.y < 0:
+                near_root_panels.remove(panel)
+        
+        return near_root_panels
+
+         
 if __name__=='__main__':
     from matplotlib import pyplot as plt
     from sphere import sphere
     nodes, shells = sphere(1, 10, 10, mesh_shell_type='quadrilateral')
     sphere_mesh = PanelMesh(nodes, shells)    
     sphere_mesh.plot_panels()
+    sphere_mesh.plot_mesh()
     
