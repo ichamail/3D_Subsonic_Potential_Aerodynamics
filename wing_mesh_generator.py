@@ -68,7 +68,7 @@ if __name__=="__main__":
     root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012_new", chord_length=0.8)
     wing = Wing(root_airfoil, tip_airfoil,
-                semi_span=1, sweep=15, dihedral=10, twist=10)
+                semi_span=1, sweep=20, dihedral=20, twist=10)
 
     num_x_bodyShells = 4
     num_x_wakeShells = 2
@@ -76,8 +76,14 @@ if __name__=="__main__":
     
     wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
                                        num_x_wakeShells, num_y_Shells,
-                                       mesh_shell_type="triangular")
-    # wing_mesh.plot_panels()
+                                       mesh_shell_type="quadrilateral")
+    
+    # V_fs = Vector((1, 0, 0))
+    # wing_mesh = generate_WingPanelMesh2(V_fs, wing, num_x_bodyShells,
+    #                                    num_x_wakeShells, num_y_Shells,
+    #                                    mesh_shell_type="quadrilateral")
+    
+    wing_mesh.plot_panels()
     
     # print(wing_mesh.panels_id)
     # print(wing_mesh.TrailingEdge)    

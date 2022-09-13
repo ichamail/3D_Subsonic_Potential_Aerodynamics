@@ -31,6 +31,25 @@ def cubic_function(x):
     """
     return x**2 * (3 - 2*x)
 
+def interpolation(root_value, tip_value, span_percentage, type:str="linear"):
+    
+    """
+    linear interpolation:
+    x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
+    x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
+    x = x_root + y/y_tip * (x_tip - x_root)
+    """
+    
+    if type == "linear":
+        section_value = root_value + (tip_value - root_value) * span_percentage
+    elif type == "cubic":
+        section_value = (
+            root_value + (tip_value 
+                          - root_value) * cubic_function(span_percentage)
+            )
+    
+    return section_value
+
 def light_vector(magnitude, alpha, beta):
     
     """

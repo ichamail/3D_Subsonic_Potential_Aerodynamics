@@ -1,6 +1,6 @@
 import numpy as np
 from vector_class import Vector
-from Algorithms import DenserAtBoundaries, cubic_function
+from Algorithms import DenserAtBoundaries, interpolation
 from airfoil_class import Airfoil
 
 
@@ -92,52 +92,39 @@ class Wing:
         z_root = z_root/C_r
         x_tip = x_tip/C_t
         z_tip = z_tip/C_t
-        y = y/half_span
+        span_percentage = y/half_span
         root_twist = 0
         tip_twist = np.deg2rad(self.twist)
-        
-        for j in range(ny):
-            
-            C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
-            
-            # linear interpolation
-            # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
-            # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
-            # x = x_root + y/y_tip * (x_tip - x_root)
-        
-            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
-            z_coords = z_root + (z_tip-z_root) * abs(y[j])
-            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
-            
-            # interpolation using cubic function
-            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
-            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
-            # twist = root_twist + (tip_twist
-            #                       - root_twist) * cubic_function(abs(y[j]))
-            
-            z, x = self.rotate(z_coords, x_coords, (0, 0.25), twist)
-            
-            X[:, j] = x * C_y
-            Y[:, j] = y[j] * half_span
-            Z[:, j] = z * C_y
-        
-        nodes = []
         delta = np.deg2rad(self.sweep)
         gamma = np.deg2rad(self.dihedral)
+        
+        for j in range(ny):
+                        
+            C_y = interpolation(C_r, C_t, abs(span_percentage[j]))
+            
+            x_coords = interpolation(x_root, x_tip, abs(span_percentage[j]))
+            z_coords = interpolation(z_root, z_tip, abs(span_percentage[j]))
+            twist = interpolation(root_twist, tip_twist,
+                                  abs(span_percentage[j]))
+            
+            x_coords = x_coords * C_y
+            y_coords = span_percentage[j] * half_span * np.ones_like(x_coords)
+            span_location = y_coords[0]
+            z_coords = z_coords * C_y
+            
+            
+            x, y, z = self.move_airfoil_section(x_coords, y_coords, z_coords,
+                                                span_location, C_y,
+                                                twist, delta, gamma)           
+            
+            X[:, j] = x 
+            Y[:, j] = y
+            Z[:, j] = z 
+        
+        nodes = []
         for i in range(nx):
-            for j in range(ny):
-                x_ij = X[i][j] + abs(Y[i][j]) * np.tan(delta)            
-                
-                if Y[i][j] > 0:
-                    y_ij, z_ij = self.rotate(Y[i][j], Z[i][j], (0,0), gamma)
-                    
-                elif Y[i][j]< 0 :
-                    y_ij, z_ij = self.rotate(Y[i][j], Z[i][j], (0,0), -gamma) 
-                  
-                else:
-                    y_ij, z_ij = Y[i][j], Z[i][j]
-                    
-                nodes.append([x_ij, y_ij, z_ij])
+            for j in range(ny):                    
+                nodes.append([X[i][j], Y[i][j], Z[i][j]])
                
         shells = []
         if mesh_shell_type=="quadrilateral":
@@ -216,43 +203,39 @@ class Wing:
         z_root = z_root/C_r
         x_tip = x_tip/C_t
         z_tip = z_tip/C_t
-        y = y/half_span
+        span_percentage = y/half_span
         root_twist = 0
         tip_twist = np.deg2rad(self.twist)
-        
-        for j in range(ny):
-            C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
-            
-            # linear interpolation
-            # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
-            # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
-            # x = x_root + y/y_tip * (x_tip - x_root)
-        
-            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
-            z_coords = z_root + (z_tip-z_root) * abs(y[j])
-            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
-            
-            # interpolation using cubic function
-            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
-            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
-            # twist = root_twist + (tip_twist
-            #                       - root_twist) * cubic_function(abs(y[j])) 
-            
-            z, x = self.rotate(z_coords, x_coords, (0, 0.25), twist)
-            
-            X[:, j] = x * C_y
-            Y[:, j] = y[j] * half_span
-            Z[:, j] = z * C_y
-        
-        nodes = []
         delta = np.deg2rad(self.sweep)
         gamma = np.deg2rad(self.dihedral)
+        
+        for j in range(ny):
+            
+            C_y = interpolation(C_r, C_t, abs(span_percentage[j]))
+            
+            x_coords = interpolation(x_root, x_tip, abs(span_percentage[j]))
+            z_coords = interpolation(z_root, z_tip, abs(span_percentage[j]))
+            twist = interpolation(root_twist, tip_twist,
+                                  abs(span_percentage[j]))
+            
+            x_coords = x_coords * C_y
+            y_coords = span_percentage[j] * half_span * np.ones_like(x_coords)
+            span_location = y_coords[0]
+            z_coords = z_coords * C_y
+            
+            
+            x, y, z = self.move_airfoil_section(x_coords, y_coords, z_coords,
+                                                span_location, C_y,
+                                                twist, delta, gamma)           
+            
+            X[:, j] = x 
+            Y[:, j] = y
+            Z[:, j] = z 
+        
+        nodes = []
         for i in range(nx):
-            for j in range(ny):
-                x_ij = X[i][j] + abs(Y[i][j]) * np.tan(delta)
-                y_ij = Y[i][j] - Y[i][j] * (1 - np.cos(gamma))
-                z_ij = Z[i][j] + abs(Y[i][j]) * np.sin(gamma)
-                nodes.append([x_ij, y_ij, z_ij])
+            for j in range(ny):                    
+                nodes.append([X[i][j], Y[i][j], Z[i][j]])
                 
         shells = []
                      
@@ -286,108 +269,67 @@ class Wing:
                              mesh_shell_type:str="quadrilateral"):
         
         self.new_x_spacing(num_x_shells)
-        y = self.semi_span
-        
+                
         Ct = self.tip_airfoil.chord
         
-        x_tip_upper, z_tip_upper = self.tip_airfoil.give_suctionSide()
-        z_tip_upper = - z_tip_upper
-        y_tip_upper = y * np.ones_like(x_tip_upper)
-        
-        x_tip_lower, z_tip_lower = self.tip_airfoil.give_pressureSide()
-        z_tip_lower = - z_tip_lower
-        y_tip_lower = y * np.ones_like(x_tip_lower)
-        x_tip_lower = np.flip(x_tip_lower)
-        z_tip_lower = np.flip(z_tip_lower)
-        
-        x_chord = x_tip_upper.copy()
+        x_upper, z_upper = self.tip_airfoil.give_suctionSide()
+        x_chord = x_upper.copy()
         z_chord = np.zeros_like(x_chord)
-        y_chord = y * np.ones_like(x_chord)
+        y_chord = self.semi_span * np.ones_like(x_chord)
+        
+        x_tip = self.tip_airfoil.x_coords.copy()
+        z_tip = -self.tip_airfoil.y_coords.copy()
+        y_tip = self.semi_span * np.ones_like(z_tip)
         
         twist = np.deg2rad(self.twist)
-        
-        z_tip_upper, x_tip_upper = self.rotate(z_tip_upper, x_tip_upper,
-                                               (0, 0.25*Ct), twist)
-        
-        z_tip_lower, x_tip_lower = self.rotate(z_tip_lower, x_tip_lower,
-                                               (0, 0.25*Ct), twist)
-        
-        z_chord, x_chord = self.rotate(z_chord, x_chord, (0, 0.25*Ct), twist)
-        
         delta = np.deg2rad(self.sweep)
-                
-        x_tip_upper = x_tip_upper + abs(y) * np.tan(delta)
-        
-        x_tip_lower = x_tip_lower + abs(y) * np.tan(delta)
-        
-        x_chord = x_chord + abs(y) * np.tan(delta)
-        
         gamma = np.deg2rad(self.dihedral)
         
-        y_tip_upper_left, z_tip_upper_left = self.rotate(y_tip_upper,
-                                                         z_tip_upper,
-                                                         (0,0), gamma)
-            
-        y_tip_lower_left, z_tip_lower_left = self.rotate(y_tip_lower,
-                                                         z_tip_lower,
-                                                         (0,0), gamma)
-    
-        y_chord_left, z_chord_left = self.rotate(y_chord,
-                                                 z_chord,
-                                                 (0, 0), gamma)
+        x_chord, y_chord, z_chord = self.move_airfoil_section(x_chord, y_chord,
+                                                              z_chord, self.semi_span, Ct,twist, delta, gamma)
         
-        y_tip_upper_right, z_tip_upper_right = self.rotate(-1*y_tip_upper,
-                                               z_tip_upper,
-                                               (0,0), -gamma)
-            
-        y_tip_lower_right, z_tip_lower_right = self.rotate(-1*y_tip_lower,
-                                                           z_tip_lower,
-                                                           (0,0), -gamma)
+        x_tip, y_tip, z_tip = self.move_airfoil_section(x_tip, y_tip, z_tip,
+                                                        self.semi_span, Ct,
+                                                        twist, delta, gamma)
+        index = len(x_upper)
+        x_tip_upper, x_tip_lower = x_tip[0:index], np.flip(x_tip[index:])
+        y_tip_upper, y_tip_lower = y_tip[0:index], np.flip(y_tip[index:])
+        z_tip_upper, z_tip_lower = z_tip[0:index], np.flip(z_tip[index:])
         
-        y_chord_right, z_chord_right = self.rotate(-1*y_chord,
-                                                   z_chord,
-                                                   (0, 0), -gamma)
         
         # generate nodes
         # left wingtip
-        x_first, y_first, z_first = x_chord[0], y_chord_left[0], z_chord_left[0]
-        x_last, y_last, z_last = x_chord[-1], y_chord_left[-1], z_chord_left[-1]
+        x_first, y_first, z_first = x_chord[0], y_chord[0], z_chord[0]
+        x_last, y_last, z_last = x_chord[-1], y_chord[-1], z_chord[-1]
         nodes = []                      
         nodes.append([x_first, y_first, z_first])
-        for i in range(1, len(x_tip_upper)-1):
-            nodes.append([x_tip_upper[i],
-                          y_tip_upper_left[i],
-                          z_tip_upper_left[i]])
+        for i in range(1, len(x_upper)-1):
+            nodes.append([x_tip_upper[i], y_tip_upper[i], z_tip_upper[i]])
             
-            nodes.append([x_chord[i], y_chord_left[i], z_chord_left[i]])
+            nodes.append([x_chord[i], y_chord[i], z_chord[i]])
             
-            nodes.append([x_tip_lower[i],
-                          y_tip_lower_left[i],
-                          z_tip_lower_left[i]])
+            nodes.append([x_tip_lower[i], y_tip_lower[i], z_tip_lower[i]])
                 
         nodes.append([x_last, y_last, z_last])
         
         # right wingtip
-        x_first, y_first, z_first = x_chord[0], y_chord_right[0], z_chord_right[0]
-        x_last, y_last, z_last = x_chord[-1], y_chord_right[-1], z_chord_right[-1]
+        x_first, y_first, z_first = x_chord[0], -y_chord[0], z_chord[0]
+        x_last, y_last, z_last = x_chord[-1], -y_chord[-1], z_chord[-1]
                      
         nodes.append([x_first, y_first, z_first])
-        for i in range(1, len(x_tip_upper)-1):
-            nodes.append([x_tip_upper[i],
-                          y_tip_upper_right[i],
-                          z_tip_upper_right[i]])
+        for i in range(1, len(x_upper)-1):
             
-            nodes.append([x_chord[i], y_chord_right[i], z_chord_right[i]])
+            nodes.append([x_tip_upper[i], -y_tip_upper[i], z_tip_upper[i]])
             
-            nodes.append([x_tip_lower[i],
-                          y_tip_lower_right[i],
-                          z_tip_lower_right[i]])
+            nodes.append([x_chord[i], -y_chord[i], z_chord[i]])
+            
+            nodes.append([x_tip_lower[i], -y_tip_lower[i], z_tip_lower[i]])
                 
         nodes.append([x_last, y_last, z_last])
         
         # generate shells
         shells = []
-        ni = len(x_tip_upper)  # x_tip_upper + first + last nodes
+        ni = len(x_upper)  # x_tip_upper + first + last nodes
         nj = 3
         
         if mesh_shell_type == "quadrilateral":       
@@ -467,7 +409,7 @@ class Wing:
                                     (const + (i+1)*nj +j)])
         
         return nodes, shells
-                        
+                       
     def generate_wakeMesh(self, num_x_shells:int, num_y_shells:int,
                           mesh_shell_type:str='quadrilateral'):
         
@@ -495,7 +437,6 @@ class Wing:
         
         C_r = self.root_airfoil.chord
         C_t = self.tip_airfoil.chord
-        lamda = self.taper_ratio
         half_span = self.semi_span
         
         # dimensionless coords
@@ -503,35 +444,30 @@ class Wing:
         z_root = z_root/C_r
         x_tip = x_tip/C_t
         z_tip = z_tip/C_t
-        y = y/half_span
+        span_percentage = y/half_span
         root_twist = 0
         tip_twist = np.deg2rad(self.twist)
+        delta = np.deg2rad(self.sweep)
+        gamma = np.deg2rad(self.dihedral)
         
         for j in range(ny):
             
-            C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
+            C_y = interpolation(C_r, C_t, abs(span_percentage[j]))
             
-            # linear interpolation
-            # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
-            # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
-            # x = x_root + y/y_tip * (x_tip - x_root)
-        
-            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
-            z_coords = z_root + (z_tip-z_root) * abs(y[j])
-            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
+            x_coords = interpolation(x_root, x_tip, abs(span_percentage[j]))
+            z_coords = interpolation(z_root, z_tip, abs(span_percentage[j]))
+            twist = interpolation(root_twist, tip_twist,
+                                  abs(span_percentage[j]))
             
-            # interpolation using cubic function
-            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
-            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
-            # twist = root_twist + (tip_twist
-            #                       - root_twist) * cubic_function(abs(y[j]))
-            
-            z, x = self.rotate(z_coords, x_coords, (0, 0.25), twist)
-            
-            x = x * C_y
-            y[j] = y[j] * half_span
-            z = z * C_y
-            
+            x_coords = x_coords * C_y
+            y_coords = span_percentage[j] * half_span * np.ones_like(x_coords)
+            span_location = y_coords[0]
+            z_coords = z_coords * C_y
+                        
+            x, y, z = self.move_airfoil_section(x_coords, y_coords, z_coords,
+                                                span_location, C_y,
+                                                twist, delta, gamma)
+                       
             x1 = x[0] - x[1]
             y1 = 0
             z1 = z[0] - z[1]
@@ -553,22 +489,9 @@ class Wing:
         
         wake_nodes = []
                
-        delta = np.deg2rad(self.sweep)
-        gamma = np.deg2rad(self.dihedral)
         for i in range(nx):
-            for j in range(ny):
-                x_ij = X[i][j] + abs(Y[i][j]) * np.tan(delta)            
-                
-                if Y[i][j] > 0:
-                    y_ij, z_ij = self.rotate(Y[i][j], Z[i][j], (0,0), gamma)
-                    
-                elif Y[i][j]< 0 :
-                    y_ij, z_ij = self.rotate(Y[i][j], Z[i][j], (0,0), -gamma) 
-                  
-                else:
-                    y_ij, z_ij = Y[i][j], Z[i][j]
-                    
-                wake_nodes.append([x_ij, y_ij, z_ij])
+            for j in range(ny):                    
+                wake_nodes.append([X[i][j], Y[i][j], Z[i][j]])
                 
         wake_shells = []
                                 
@@ -632,7 +555,6 @@ class Wing:
         
         C_r = self.root_airfoil.chord
         C_t = self.tip_airfoil.chord
-        lamda = self.taper_ratio
         half_span = self.semi_span
         
         # dimensionless coords
@@ -640,58 +562,40 @@ class Wing:
         z_root = z_root/C_r
         x_tip = x_tip/C_t
         z_tip = z_tip/C_t
-        y = y/half_span
+        span_percentage = y/half_span
         root_twist = 0
         tip_twist = np.deg2rad(self.twist)
+        delta = np.deg2rad(self.sweep)
+        gamma = np.deg2rad(self.dihedral)
         
         for j in range(ny):
+                        
+            C_y = interpolation(C_r, C_t, abs(span_percentage[j]))
             
-            C_y = C_r * ( 1 - abs(y[j]) * (1 - lamda) )
+            x_coords = interpolation(x_root, x_tip, abs(span_percentage[j]))
+            z_coords = interpolation(z_root, z_tip, abs(span_percentage[j]))
+            twist = interpolation(root_twist, tip_twist,
+                                  abs(span_percentage[j]))
             
-            # linear interpolation
-            # x = {(y_tip - y)*x_root + (y - y_root)*x_tip}/(y_tip - y_root)
-            # x = {y_tip*x_root + y*(x_tip - x_root)}/y_tip
-            # x = x_root + y/y_tip * (x_tip - x_root)
-        
-            x_coords = x_root + (x_tip-x_root) * abs(y[j]) 
-            z_coords = z_root + (z_tip-z_root) * abs(y[j])
-            twist = root_twist + (tip_twist - root_twist) * abs(y[j])
-            
-            # interpolation using cubic function
-            # x_coords = x_root + (x_tip-x_root) * cubic_function(abs(y[j])) 
-            # z_coords = z_root + (z_tip-z_root) * cubic_function(abs(y[j])) 
-            # twist = root_twist + (tip_twist
-            #                       - root_twist) * cubic_function(abs(y[j]))
-            
-            z, x = self.rotate(z_coords, x_coords, (0, 0.25), twist)
-            
-            x = x * C_y
-            y[j] = y[j] * half_span
-            z = z * C_y
+            x_coords = x_coords * C_y
+            y_coords = span_percentage[j] * half_span * np.ones_like(x_coords)
+            span_location = y_coords[0]
+            z_coords = z_coords * C_y
+                        
+            x, y, z = self.move_airfoil_section(x_coords, y_coords, z_coords,
+                                                span_location, C_y,
+                                                twist, delta, gamma)
                         
             X[:, j] = np.linspace(x[0], x[0] + vec.x, num_x_shells+1)
             Y[:, j] = y[j]
             Z[:, j] = np.linspace(z[0], z[0]+ vec.z, num_x_shells+1)
         
         wake_nodes = []
-               
-        delta = np.deg2rad(self.sweep)
-        gamma = np.deg2rad(self.dihedral)
         for i in range(nx):
             for j in range(ny):
-                x_ij = X[i][j] + abs(Y[i][j]) * np.tan(delta)            
+                wake_nodes.append([X[i][j], Y[i][j], Z[i][j]])
                 
-                if Y[i][j] > 0:
-                    y_ij, z_ij = self.rotate(Y[i][j], Z[i][j], (0,0), gamma)
-                    
-                elif Y[i][j]< 0 :
-                    y_ij, z_ij = self.rotate(Y[i][j], Z[i][j], (0,0), -gamma) 
-                  
-                else:
-                    y_ij, z_ij = Y[i][j], Z[i][j]
-                    
-                wake_nodes.append([x_ij, y_ij, z_ij])
-                
+                     
         wake_shells = []
                                
         if mesh_shell_type=="quadrilateral":
@@ -945,7 +849,12 @@ class Wing:
         
         WingTip = {"left":leftWingTip_Shell_ids, "right":rightWingTip_Shell_ids}
         return WingTip
-        
+    
+    @staticmethod
+    def sweep_airfoil_section(x_coords, span_location, sweep_angle):
+        x_coords = x_coords + abs(span_location) * np.tan(sweep_angle)
+        return x_coords
+          
     @staticmethod
     def rotate(x_coords, y_coords, rotate_location, rotate_angle):
 
@@ -966,18 +875,62 @@ class Wing:
         
         return x, y
     
+    def twist_airfoil_section(self, x_coords, z_coords, chord, twist_angle):
+        
+        z_coords, x_coords = self.rotate(z_coords, x_coords,
+                                        (0, 0.25*chord), twist_angle)
+        
+        return x_coords, z_coords
+       
+    def rotate_airfoil_section(self, y_coords, z_coords, span_location,
+                               dihedral_angle):
+        
+        if span_location < 0:
+            dihedral_angle = - dihedral_angle
+        
+        # y_coords, z_coords = self.rotate(y_coords, z_coords,
+        #                                  (0, 0), dihedral_angle)
+        
+        # or xflr5's style to avoid  airfoil sections near root to intersect
+        root_gamma = 0
+        tip_gamma = dihedral_angle
+        span_percentage = abs(span_location)/self.semi_span
+        
+        section_gamma = interpolation(root_gamma, tip_gamma, span_percentage)
+                
+        y_coords, z_coords = self.rotate(y_coords, z_coords,
+                                         (span_location, 0), section_gamma)
+        
+        z_coords = z_coords - span_location * np.tan(tip_gamma)
+        
+        return y_coords, z_coords
+           
+    def move_airfoil_section(self, x_coords, y_coords, z_coords, span_location,
+                             chord, twist_angle, sweep_angle, dihedral_angle):
+        # angles in rads
+                    
+        x_coords, z_coords = self.twist_airfoil_section(x_coords,
+                                                        z_coords,
+                                                        chord, twist_angle)
+        
+        x_coords = self.sweep_airfoil_section(x_coords, span_location,
+                                              sweep_angle)
+        
+        y_coords, z_coords = self.rotate_airfoil_section(y_coords, z_coords,
+                                                         span_location, dihedral_angle)        
+        return x_coords, y_coords, z_coords
     
       
 if __name__=="__main__":
     from mesh_class import PanelMesh
       
-    root_airfoil = Airfoil(name="naca0012", chord_length=1)
+    root_airfoil = Airfoil(name="naca0018", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012", chord_length=0.8)
-    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=30, dihedral=-20,
-                twist=0)
+    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=20, dihedral=20,
+                twist=10)
     
-    num_x_bodyShells = 10
-    num_y_Shells = 10
+    num_x_bodyShells = 20
+    num_y_Shells = 20
         
     wing_nodes, wing_shells = wing.generate_wingMesh(num_x_bodyShells,
                                                      num_y_Shells,
