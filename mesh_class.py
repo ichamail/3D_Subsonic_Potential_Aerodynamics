@@ -111,8 +111,13 @@ class Mesh:
             if node[1] == 0:
                 near_root_nodes_id.append(node_id)
         
+        if self.shells_id:
+            body_shells_id = self.shells_id["body"]
+        else:
+            body_shells_id = np.arange(len(self.shells))
+        
         near_root_shells_id = []
-        for shell_id in self.shells_id["body"]:
+        for shell_id in body_shells_id:
             for node_id in self.shells[shell_id]:
                 if node_id in near_root_nodes_id:
                     near_root_shells_id.append(shell_id)
