@@ -1,6 +1,6 @@
 import numpy as np
 from vector_class import Vector
-from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff
+from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff, influence_coeff
 from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
 from mesh_class import PanelMesh
 from Algorithms import LeastSquares
@@ -93,8 +93,9 @@ class Steady_Wakeless_PanelMethod(PanelMethod):
             
             # loop all over panels
             for j, panel_j in enumerate(panels):
-                B[i][j] = Src_influence_coeff(r_cp, panel_j)
-                C[i][j] = Dblt_influence_coeff(r_cp, panel_j)
+                # B[i][j] = Src_influence_coeff(r_cp, panel_j)
+                # C[i][j] = Dblt_influence_coeff(r_cp, panel_j)
+                B[i][j], C[i][j] = influence_coeff(r_cp, panel_j)
                 
         return B, C
 
@@ -177,8 +178,9 @@ class Steady_PanelMethod(PanelMethod):
             for id_j in mesh.panels_id["body"]:
                 
                 panel_j = mesh.panels[id_j]
-                B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
-                C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
+                # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
+                # C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
+                B[id_i][id_j], C[id_i][id_j] = influence_coeff(r_cp, panel_j)
                 A[id_i][id_j] = C[id_i][id_j]
                 
                 if id_j in mesh.TrailingEdge["suction side"]:
