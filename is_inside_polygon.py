@@ -71,7 +71,12 @@ def doIntersect(p1:tuple, q1:tuple, p2:tuple, q2:tuple) -> bool:
     if ((o3 == 0) and onSegment(p2, p1, q2)):
         return True
  
-    # p2 , q2 and q1 are collinear
+    # p2, q2 and q1 are collinear and
+    # q1 lies on segment p2q2
+    if (o4 == 0) and (onSegment(p2, q1, q2)):
+        return True
+ 
+    return False
 
 
 def is_inside_polygon(points:list, p:tuple) -> bool:
@@ -114,11 +119,11 @@ def is_inside_polygon(points:list, p:tuple) -> bool:
 		
 	# Return true if count is odd, false otherwise
     return (count % 2 == 1)
-
+    
 
 if __name__ == '__main__':
     polygon1 = [ (0, 0), (10, 0), (10, 10), (0, 10) ]
-	
+        
     p = (1, 1)
     if (is_inside_polygon(points = polygon1, p = p)):
         print('Yes')
