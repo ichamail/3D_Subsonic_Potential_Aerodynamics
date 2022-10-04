@@ -34,7 +34,7 @@ class Panel:
     def set_centroid(self):
         r_cp = Vector((0, 0, 0))
         for i in range(self.num_vertices):
-            r_cp = Vector.addition(r_cp, self.r_vertex[i])
+            r_cp = r_cp + self.r_vertex[i]
         
         self.r_cp = r_cp.scalar_product(1/self.num_vertices)
             
@@ -42,18 +42,17 @@ class Panel:
         r_1 = self.r_vertex[0]
         r_2 = self.r_vertex[1]
         r_3 = self.r_vertex[2]
-        r_31 = Vector.addition(r_1, r_3.scalar_product(-1))
+        r_31 = r_1 - r_3
         
         if self.num_vertices == 4:
             r_4 = self.r_vertex[3]
-            r_24 = Vector.addition(r_4, r_2.scalar_product(-1))
-            
+            r_24 = r_4 - r_2
             
             n = Vector.cross_product(r_24, r_31)
             n = n.scalar_product(1/n.norm())
             
         elif self.num_vertices == 3:
-            r_21 = Vector.addition(r_1, r_2.scalar_product(-1))
+            r_21 = r_1 - r_2
             
             n = Vector.cross_product(r_21, r_31)
             n = n.scalar_product(1/n.norm())
@@ -63,7 +62,7 @@ class Panel:
     def set_l(self):
         r_1 = self.r_vertex[0]
         r_2 = self.r_vertex[1]
-        r_21 = Vector.addition(r_1, r_2.scalar_product(-1))
+        r_21 = r_1 - r_2
         self.l = r_21.scalar_product(1/r_21.norm())
     
     def set_m(self):
@@ -83,25 +82,24 @@ class Panel:
         R = self.R
         
         for i in range(n):
-            r_vertex_local[i] = Vector.addition(r_vertex[i],
-                                                r_cp.scalar_product(-1))
+            r_vertex_local[i] = r_vertex[i] - r_cp
             r_vertex_local[i] = r_vertex_local[i].transformation(R)
 
     def set_char_length(self):
         r_1 = self.r_vertex[0]
         r_2 = self.r_vertex[1]
         r_3 = self.r_vertex[2]
-        r_31 = Vector.addition(r_1, r_3.scalar_product(-1))
+        r_31 = r_1 - r_3
         
         if self.num_vertices == 4:
             r_4 = self.r_vertex[3]
-            r_24 = Vector.addition(r_4, r_2.scalar_product(-1))
+            r_24 = r_4 - r_2
             
             self.char_length = np.max([r_24.norm(), r_31.norm()])
             
         elif self.num_vertices == 3:
-            r_21 = Vector.addition(r_1, r_2.scalar_product(-1))
-            r_32 = Vector.addition(r_2, r_3.scalar_product(-1))
+            r_21 = r_1 - r_2
+            r_32 = r_2 - r_3
             
             self.char_length = np.max([r_21.norm(), r_32.norm(),
                                        r_31.norm()])        
@@ -110,16 +108,16 @@ class Panel:
         r_1 = self.r_vertex[0]
         r_2 = self.r_vertex[1]
         r_3 = self.r_vertex[2]
-        r_31 = Vector.addition(r_1, r_3.scalar_product(-1))
+        r_31 = r_1 - r_3
         
         if self.num_vertices == 3:
-            r_21 = Vector.addition(r_1, r_2.scalar_product(-1))
+            r_21 = r_1 - r_2
             cross_prod = Vector.cross_product(r_31, r_21)
             self.area = 0.5 * cross_prod.norm()
             
         elif self.num_vertices == 4:
             r_4 = self.r_vertex[3]
-            r_24 = Vector.addition(r_4, r_2.scalar_product(-1))
+            r_24 = r_4 - r_2
             cross_prod = Vector.cross_product(r_31, r_24)
             self.area = 0.5 * cross_prod.norm()               
         

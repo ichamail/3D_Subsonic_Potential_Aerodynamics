@@ -12,8 +12,7 @@ class Vector:
         return '({:g})ex + ({:g})ey + ({:g})ez'.format(self.x, self.y, self.z)
     
     def norm(self):
-        norm = Vector.dot_product(self, self)
-        norm = np.sqrt(norm)
+        norm = np.sqrt(self.x**2 + self.y**2 + self.z**2)
         return norm
     
     def scalar_product(self, scalar:float):
