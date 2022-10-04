@@ -36,7 +36,7 @@ class Panel:
         for i in range(self.num_vertices):
             r_cp = r_cp + self.r_vertex[i]
         
-        self.r_cp = r_cp.scalar_product(1/self.num_vertices)
+        self.r_cp = r_cp/self.num_vertices
             
     def set_n(self):
         r_1 = self.r_vertex[0]
@@ -49,13 +49,13 @@ class Panel:
             r_24 = r_4 - r_2
             
             n = Vector.cross_product(r_24, r_31)
-            n = n.scalar_product(1/n.norm())
+            n = n/n.norm()
             
         elif self.num_vertices == 3:
             r_21 = r_1 - r_2
             
             n = Vector.cross_product(r_21, r_31)
-            n = n.scalar_product(1/n.norm())
+            n = n/n.norm()
         
         self.n = n
     
@@ -63,7 +63,7 @@ class Panel:
         r_1 = self.r_vertex[0]
         r_2 = self.r_vertex[1]
         r_21 = r_1 - r_2
-        self.l = r_21.scalar_product(1/r_21.norm())
+        self.l = r_21/r_21.norm()
     
     def set_m(self):
         self.m = Vector.cross_product(self.n, self.l)
