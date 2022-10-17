@@ -926,11 +926,11 @@ if __name__=="__main__":
       
     root_airfoil = Airfoil(name="naca0018", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012", chord_length=0.8)
-    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=20, dihedral=20,
-                twist=10)
+    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
+                twist=0)
     
-    num_x_bodyShells = 20
-    num_y_Shells = 20
+    num_x_bodyShells = 10
+    num_y_Shells = 10
         
     wing_nodes, wing_shells = wing.generate_wingMesh(num_x_bodyShells,
                                                      num_y_Shells,
@@ -939,6 +939,11 @@ if __name__=="__main__":
     # wing_mesh.plot_shells(elevation=-150, azimuth=-120)
     # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
     wing_mesh.plot_mesh(elevation=-150, azimuth=-120)
+    
+    wing_mesh.set_body_fixed_frame_origin(0, 0, 0)
+    yaw, pitch, roll = np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
+    wing_mesh.set_body_fixed_frame_orientation(yaw, pitch, roll)
+    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
     
 
     pass

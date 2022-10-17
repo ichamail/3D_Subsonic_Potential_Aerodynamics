@@ -120,7 +120,38 @@ class Panel:
             r_24 = r_4 - r_2
             cross_prod = Vector.cross_product(r_31, r_24)
             self.area = 0.5 * cross_prod.norm()               
+
+    # unsteady features
+    
+    def move(self, ro, Vo, omega, dt):
         
+        # ro: position vector of body-fixed frame's origin
+        # Vo: velocity vector of body-fixed frame's origin
+        # omega: body-fixed frame's angular velocity
+        
+        for i in range(self.num_vertices):
+            # r_vertex : position vector of panel's vertex observed
+            # from inertial frame of reference
+             
+            r = self.r_vertex[i] - ro
+            v = Vo + Vector.cross_product(omega, r)
+            dr = v * dt
+            self.r_vertex[i] = self.r_vertex[i] + dr
+            
+        
+                
+        self.set_centroid()
+        self.set_n() 
+        self.set_l() 
+        self.set_m()
+        self.set_R()
+        
+        # λογικά δεν χρειάζονται ανανέωση
+        self.set_r_vertex_local()
+        self.set_char_length()
+        self.set_area()
+        
+   
 class quadPanel(Panel):
     def __init__(self, vertex0:Vector, vertex1:Vector,
                  vertex2:Vector, vertex3:Vector):

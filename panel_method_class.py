@@ -123,12 +123,12 @@ class Steady_PanelMethod(PanelMethod):
             panel_i.mu = doublet_strengths[panel_i.id]
             
             if panel_i.id in mesh.TrailingEdge["suction side"]:
-                for id_j in mesh.wake_sheddingShells[panel_i.id]:
+                for id_j in mesh.wake_sheddingPanels[panel_i.id]:
                     panel_j = mesh.panels[id_j]
                     panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
                     
             elif panel_i.id in mesh.TrailingEdge["pressure side"]:
-                for id_j in mesh.wake_sheddingShells[panel_i.id]:
+                for id_j in mesh.wake_sheddingPanels[panel_i.id]:
                     panel_j = mesh.panels[id_j]
                     panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
         
@@ -184,13 +184,13 @@ class Steady_PanelMethod(PanelMethod):
                 A[id_i][id_j] = C[id_i][id_j]
                 
                 if id_j in mesh.TrailingEdge["suction side"]:
-                    for id_k in mesh.wake_sheddingShells[id_j]:
+                    for id_k in mesh.wake_sheddingPanels[id_j]:
                         panel_k = mesh.panels[id_k]
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
                         
                 elif id_j in mesh.TrailingEdge["pressure side"]:
-                    for id_k in mesh.wake_sheddingShells[id_j]:
+                    for id_k in mesh.wake_sheddingPanels[id_j]:
                         panel_k = mesh.panels[id_k]
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]

@@ -25,7 +25,29 @@ class Mesh:
         self.TrailingEdge = TrailingEdge
         self.wake_sheddingShells = wake_sheddingShells
         self.WingTip = WingTip
-    
+
+        
+        ### unsteady features ###
+        
+        self.origin = (0, 0, 0)  # body-fixed frame origin
+        
+        # position vector of body-fixed frame origin
+        self.ro = Vector(self.origin) 
+        
+        # velocity vector of body-fixed frame origin
+        self.Vo = Vector((0, 0, 0))
+        
+        # orientation of body-fixed frame : (yaw-angle, pitch-angle, roll-angle)
+        self.orientation = (0, 0, 0)
+        
+        # Rotation Matrix
+        self.R = np.array([[1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1]])
+                
+        # body-fixed frame's angular velocity vector
+        self.omega = Vector((0, 0, 0))              
+        
     def plot_shells(self, elevation=30, azimuth=-60):
         ax = plt.axes(projection='3d')
         ax.set_xlabel('x')
@@ -124,7 +146,37 @@ class Mesh:
                     break
         
         return near_root_shells_id
-                                      
+    
+    # unsteady features
+    def set_body_fixed_frame_origin(self, xo, yo, zo):
+        self.origin = (xo, yo, zo)
+        self.ro = Vector(self.origin)
+    
+    def set_body_fixed_frame_orientation(self, yaw, pitch, roll):
+        self.orientation = (yaw, pitch, roll)
+        
+        Rz = np.array([[np.cos(yaw), -np.sin(yaw), 0],
+                       [np.sin(yaw), np.cos(yaw), 0],
+                       [0, 0, 1]])
+        
+        Ry = np.array([[np.cos(pitch), 0, np.sin(pitch)],
+                       [0, 1, 0],
+                       [-np.sin(pitch), 0, np.cos(pitch)]])
+        
+        Rx = np.array([[1, 0, 1],
+                       [0, np.cos(roll), -np.sin(roll)],
+                       [0, np.sin(roll), np.cos(roll)]])
+        
+        R = Rz @ Ry @ Rx
+        
+        self.R = R       
+        
+    def set_origin_velocity(self, Vx, Vy, Vz):
+        self.Vo = Vector((Vx, Vy, Vz))
+    
+    def set_angular_velocity(self, omega_x, omega_y, omega_z):
+        self.omega = Vector((omega_x, omega_y, omega_z))
+    
                 
 class PanelMesh(Mesh):
     def __init__(self, nodes:list, shells:list,
@@ -138,7 +190,7 @@ class PanelMesh(Mesh):
         self.panels_num = None
         self.panel_neighbours = self.shell_neighbours
         self.panels_id = self.shells_id
-        self.wake_sheddingShells = self.wake_sheddingShells
+        self.wake_sheddingPanels = self.wake_sheddingShells
         self.CreatePanels()
     
     def CreatePanels(self):
@@ -285,6 +337,56 @@ class PanelMesh(Mesh):
         
         return near_root_panels
 
+
+    # unsteady features
+    
+    def plot_mesh_inertial_frame(self, elevation=30, azimuth=-60):
+        shells = []
+        vert_coords = []
+        
+        if self.shells_id:
+            body_panels = [self.panels[id] for id in self.shells_id["body"]]
+        else:
+            body_panels = self.panels
+        
+        for panel in body_panels:
+            shell=[]
+            for r_vertex in panel.r_vertex:
+                r = self.ro + r_vertex.transformation(self.R)
+                shell.append((r.x, r.y, r.z))
+                vert_coords.append([r.x, r.y, r.z])
+            shells.append(shell)
+        
+        
+        light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
+        face_normals = [panel.n.transformation(self.R) for panel in body_panels]
+        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        min = np.min(dot_prods)
+        max = np.max(dot_prods)
+        target_min = 0.2 # darker gray
+        target_max = 0.6 # lighter gray
+        shading = [(dot_prod - min)/(max - min) *(target_max - target_min) 
+                   + target_min
+                   for dot_prod in dot_prods]
+        facecolor = plt.cm.gray(shading)
+        
+        ax = plt.axes(projection='3d')
+        poly3 = Poly3DCollection(shells, facecolor=facecolor)
+        ax.add_collection(poly3)
+        ax.view_init(elevation, azimuth)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        vert_coords = np.array(vert_coords)
+        x, y, z = vert_coords[:, 0], vert_coords[:, 1], vert_coords[:, 2]
+        ax.set_xlim3d(x.min(), x.max())
+        ax.set_ylim3d(y.min(), y.max())
+        ax.set_zlim3d(z.min(), z.max())
+        set_axes_equal(ax)
+        
+        plt.show()
+           
          
 if __name__=='__main__':
     from matplotlib import pyplot as plt
@@ -294,3 +396,8 @@ if __name__=='__main__':
     sphere_mesh.plot_panels()
     sphere_mesh.plot_mesh()
     
+    yaw, pitch, roll = np.deg2rad(20), np.deg2rad(30), np.deg2rad(40)
+    sphere_mesh.set_body_fixed_frame_orientation(yaw, pitch, roll)
+    sphere_mesh.set_R2(yaw, pitch, roll)
+    print(sphere_mesh.R)
+    print(sphere_mesh.R2)
