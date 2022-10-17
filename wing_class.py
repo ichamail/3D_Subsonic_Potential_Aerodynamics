@@ -123,8 +123,9 @@ class Wing:
         
         nodes = []
         for i in range(nx):
-            for j in range(ny):                    
-                nodes.append([X[i][j], Y[i][j], Z[i][j]])
+            for j in range(ny):
+                node = (X[i][j], Y[i][j], Z[i][j])                    
+                nodes.append(node)
                
         shells = []
         if mesh_shell_type=="quadrilateral":
@@ -234,8 +235,9 @@ class Wing:
         
         nodes = []
         for i in range(nx):
-            for j in range(ny):                    
-                nodes.append([X[i][j], Y[i][j], Z[i][j]])
+            for j in range(ny):
+                node = (X[i][j], Y[i][j], Z[i][j])                    
+                nodes.append(node)
                 
         shells = []
                      
@@ -302,30 +304,30 @@ class Wing:
         x_first, y_first, z_first = x_chord[0], y_chord[0], z_chord[0]
         x_last, y_last, z_last = x_chord[-1], y_chord[-1], z_chord[-1]
         nodes = []                      
-        nodes.append([x_first, y_first, z_first])
+        nodes.append((x_first, y_first, z_first))
         for i in range(1, len(x_upper)-1):
-            nodes.append([x_tip_upper[i], y_tip_upper[i], z_tip_upper[i]])
+            nodes.append((x_tip_upper[i], y_tip_upper[i], z_tip_upper[i]))
             
-            nodes.append([x_chord[i], y_chord[i], z_chord[i]])
+            nodes.append((x_chord[i], y_chord[i], z_chord[i]))
             
-            nodes.append([x_tip_lower[i], y_tip_lower[i], z_tip_lower[i]])
+            nodes.append((x_tip_lower[i], y_tip_lower[i], z_tip_lower[i]))
                 
-        nodes.append([x_last, y_last, z_last])
+        nodes.append((x_last, y_last, z_last))
         
         # right wingtip
         x_first, y_first, z_first = x_chord[0], -y_chord[0], z_chord[0]
         x_last, y_last, z_last = x_chord[-1], -y_chord[-1], z_chord[-1]
                      
-        nodes.append([x_first, y_first, z_first])
+        nodes.append((x_first, y_first, z_first))
         for i in range(1, len(x_upper)-1):
             
-            nodes.append([x_tip_upper[i], -y_tip_upper[i], z_tip_upper[i]])
+            nodes.append((x_tip_upper[i], -y_tip_upper[i], z_tip_upper[i]))
             
-            nodes.append([x_chord[i], -y_chord[i], z_chord[i]])
+            nodes.append((x_chord[i], -y_chord[i], z_chord[i]))
             
-            nodes.append([x_tip_lower[i], -y_tip_lower[i], z_tip_lower[i]])
+            nodes.append((x_tip_lower[i], -y_tip_lower[i], z_tip_lower[i]))
                 
-        nodes.append([x_last, y_last, z_last])
+        nodes.append((x_last, y_last, z_last))
         
         # generate shells
         shells = []
@@ -490,8 +492,9 @@ class Wing:
         wake_nodes = []
                
         for i in range(nx):
-            for j in range(ny):                    
-                wake_nodes.append([X[i][j], Y[i][j], Z[i][j]])
+            for j in range(ny):
+                node = (X[i][j], Y[i][j], Z[i][j])                    
+                wake_nodes.append(node)
                 
         wake_shells = []
                                 
@@ -593,7 +596,8 @@ class Wing:
         wake_nodes = []
         for i in range(nx):
             for j in range(ny):
-                wake_nodes.append([X[i][j], Y[i][j], Z[i][j]])
+                node = (X[i][j], Y[i][j], Z[i][j])
+                wake_nodes.append(node)
                 
                      
         wake_shells = []
@@ -940,8 +944,8 @@ if __name__=="__main__":
     # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
     wing_mesh.plot_mesh(elevation=-150, azimuth=-120)
     
-    wing_mesh.set_body_fixed_frame_origin(0, 0, 0)
-    yaw, pitch, roll = np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
+    wing_mesh.set_body_fixed_frame_origin(1, 1, 1)
+    yaw, pitch, roll = np.deg2rad(0), np.deg2rad(0), np.deg2rad(40)
     wing_mesh.set_body_fixed_frame_orientation(yaw, pitch, roll)
     wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
     
