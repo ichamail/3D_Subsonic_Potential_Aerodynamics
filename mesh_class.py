@@ -10,6 +10,7 @@ from panel_class import Panel, triPanel, quadPanel
 class Mesh:
     
     def __init__(self, nodes:list, shells:list,
+                 nodes_id:dict = {},
                  shells_id:dict = {},
                  TrailingEdge:dict={},
                  wake_sheddingShells:dict={},
@@ -21,6 +22,7 @@ class Mesh:
 
         self.shell_neighbours = self.find_shell_neighbours()
         
+        self.nodes_id = nodes_id
         self.shells_id = shells_id
         self.TrailingEdge = TrailingEdge
         self.wake_sheddingShells = wake_sheddingShells
@@ -39,6 +41,8 @@ class Mesh:
         
         # orientation of body-fixed frame : (yaw-angle, pitch-angle, roll-angle)
         self.orientation = (0, 0, 0)
+        
+        self.theta = Vector(self.orientation)
         
         # Rotation Matrix
         self.R = np.array([[1, 0, 0],
@@ -152,8 +156,10 @@ class Mesh:
         self.origin = (xo, yo, zo)
         self.ro = Vector(self.origin)
     
-    def set_body_fixed_frame_orientation(self, yaw, pitch, roll):
-        self.orientation = (yaw, pitch, roll)
+    def set_body_fixed_frame_orientation(self, roll, pitch, yaw):
+        self.orientation = (roll, pitch, yaw)
+        
+        self.theta = Vector(self.orientation)
         
         Rz = np.array([[np.cos(yaw), -np.sin(yaw), 0],
                        [np.sin(yaw), np.cos(yaw), 0],
@@ -163,7 +169,7 @@ class Mesh:
                        [0, 1, 0],
                        [-np.sin(pitch), 0, np.cos(pitch)]])
         
-        Rx = np.array([[1, 0, 1],
+        Rx = np.array([[1, 0, 0],
                        [0, np.cos(roll), -np.sin(roll)],
                        [0, np.sin(roll), np.cos(roll)]])
         
@@ -171,21 +177,29 @@ class Mesh:
         
         self.R = R       
         
-    def set_origin_velocity(self, Vx, Vy, Vz):
-        self.Vo = Vector((Vx, Vy, Vz))
+    def set_origin_velocity(self, Vo:Vector):
+        self.Vo = Vo
     
-    def set_angular_velocity(self, omega_x, omega_y, omega_z):
-        self.omega = Vector((omega_x, omega_y, omega_z))
+    def set_angular_velocity(self, omega:Vector):
+        self.omega = omega
     
+    def move_body(self, dt):
+        
+        ro = self.ro + self.Vo*dt
+        theta = self.theta + self.omega*dt
+        
+        self.set_body_fixed_frame_origin(ro.x, ro.y, ro.z)
+        self.set_body_fixed_frame_orientation(theta.x, theta.y, theta.z)
                 
 class PanelMesh(Mesh):
     def __init__(self, nodes:list, shells:list,
+                 nodes_id:dict = {},
                  shells_id:dict = {},
                  TrailingEdge:dict={},
                  wake_sheddingShells:dict={},
                  WingTip:dict={}):
-        super().__init__(nodes, shells,
-                         shells_id, TrailingEdge, wake_sheddingShells, WingTip)
+        super().__init__(nodes, shells, nodes_id, shells_id,
+                         TrailingEdge, wake_sheddingShells, WingTip)
         self.panels = None
         self.panels_num = None
         self.panel_neighbours = self.shell_neighbours
@@ -198,8 +212,8 @@ class PanelMesh(Mesh):
         for shell_id, shell in enumerate(self.shells):
             vertex = []
             for node_id in shell:
-                [x, y, z] = self.nodes[node_id]
-                vertex.append(Vector((x, y, z)))
+                node = self.nodes[node_id]
+                vertex.append(Vector(node))
 
             if len(vertex) == 3:
                 panels.append(triPanel(vertex[0], vertex[1], vertex[2]))
@@ -378,6 +392,102 @@ class PanelMesh(Mesh):
         ax.set_ylabel('Y')
         ax.set_zlabel('Z')
 
+        
+        
+        ex = Vector((1, 0, 0))
+        ey = Vector((0, 1, 0))
+        ez = Vector((0, 0, 1))
+        
+        ax.quiver(0, 0, 0,
+                  ex.x, ex.y, ex.z,
+                  color='b', label='ex')
+        ax.quiver(0, 0, 0,
+                  ey.x, ey.y, ey.z,
+                  color='g', label='ey')
+        ax.quiver(0, 0, 0,
+                  ez.x, ez.y, ez.z,
+                  color='r', label='ez')
+        
+        vert_coords.append([ex.x, ex.y, ex.z])
+        vert_coords.append([ey.x, ey.y, ey.z])
+        vert_coords.append([ez.x, ez.y, ez.z])
+        
+        vert_coords = np.array(vert_coords)
+        x, y, z = vert_coords[:, 0], vert_coords[:, 1], vert_coords[:, 2]
+        ax.set_xlim3d(x.min(), x.max())
+        ax.set_ylim3d(y.min(), y.max())
+        ax.set_zlim3d(z.min(), z.max())
+        
+        set_axes_equal(ax)
+        
+        plt.show()
+    
+    def plot_mesh(self, elevation=30, azimuth=-60):
+        shells = []
+        vert_coords = []
+        
+        if self.shells_id:
+            body_panels = [self.panels[id] for id in self.shells_id["body"]]
+        else:
+            body_panels = self.panels
+        
+        for panel in body_panels:
+            shell=[]
+            for r_vertex in panel.r_vertex:
+                shell.append((r_vertex.x, r_vertex.y, r_vertex.z))
+                vert_coords.append([r_vertex.x, r_vertex.y, r_vertex.z])
+            shells.append(shell)
+        
+        
+        light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
+        face_normals = [panel.n for panel in body_panels]
+        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        min = np.min(dot_prods)
+        max = np.max(dot_prods)
+        target_min = 0.2 # darker gray
+        target_max = 0.6 # lighter gray
+        shading = [(dot_prod - min)/(max - min) *(target_max - target_min) 
+                   + target_min
+                   for dot_prod in dot_prods]
+        facecolor = plt.cm.gray(shading)
+        
+        ax = plt.axes(projection='3d')
+        poly3 = Poly3DCollection(shells, facecolor=facecolor)
+        ax.add_collection(poly3)
+        ax.view_init(elevation, azimuth)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+        
+        
+        ro = -self.ro  # ro: r_oo' -> r_o'o = -roo'  
+        ex = Vector((1, 0, 0))
+        ey = Vector((0, 1, 0))
+        ez = Vector((0, 0, 1))
+        
+        ro = ro.transformation(self.R.T)
+        ex = ex.transformation(self.R.T)
+        ey = ey.transformation(self.R.T)
+        ez = ez.transformation(self.R.T)
+        
+        
+        
+        ax.quiver(ro.x, ro.y, ro.z,
+                  ex.x, ex.y, ex.z,
+                  color='b', label='ex')
+        ax.quiver(ro.x, ro.y, ro.z,
+                  ey.x, ey.y, ey.z,
+                  color='g', label='ey')
+        ax.quiver(ro.x, ro.y, ro.z,
+                  ez.x, ez.y, ez.z,
+                  color='r', label='ez')
+        
+        
+        
+        vert_coords.append([(ro+ex).x, (ro+ex).y, (ro+ex).z])
+        vert_coords.append([(ro+ey).x, (ro+ey).y, (ro+ey).z])
+        vert_coords.append([(ro+ez).x, (ro+ez).y, (ro+ez).z])
+
         vert_coords = np.array(vert_coords)
         x, y, z = vert_coords[:, 0], vert_coords[:, 1], vert_coords[:, 2]
         ax.set_xlim3d(x.min(), x.max())
@@ -396,8 +506,4 @@ if __name__=='__main__':
     sphere_mesh.plot_panels()
     sphere_mesh.plot_mesh()
     
-    yaw, pitch, roll = np.deg2rad(20), np.deg2rad(30), np.deg2rad(40)
-    sphere_mesh.set_body_fixed_frame_orientation(yaw, pitch, roll)
-    sphere_mesh.set_R2(yaw, pitch, roll)
-    print(sphere_mesh.R)
-    print(sphere_mesh.R2)
+    

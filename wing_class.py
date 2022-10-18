@@ -628,7 +628,8 @@ class Wing:
         return wake_nodes, wake_shells
     
     def generate_wingMesh(self, num_x_bodyShells:int, num_y_Shells:int,
-                          mesh_shell_type:str="quadrilateral"):
+                          mesh_shell_type:str="quadrilateral",
+                          return_WingTip=False):
         
         # body_nodes, body_shells = self.generate_bodyMesh2(num_x_bodyShells,
         #                                                  num_y_Shells,
@@ -649,15 +650,23 @@ class Wing:
         nodes = [*wingTip_nodes, *body_nodes]
         shells = [*wingTip_shells, *body_shells]
         
+        if return_WingTip:
+            WingTip = {"left": [id for id in range(int(len(wingTip_shells)/2))],
+                       "right" : [id for id
+                                  in range(int(len(wingTip_shells)/2),
+                                                 len(wingTip_shells))] }
+            
+            return nodes, shells, WingTip
+        
         return nodes, shells
     
     def generate_mesh(self, num_x_bodyShells:int,
                       num_x_wakeShells:int, num_y_Shells:int,
-                      mesh_shell_type:str="quadrilateral"):
+                      mesh_shell_type:str="quadrilateral",
+                      return_id_dicts=False):
         
-        wing_nodes, wing_shells = self.generate_wingMesh(num_x_bodyShells,
-                                                         num_y_Shells,
-                                                         mesh_shell_type)
+        wing_nodes, wing_shells, WingTip = self.generate_wingMesh(
+            num_x_bodyShells, num_y_Shells, mesh_shell_type,return_WingTip=True)
         
         wake_nodes, wake_shells = self.generate_wakeMesh(num_x_wakeShells,
                                                          num_y_Shells,
@@ -671,19 +680,31 @@ class Wing:
         nodes = [*wing_nodes, *wake_nodes]
         shells = [*wing_shells, *wake_shells]
         
+        
+        if return_id_dicts:
+            nodes_id = {"body": [id for id in range(len(wing_nodes))],
+                        "wake": [id for id in
+                                 range(len(wing_nodes), len(nodes))]}
+        
+            shells_id = {"body": [id for id in range(len(wing_shells))],
+                         "wake": [id for id in
+                                  range(len(wing_shells), len(shells))]}
+            
+            return nodes, shells, nodes_id, shells_id, WingTip
+        
         return nodes, shells
            
     def generate_mesh2(self, V_fs:Vector, num_x_bodyShells,
                        num_x_wakeShells, num_y_Shells,
-                       mesh_shell_type:str="quadrilateral"):
+                       mesh_shell_type:str="quadrilateral",
+                       return_id_dicts=False):
         
         """
         uses generate_wakeMesh2 method for wake meshing
         """
         
-        wing_nodes, wing_shells = self.generate_wingMesh(num_x_bodyShells,
-                                                         num_y_Shells,
-                                                         mesh_shell_type)
+        wing_nodes, wing_shells, WingTip = self.generate_wingMesh(
+            num_x_bodyShells, num_y_Shells, mesh_shell_type, return_WingTip=True)
         
         wake_nodes, wake_shells = self.generate_wakeMesh2(V_fs,
                                                           num_x_wakeShells,
@@ -697,6 +718,17 @@ class Wing:
                 
         nodes = [*wing_nodes,*wake_nodes]
         shells = [*wing_shells,*wake_shells]
+        
+        if return_id_dicts:
+            nodes_id = {"body": [id for id in range(len(wing_nodes))],
+                        "wake": [id for id in
+                                 range(len(wing_nodes), len(nodes))]}
+        
+            shells_id = {"body": [id for id in range(len(wing_shells))],
+                         "wake": [id for id in
+                                  range(len(wing_shells), len(shells))]}
+            
+            return nodes, shells, nodes_id, shells_id, WingTip
         
         return nodes, shells
          
@@ -727,45 +759,8 @@ class Wing:
         nodes = [*body_nodes, *wake_nodes]
         shells = [*body_shells, *wake_shells]
         
-        return nodes, shells
-
-    @staticmethod
-    def give_shells_id_dict(num_x_bodyShells, num_x_wakeShells,
-                            num_y_Shells, mesh_shell_type="quadrilateral"):
-        
-        # x shells on Suction side + x shells on Pressure side
-        num_x_bodyShells = 2 * num_x_bodyShells
-        # ny shells on positive y axis + y shells on negative y axis
-        num_y_Shells = 2 * num_y_Shells
-        
-        if mesh_shell_type == "quadrilateral":
-            num_UpperLower_Shells = num_x_bodyShells * num_y_Shells
-            num_wing_tip_Shells = 2 * num_x_bodyShells
-            num_bodyShells = num_UpperLower_Shells + num_wing_tip_Shells
-            num_wakeShells = num_x_wakeShells * num_y_Shells
-            
-        elif mesh_shell_type == "triangular":
-            num_UpperLower_Shells = num_x_bodyShells * num_y_Shells * 2
-            num_wing_tip_Shells = 4 * num_x_bodyShells - 8
-            num_bodyShells = num_UpperLower_Shells + num_wing_tip_Shells
-            num_wakeShells = num_x_wakeShells * num_y_Shells * 2
-            
-        
-        
-        bodyShells_id_list = []
-        wakeShells_id_list = []
-                
-        for id in range(num_bodyShells + num_wakeShells):
-            
-            if id < (num_bodyShells):
-                bodyShells_id_list.append(id)
-            else:
-                wakeShells_id_list.append(id)
-
-        shells_id_dict = {"body": bodyShells_id_list,
-                          "wake": wakeShells_id_list}
-        return shells_id_dict
-        
+        return nodes, shells       
+      
     @staticmethod
     def give_TrailingEdge_Shells_id(num_x_bodyShells:int, num_y_Shells:int,
                                     mesh_shell_type:str="quadrilateral"):
@@ -827,33 +822,6 @@ class Wing:
         
         return wake_sheddingShells_id
 
-    @staticmethod
-    def give_WingTip_Shells_id(num_x_bodyShells:int,
-                               mesh_shell_type:str="quadrilateral"):
-        
-        # x shells on Suction side + x shells on Pressure side
-        num_x_bodyShells = 2 * num_x_bodyShells 
-
-        if mesh_shell_type == "quadrilateral":
-            c1 = 0
-            c2 = 1    
-        elif mesh_shell_type == "triangular":
-            c1 = 1
-            c2 = 2
-        num_WingTip_Shells = 2*num_x_bodyShells * c2 - 8*c1
-        num_leftWingTip_shells = int(num_WingTip_Shells/2)
-        
-        leftWingTip_Shell_ids = []
-        rightWingTip_Shell_ids = []
-        for id in range(num_WingTip_Shells):
-            if id < num_leftWingTip_shells:
-                leftWingTip_Shell_ids.append(id)
-            else:
-                rightWingTip_Shell_ids.append(id)
-        
-        WingTip = {"left":leftWingTip_Shell_ids, "right":rightWingTip_Shell_ids}
-        return WingTip
-    
     @staticmethod
     def sweep_airfoil_section(x_coords, span_location, sweep_angle):
         x_coords = x_coords + abs(span_location) * np.tan(sweep_angle)
@@ -942,12 +910,24 @@ if __name__=="__main__":
     wing_mesh = PanelMesh(wing_nodes, wing_shells)
     # wing_mesh.plot_shells(elevation=-150, azimuth=-120)
     # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
-    wing_mesh.plot_mesh(elevation=-150, azimuth=-120)
     
-    wing_mesh.set_body_fixed_frame_origin(1, 1, 1)
-    yaw, pitch, roll = np.deg2rad(0), np.deg2rad(0), np.deg2rad(40)
-    wing_mesh.set_body_fixed_frame_orientation(yaw, pitch, roll)
+    
+    wing_mesh.set_body_fixed_frame_origin(0, 0, 0)
+    roll, pitch, yaw = np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
+    wing_mesh.set_body_fixed_frame_orientation(roll, pitch, yaw)
+    
+    wing_mesh.plot_mesh(elevation=-150, azimuth=-120)
     wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
     
+    omega = Vector((np.deg2rad(10), 0, 0))
+    Vo = Vector((-1, 0, 0))
+    dt = 1
+    wing_mesh.set_angular_velocity(omega)
+    wing_mesh.set_origin_velocity(Vo)
+    for i in range(5):
+        wing_mesh.move_body(dt)
+        wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
+        
+        wing_mesh.plot_mesh(elevation=-150, azimuth=-120)
 
     pass
