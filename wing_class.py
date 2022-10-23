@@ -911,23 +911,33 @@ if __name__=="__main__":
     # wing_mesh.plot_shells(elevation=-150, azimuth=-120)
     # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
     
+    nodes = [(0, -1, 0), (3, -1, 0), (3, 1, 0), (0, 1, 0)]
+    wing_mesh.nodes = wing_mesh.nodes + nodes
+    wing_mesh.node_num = wing_mesh.node_num + 4
+    
+    
     
     wing_mesh.set_body_fixed_frame_origin(0, 0, 0)
     roll, pitch, yaw = np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
     wing_mesh.set_body_fixed_frame_orientation(roll, pitch, yaw)
     
-    wing_mesh.plot_mesh(elevation=-150, azimuth=-120)
+    wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120)
     wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
     
     omega = Vector((np.deg2rad(10), 0, 0))
     Vo = Vector((-1, 0, 0))
+    V_wind = Vector((0, 0, 0))
     dt = 1
     wing_mesh.set_angular_velocity(omega)
     wing_mesh.set_origin_velocity(Vo)
+    
     for i in range(5):
+        
+        wing_mesh.move_nodes([481, 480, 479, 478], V_wind, dt)
         wing_mesh.move_body(dt)
         wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
         
-        wing_mesh.plot_mesh(elevation=-150, azimuth=-120)
+        wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120)
 
+    
     pass

@@ -1,5 +1,5 @@
 from airfoil_class import Airfoil
-from mesh_class import PanelMesh
+from mesh_class import PanelAeroMesh
 from wing_class import Wing
 from wing_mesh_generator import generate_WingPanelMesh
 from panel_method_class import PanelMethod, Steady_Wakeless_PanelMethod
@@ -19,7 +19,7 @@ num_y_Shells = 10
 
 nodes, shells = wing.generate_wingMesh(num_x_bodyShells, num_y_Shells)
 TrailingEdge = wing.give_TrailingEdge_Shells_id(num_x_bodyShells, num_y_Shells)
-wing_mesh = PanelMesh(nodes, shells, TrailingEdge=TrailingEdge)
+wing_mesh = PanelAeroMesh(nodes, shells, TrailingEdge=TrailingEdge)
 wing_mesh.free_TrailingEdge()
 
 # wing_mesh.plot_panels(elevation=-150, azimuth=-120)

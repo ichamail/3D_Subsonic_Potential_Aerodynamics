@@ -2,7 +2,7 @@ import numpy as np
 from vector_class import Vector
 from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff, influence_coeff
 from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
-from mesh_class import PanelMesh
+from mesh_class import PanelMesh, PanelAeroMesh
 from Algorithms import LeastSquares
 
 
@@ -105,7 +105,7 @@ class Steady_PanelMethod(PanelMethod):
     def __init__(self, V_freestream):
         super().__init__(V_freestream)
     
-    def solve(self, mesh:PanelMesh):
+    def solve(self, mesh:PanelAeroMesh):
             
         body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
         
@@ -158,7 +158,7 @@ class Steady_PanelMethod(PanelMethod):
             panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
 
     @staticmethod
-    def influence_coeff_matrices(mesh:PanelMesh):
+    def influence_coeff_matrices(mesh:PanelAeroMesh):
         
         # Compute Influence coefficient matrices
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
