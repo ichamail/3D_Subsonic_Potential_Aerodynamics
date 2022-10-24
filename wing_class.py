@@ -643,18 +643,23 @@ class Wing:
                                                             num_x_bodyShells,
                                                             mesh_shell_type)
                 
-        for id, body_shell in enumerate(body_shells):
-            for j in range(len(body_shell)):
-                body_shells[id][j] = body_shells[id][j] + len(wingTip_nodes)
+        for id, wingTip_shell in enumerate(wingTip_shells):
+            for j in range(len(wingTip_shell)):
+                wingTip_shells[id][j] = wingTip_shells[id][j] + len(body_nodes)
                 
-        nodes = [*wingTip_nodes, *body_nodes]
-        shells = [*wingTip_shells, *body_shells]
+        nodes = [*body_nodes, *wingTip_nodes]
+        shells = [*body_shells, *wingTip_shells]
         
         if return_WingTip:
-            WingTip = {"left": [id for id in range(int(len(wingTip_shells)/2))],
-                       "right" : [id for id
-                                  in range(int(len(wingTip_shells)/2),
-                                                 len(wingTip_shells))] }
+            id_start_left = len(body_shells)
+            id_end_left = id_start_left + int(len(wingTip_shells)/2) - 1
+            id_start_right = id_end_left + 1
+            id_end_right = id_start_right  + int(len(wingTip_shells)/2) - 1
+            
+            WingTip = {"left" : [id for id in range(id_start_left,
+                                                   id_end_left+1)],
+                       "right" : [id for id in range(id_start_right,
+                                                     id_end_right + 1)] }
             
             return nodes, shells, WingTip
         
@@ -780,6 +785,7 @@ class Wing:
         
         # num_WingTipShells = num_x_bodyShells * c2 - 4*c1
         num_WingTipShells = 2*num_x_bodyShells * c2 - 8*c1
+        num_WingTipShells = 0
         
         SS_TE_shell_id_list = []
         PS_TE_shell_id_list = []
@@ -801,20 +807,27 @@ class Wing:
                                  mesh_shell_type:str="quadrilateral"):
         
         if mesh_shell_type == "quadrilateral":
-            c=1
+            c1 = 0
+            c2 = 1
+             
         elif mesh_shell_type == "triangular":
-            c=2
+            c1 = 1
+            c2 = 2
         
         num_y_Shells = len(TrailingEdge["suction side"])
-        last_id = TrailingEdge["pressure side"][-1] + 1
+        num_x_bodyShells = (TrailingEdge["pressure side"][-1] + 1)/num_y_Shells
+        num_x_bodyShells = int(num_x_bodyShells/c2)
+        num_WingTipShells = 2*num_x_bodyShells * c2 - 8*c1
+        
+        last_id = TrailingEdge["pressure side"][-1] + 1 + num_WingTipShells
         
         wake_sheddingShells_id = {}
         for j in range(num_y_Shells):
             id_list = []
             for i in range(num_x_wakeShells):
-                for k in range(c):
-                    id = last_id + j + k
-                    id_list.append(id + c*num_y_Shells*i)
+                for k in range(c2):
+                    id = last_id + j + k 
+                    id_list.append(id + c2*num_y_Shells*i)
             last_id = last_id + k
             
             wake_sheddingShells_id[TrailingEdge["suction side"][j]] = id_list
