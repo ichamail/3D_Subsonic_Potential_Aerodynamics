@@ -293,57 +293,65 @@ class AeroMesh(Mesh):
 
 
     ### unsteady features  ###
-    def shed_wake_nodes(self, v_rel, dt, wake_shed_factor=1):
-        
+    def initialize_wake_nodes(self):
         num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
         last_body_node_id = self.nodes_id["body"][-1]
         first_wake_node_id = last_body_node_id + 1
-        start_id = first_wake_node_id - num_TrailingEdge_nodes
         
-        print(self.nodes_id["wake"])
-        if self.nodes_id["wake"] == []:
-            
-            for id in range(start_id, first_wake_node_id):
-                print(self.nodes[id])
+        for id in range(num_TrailingEdge_nodes):
                 self.nodes.append(self.nodes[id])
-                id = num_TrailingEdge_nodes + id
+                id = first_wake_node_id + id
                 self.nodes_id["wake"].append(id)
-            
-        print(self.nodes_id["wake"])    
-        self.move_nodes(self.nodes_id["wake"], v_rel, dt*wake_shed_factor)
-             
-        for id in range(start_id, first_wake_node_id):
+    
+    def add_wakeNodes(self):
+        
+        num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
+        for id in range(num_TrailingEdge_nodes):
             self.nodes.append(self.nodes[id])
             id = self.nodes_id["wake"][-1] + 1
             self.nodes_id["wake"].append(id)
         
-        print(self.nodes_id["wake"])
+    def add_wakeShells(self):
         
+        num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
         first_id = self.nodes_id["wake"][-1] - 2*num_TrailingEdge_nodes + 1 
         ny = num_TrailingEdge_nodes
-        for j in range(1):
-            for i in range(num_TrailingEdge_nodes-1):
-                shell = [(i+j*ny) + first_id,
-                         (i+j*ny)+1 + first_id,
-                         ((i+j*ny)+1 + ny) + first_id,
-                         ((i+j*ny)+ny) + first_id]
-                
-                self.shells.append(shell)
-                print(shell)
-                if self.shells_id["wake"] == []:
-                    id = self.shells_id["body"][-1] + 1
-                else:
-                    id = self.shells_id["wake"][-1] + 1
-                
-                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
-                self.shells_id["wake"].append(id)
-                 
-                 
-                
+        for i in range(ny-1):
             
+            shell = [i + first_id,
+                     (i + 1) + first_id,
+                     (i + 1 + ny) + first_id,
+                     (i + ny) + first_id]
+            
+            self.shells.append(shell)
+            
+            if self.shells_id["wake"] == []:
+                id = self.shells_id["body"][-1] + 1
+            else:
+                id = self.shells_id["wake"][-1] + 1
+            
+            # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+            self.shells_id["wake"].append(id)
+            
+            
+            value_list_id = id
+            
+            key_id = self.TrailingEdge["pressure side"][i]
+            self.wake_sheddingShells[key_id].append(value_list_id)
+            
+            key_id = self.TrailingEdge["suction side"][i]
+            self.wake_sheddingShells[key_id].append(value_list_id)        
         
-    
+    def shed_wakeNodes(self, v_rel, dt, wake_shed_factor=1):
+                
+        if self.nodes_id["wake"] == []:
+            self.initialize_wake_nodes()
                       
+        self.move_nodes(self.nodes_id["wake"], v_rel, dt*wake_shed_factor)    
+        self.add_wakeNodes()
+        self.add_wakeShells()
+        
+                          
 class PanelMesh(Mesh):
     def __init__(self, nodes:list, shells:list):
         super().__init__(nodes, shells)
@@ -695,58 +703,36 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
 
     
     ### unsteady features ###
+    
+    def add_wakePanels(self):
+                
+        num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
+        id_end = self.shells_id["wake"][-1]
+        id_start = id_end - num_TrailingEdge_panels + 1
+                
+        for shell_id in range(id_start, id_end+1):
+            vertex = []
+            for node_id in self.shells[shell_id]:
+                node = self.nodes[node_id]
+                vertex.append(Vector(node))
+            
+            if len(vertex) == 3:
+                self.panels.append(triPanel(vertex[0], vertex[1], vertex[2]))
+            elif len(vertex) == 4:
+                self.panels.append(quadPanel(vertex[0], vertex[1],
+                                        vertex[2], vertex[3]))
+            
+            self.panels[-1].id = shell_id
+    
     def shed_wakePanels(self, v_rel, dt, wake_shed_factor=1):
-        print(self.nodes_id)
-        
         if self.panels_id["wake"] == []:
-            self.shed_wake_nodes(v_rel, dt, wake_shed_factor)
-            
-            num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
-            id_end = self.shells_id["wake"][-1]
-            id_start = id_end - num_TrailingEdge_panels + 1
-                    
-            for shell_id in range(id_start, id_end+1):
-                vertex = []
-                for node_id in self.shells[shell_id]:
-                    print(node_id)
-                    node = self.nodes[node_id]
-                    vertex.append(Vector(node))
-                
-                if len(vertex) == 3:
-                    self.panels.append(triPanel(vertex[0], vertex[1], vertex[2]))
-                elif len(vertex) == 4:
-                    self.panels.append(quadPanel(vertex[0], vertex[1],
-                                            vertex[2], vertex[3]))
-                
-                self.panels[-1].id = shell_id
-        
+            self.shed_wakeNodes(v_rel, dt, wake_shed_factor)
+            self.add_wakePanels()
         else:
-            
             self.move_panels(self.panels_id["wake"], v_rel, dt*wake_shed_factor)
-            
-            self.shed_wake_nodes(v_rel, dt, wake_shed_factor)        
-            
-            
-            num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
-            id_end = self.shells_id["wake"][-1]
-            id_start = id_end - num_TrailingEdge_panels + 1
-                    
-            for shell_id in range(id_start, id_end+1):
-                vertex = []
-                for node_id in self.shells[shell_id]:
-                    print(node_id)
-                    node = self.nodes[node_id]
-                    vertex.append(Vector(node))
-                
-                if len(vertex) == 3:
-                    self.panels.append(triPanel(vertex[0], vertex[1], vertex[2]))
-                elif len(vertex) == 4:
-                    self.panels.append(quadPanel(vertex[0], vertex[1],
-                                            vertex[2], vertex[3]))
-                
-                self.panels[-1].id = shell_id
-
-        
+            self.shed_wakeNodes(v_rel, dt, wake_shed_factor)        
+            self.add_wakePanels()
+    
     def plot_mesh_inertial_frame(self, elevation=30, azimuth=-60,
                                  plot_wake=False):
         body_shells = []
