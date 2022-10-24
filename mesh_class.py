@@ -547,26 +547,8 @@ class PanelMesh(Mesh):
         vert_coords.append([ex.x, ex.y, ex.z])
         vert_coords.append([ey.x, ey.y, ey.z])
         vert_coords.append([ez.x, ez.y, ez.z])
-        
-        
-        
-        node_num = self.node_num
-        x, y, z = [], [], []
-        for node_id in [node_num-1, node_num-2,
-                        node_num-3, node_num-4, node_num-1]:
-            node = self.nodes[node_id]
-            r = self.ro + Vector(node).transformation(self.R)
-            x.append(r.x)
-            y.append(r.y)
-            z.append(r.z)
-        
-            vert_coords.append([r.x, r.y, r.z])
-            
-        ax.plot3D(x, y, z, color='r')
-        
-        
-        
-        
+       
+       
         vert_coords = np.array(vert_coords)
         x, y, z = vert_coords[:, 0], vert_coords[:, 1], vert_coords[:, 2]
         ax.set_xlim3d(x.min(), x.max())
@@ -639,22 +621,7 @@ class PanelMesh(Mesh):
         vert_coords.append([(ro+ex).x, (ro+ex).y, (ro+ex).z])
         vert_coords.append([(ro+ey).x, (ro+ey).y, (ro+ey).z])
         vert_coords.append([(ro+ez).x, (ro+ez).y, (ro+ez).z])
-              
-        
-        node_num = self.node_num
-        x, y, z = [], [], []
-        for node_id in [node_num-1, node_num-2,
-                        node_num-3, node_num-4, node_num-1]:
-            node = self.nodes[node_id]
-            x.append(node[0])
-            y.append(node[1])
-            z.append(node[2])
-        
-            vert_coords.append([node[0], node[1], node[2]])
-            
-        ax.plot3D(x, y, z, color='r')
-        
-        
+                    
         
         vert_coords = np.array(vert_coords)
         x, y, z = vert_coords[:, 0], vert_coords[:, 1], vert_coords[:, 2]
