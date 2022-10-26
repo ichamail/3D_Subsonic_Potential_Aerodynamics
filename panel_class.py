@@ -190,8 +190,21 @@ class Panel:
         self.set_r_vertex_local()
         self.set_char_length()
         self.set_area()
+
+    def update_vertices_location(self, vertex_list):
+        for i in range(self.num_vertices):
+            self.r_vertex[i] = vertex_list[i]
         
+        self.set_centroid()
+        self.set_n() 
+        self.set_l() 
+        self.set_m()
+        self.set_R()
+        self.set_r_vertex_local()
+        self.set_char_length()
+        self.set_area()
    
+    
 class quadPanel(Panel):
     def __init__(self, vertex0:Vector, vertex1:Vector,
                  vertex2:Vector, vertex3:Vector):
@@ -208,6 +221,7 @@ class quadPanel(Panel):
         self.set_r_vertex_local()
         self.set_char_length()
         self.set_area()
+
         
 class triPanel(Panel):
     def __init__(self, vertex0:Vector, vertex1:Vector,

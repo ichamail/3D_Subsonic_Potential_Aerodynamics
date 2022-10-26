@@ -213,7 +213,6 @@ class Mesh:
         dr = dr.transformation(self.R.T)
         r = r+dr
         
-        
         self.nodes[node_id] = (r.x, r.y, r.z)
 
     def move_nodes(self, node_id_list, v_rel, dt):
@@ -221,6 +220,20 @@ class Mesh:
         for node_id in node_id_list:
             self.move_node(node_id, v_rel, dt)
     
+    def convect_node(self, node_id, velocity:Vector, dt):
+        
+        node = self.nodes[node_id]
+        r = Vector(node)
+        dr = velocity * dt
+        r = r + dr
+        self.nodes[node_id] = (r.x, r.y, r.z)
+    
+    def convect_nodes(self, node_id_list, velocity_list, dt):
+        for i in range(len(node_id_list)):
+            node_id = node_id_list[i]
+            velocity = velocity_list[i]
+            self.convect_node(node_id, velocity, dt)
+        
         
 class AeroMesh(Mesh):
     
@@ -342,7 +355,7 @@ class AeroMesh(Mesh):
             key_id = self.TrailingEdge["suction side"][i]
             self.wake_sheddingShells[key_id].append(value_list_id)        
         
-    def shed_wakeNodes(self, v_rel, dt, wake_shed_factor=1):
+    def shed_wake(self, v_rel, dt, wake_shed_factor=1):
                 
         if self.nodes_id["wake"] == []:
             self.initialize_wake_nodes()
@@ -350,6 +363,21 @@ class AeroMesh(Mesh):
         self.move_nodes(self.nodes_id["wake"], v_rel, dt*wake_shed_factor)    
         self.add_wakeNodes()
         self.add_wakeShells()
+
+    def nodes_to_convect(self):
+        num_TrailingEdge_nodes = len(self.TrailingEdge["suction side"]) + 1
+        id_start = self.nodes_id["wake"][0]
+        id_end = self.nodes_id["wake"][-1] - num_TrailingEdge_nodes
+        
+        node_id_list = []
+        for id in range(id_start, id_end+1):
+            node_id_list.append(id)
+        
+        return node_id_list
+            
+    def convect_wake(self, velocity_list, dt):
+        node_id_list = self.nodes_to_convect()
+        self.convect_nodes(node_id_list, velocity_list, dt)
         
                           
 class PanelMesh(Mesh):
@@ -691,15 +719,39 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             
             self.panels[-1].id = shell_id
     
-    def shed_wakePanels(self, v_rel, dt, wake_shed_factor=1):
+    def shed_wake(self, v_rel, dt, wake_shed_factor=1):
         if self.panels_id["wake"] == []:
-            self.shed_wakeNodes(v_rel, dt, wake_shed_factor)
+            super().shed_wake(v_rel, dt, wake_shed_factor)
             self.add_wakePanels()
         else:
             self.move_panels(self.panels_id["wake"], v_rel, dt*wake_shed_factor)
-            self.shed_wakeNodes(v_rel, dt, wake_shed_factor)        
+            super().shed_wake(v_rel, dt, wake_shed_factor)        
             self.add_wakePanels()
-    
+   
+    def convect_wake(self, induced_velocity_function, dt):
+        
+        # create velocity list 
+        node_id_list = self.nodes_to_convect()
+        velocity_list = []
+        for node_id in node_id_list:
+            r_p = Vector(self.nodes[node_id])
+            induced_velocity = induced_velocity_function(r_p, self.panels)
+            velocity_list.append(induced_velocity)
+        
+        # convect wake
+        super().convect_wake(velocity_list, dt)
+        
+        # update panel vertices' location
+        for shell_id in self.shells_id["wake"]:
+            shell = self.shells[shell_id]          
+            vertex_list = []
+            for node_id in shell:
+                node = self.nodes[node_id]
+                vertex = Vector(node)
+                vertex_list.append(vertex)
+            
+            self.panels[shell_id].update_vertices_location(vertex_list)
+           
     def plot_mesh_inertial_frame(self, elevation=30, azimuth=-60,
                                  plot_wake=False):
         body_shells = []

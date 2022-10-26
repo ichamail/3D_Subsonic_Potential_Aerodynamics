@@ -4,7 +4,8 @@ from airfoil_class import Airfoil
 from wing_class import Wing
 from mesh_class import PanelMesh, PanelAeroMesh
 from wing_mesh_generator import generate_WingPanelMesh
-      
+
+     
 root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
 tip_airfoil = Airfoil(name="naca0012_new", chord_length=1)
 wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
@@ -13,13 +14,6 @@ wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
 num_x_bodyShells = 4
 num_y_Shells = 2
 num_x_wakeShells = 0
-    
-# wing_nodes, wing_shells = wing.generate_wingMesh(num_x_bodyShells,
-#                                                     num_y_Shells,
-#                                                     "quadrilateral")    
-# wing_mesh = PanelMesh(wing_nodes, wing_shells)
-
-
 
 
 wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells, num_x_wakeShells,
@@ -43,14 +37,19 @@ dt = 1
 wing_mesh.set_angular_velocity(omega)
 wing_mesh.set_origin_velocity(Vo)
 
+induced_velocity_function = lambda r_p, panels : Vector((0, 0, -r_p.x * 0.1))
+
 for i in range(5):
     
     wing_mesh.move_body(dt)
     wing_mesh.shed_wake(V_wind, dt)
+    wing_mesh.convect_wake(induced_velocity_function, dt)
     # wing_mesh.plot_shells(elevation=-150, azimuth=-120)
     # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
     wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
                                        plot_wake=True)    
     wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
                                         plot_wake=True)
+    
+  
     
