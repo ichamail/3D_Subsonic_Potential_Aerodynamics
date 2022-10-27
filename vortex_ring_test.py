@@ -91,7 +91,6 @@ for i in range(nx):
             u[i, j, k] = V[i, j, k].x
             v[i, j, k] = V[i, j, k].y
             w[i, j, k] = V[i, j, k].z
-            print(V[i, j, k])
 
 ax.quiver(X, Y, Z, u, v, w, normalize=True, color='m')
 

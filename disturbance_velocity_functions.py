@@ -175,7 +175,8 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             denominator = (
                 r_a * r_b
                 * (r_a*r_b + ( (r.x - r_vertex[a].x) * (r.x - r_vertex[b].x)
-                              + (r.y - r_vertex[a].y) * (r.y - r_vertex[b].y))
+                              + (r.y - r_vertex[a].y) * (r.y - r_vertex[b].y)
+                              + r.z**2)
                    )
                 )
             
@@ -183,8 +184,12 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
                            - (r.x - r_vertex[a].x) * (r.y - r_vertex[b].y))
                          * (r_a + r_b) )
             
-            w = w + numerator/denominator
-                
+            if denominator == 0:
+                pass
+            else:
+                w = w + numerator/denominator
+            
+               
         w = 1/(4*np.pi) * panel.mu * w
         
     else:
