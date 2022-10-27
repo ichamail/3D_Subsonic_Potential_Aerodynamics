@@ -202,17 +202,31 @@ class Steady_PanelMethod(PanelMethod):
 
 class UnSteady_PanelMethod(PanelMethod):
     
-    def __init__(self, V_wind):
+    def __init__(self, V_wind=Vector((0, 0, 0))):
         # V_wind: wind velocity observed from inertial frame of reference F
-        super().__init__(V_wind)
+        
+        super().__init__(V_freestream=Vector((0, 0, 0)))
+        self.V_wind = V_wind
+        self.set_V_fs(Vo=Vector((0, 0, 0)), V_wind=self.V_wind)
         self.wake_shed_factor = 0.3
         self.dt = 0.1
     
-    def set_V_fs(self, Velocity, alpha, beta):
+    def set_V_wind(self, Velocity, alpha, beta):
         # alpha: angle between X-axis & Y-axis of inertial frame of reference F
         # beta: angle between X-axis & Y-axis of inertial frame of reference F
-        return super().set_V_fs(Velocity, alpha, beta)
+        alpha = np.deg2rad(alpha)
+        beta = np.deg2rad(beta)
+        Vx = Velocity * np.cos(alpha) * np.cos(beta)
+        Vy = Velocity * np.cos(alpha) * np.sin(beta)
+        Vz = - Velocity * np.sin(alpha)
+        self.V_wind = Vector((Vx, Vy, Vz))
     
+    def set_V_fs(self, Vo, V_wind):
+        # Vo: Velocity vector of body-fixed frame's of reference (f') origin, observed from inertial frame of reference F
+        # V_wind: wind velocity vector observed from inertial frame of reference F
+        self.V_wind = V_wind
+        self.V_fs = V_wind - Vo
+            
     def set_WakeShedFactor(self, wake_shed_factor):
         self.wake_shed_factor = wake_shed_factor
     
@@ -223,9 +237,11 @@ class UnSteady_PanelMethod(PanelMethod):
                 
         for panel in body_panels:
             
-            v_rel = self.V_fs  # velocity relative to inertial frame (V_wind)
+            v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
             r_cp = panel.r_cp
             v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            # V_wind - Vo = V_fs
+            # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
             v = v.transformation(mesh.R.T)           
             panel.sigma = source_strength(panel, v)
                
@@ -258,9 +274,11 @@ class UnSteady_PanelMethod(PanelMethod):
                
         for panel in body_panels:
             
-            v_rel = self.V_fs  # velocity relative to inertial frame (V_wind)
+            v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
             r_cp = panel.r_cp
             v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            # V_wind - Vo = V_fs
+            # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
             v = v.transformation(mesh.R.T)
             
             # Velocity caclulation with least squares approach (faster)
@@ -291,9 +309,11 @@ class UnSteady_PanelMethod(PanelMethod):
     
     def solve(self, mesh:PanelAeroMesh, dt, iters):
         self.dt = dt
+        self.set_V_fs(mesh.Vo, self.V_wind)
+        
         for i in range(iters):
             mesh.move_body(dt)
-            mesh.shed_wake(self.V_fs, dt, self.wake_shed_factor)
+            mesh.shed_wake(self.V_wind, dt, self.wake_shed_factor)
             self.advance_solution(mesh)
             mesh.convect_wake(induced_velocity, dt)
             # mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
@@ -351,7 +371,7 @@ class UnSteady_PanelMethod(PanelMethod):
         return A, B, C
 
 
-   
+
 # function definitions for functions used in solve method
 
 def source_strength(panel, V_fs):
