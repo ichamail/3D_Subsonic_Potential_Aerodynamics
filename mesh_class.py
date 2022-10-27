@@ -733,9 +733,12 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         # create velocity list 
         node_id_list = self.nodes_to_convect()
         velocity_list = []
+        body_panels = [self.panels[id] for id in self.panels_id["body"]]
+        wake_panels = [self.panels[id] for id in self.panels_id["wake"]]
         for node_id in node_id_list:
             r_p = Vector(self.nodes[node_id])
-            induced_velocity = induced_velocity_function(r_p, self.panels)
+            induced_velocity = induced_velocity_function(r_p, body_panels,
+                                                         wake_panels)
             velocity_list.append(induced_velocity)
         
         # convect wake
