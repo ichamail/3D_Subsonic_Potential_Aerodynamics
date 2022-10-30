@@ -27,7 +27,8 @@ def sphere(radius, num_longitude, num_latitude,
             x = r * np.sin(phi) * np.cos(theta)
             y = r * np.sin(phi) * np.sin(theta) 
             z = r * np.cos(phi)
-            nodes.append([x, y, z])
+            node = (x, y, z)
+            nodes.append(node)
         
     if mesh_shell_type == 'quadrilateral':
         # quadrilateral shells
@@ -120,7 +121,7 @@ if __name__=='__main__':
             if i != j and Mesh.do_intersect(shell_i, shell_j):
                 neighbors[-1].append(j)
     
-    print("node id, [x, y, x]")
+    print("node id, (x, y, x)")
     for i, node in enumerate(nodes):
         print(i, node)
         

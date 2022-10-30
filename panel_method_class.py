@@ -2,7 +2,7 @@ import numpy as np
 from vector_class import Vector
 from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff, influence_coeff
 from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
-from mesh_class import PanelMesh
+from mesh_class import PanelMesh, PanelAeroMesh
 from Algorithms import LeastSquares
 
 
@@ -70,7 +70,7 @@ class Steady_Wakeless_PanelMethod(PanelMethod):
             # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
             # παρ' ότι πολύ πιο αργή
             
-            # panel.Velocity = Velocity(panel.r_cp, mesh.panels, self.V_fs)
+            # panel.Velocity = Velocity(self.V_fs, panel.r_cp, self.panels)
             
             
             # pressure coefficient calculation
@@ -105,9 +105,10 @@ class Steady_PanelMethod(PanelMethod):
     def __init__(self, V_freestream):
         super().__init__(V_freestream)
     
-    def solve(self, mesh:PanelMesh):
+    def solve(self, mesh:PanelAeroMesh):
             
         body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        wake_panels = [mesh.panels[id] for id in mesh.panels_id["wake"]]
         
         for panel in body_panels:
             panel.sigma = source_strength(panel, self.V_fs)
@@ -123,12 +124,12 @@ class Steady_PanelMethod(PanelMethod):
             panel_i.mu = doublet_strengths[panel_i.id]
             
             if panel_i.id in mesh.TrailingEdge["suction side"]:
-                for id_j in mesh.wake_sheddingShells[panel_i.id]:
+                for id_j in mesh.wake_sheddingPanels[panel_i.id]:
                     panel_j = mesh.panels[id_j]
                     panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
                     
             elif panel_i.id in mesh.TrailingEdge["pressure side"]:
-                for id_j in mesh.wake_sheddingShells[panel_i.id]:
+                for id_j in mesh.wake_sheddingPanels[panel_i.id]:
                     panel_j = mesh.panels[id_j]
                     panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
         
@@ -151,14 +152,15 @@ class Steady_PanelMethod(PanelMethod):
             # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
             # παρ' ότι πολύ πιο αργή
             
-            # panel.Velocity = Velocity(panel.r_cp, mesh.panels, self.V_fs)
+            # panel.Velocity = Velocity(self.V_fs, panel.r_cp, body_panels,
+            #                           wake_panels)
             
             
             # pressure coefficient calculation
             panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
 
     @staticmethod
-    def influence_coeff_matrices(mesh:PanelMesh):
+    def influence_coeff_matrices(mesh:PanelAeroMesh):
         
         # Compute Influence coefficient matrices
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
@@ -184,20 +186,192 @@ class Steady_PanelMethod(PanelMethod):
                 A[id_i][id_j] = C[id_i][id_j]
                 
                 if id_j in mesh.TrailingEdge["suction side"]:
-                    for id_k in mesh.wake_sheddingShells[id_j]:
+                    for id_k in mesh.wake_sheddingPanels[id_j]:
                         panel_k = mesh.panels[id_k]
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
                         
                 elif id_j in mesh.TrailingEdge["pressure side"]:
-                    for id_k in mesh.wake_sheddingShells[id_j]:
+                    for id_k in mesh.wake_sheddingPanels[id_j]:
                         panel_k = mesh.panels[id_k]
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
                 
         return A, B, C
 
-   
+
+class UnSteady_PanelMethod(PanelMethod):
+    
+    def __init__(self, V_wind=Vector((0, 0, 0))):
+        # V_wind: wind velocity observed from inertial frame of reference F
+        
+        super().__init__(V_freestream=Vector((0, 0, 0)))
+        self.V_wind = V_wind
+        self.set_V_fs(Vo=Vector((0, 0, 0)), V_wind=self.V_wind)
+        self.wake_shed_factor = 0.3
+        self.dt = 0.1
+    
+    def set_V_wind(self, Velocity, alpha, beta):
+        # alpha: angle between X-axis & Y-axis of inertial frame of reference F
+        # beta: angle between X-axis & Y-axis of inertial frame of reference F
+        alpha = np.deg2rad(alpha)
+        beta = np.deg2rad(beta)
+        Vx = Velocity * np.cos(alpha) * np.cos(beta)
+        Vy = Velocity * np.cos(alpha) * np.sin(beta)
+        Vz = - Velocity * np.sin(alpha)
+        self.V_wind = Vector((Vx, Vy, Vz))
+    
+    def set_V_fs(self, Vo, V_wind):
+        # Vo: Velocity vector of body-fixed frame's of reference (f') origin, observed from inertial frame of reference F
+        # V_wind: wind velocity vector observed from inertial frame of reference F
+        self.V_wind = V_wind
+        self.V_fs = V_wind - Vo
+            
+    def set_WakeShedFactor(self, wake_shed_factor):
+        self.wake_shed_factor = wake_shed_factor
+    
+    def advance_solution(self, mesh:PanelAeroMesh):
+                    
+        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        wake_panels = [mesh.panels[id] for id in mesh.panels_id["wake"]]
+                
+        for panel in body_panels:
+            
+            v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
+            r_cp = panel.r_cp
+            v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            # V_wind - Vo = V_fs
+            # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
+            v = v.transformation(mesh.R.T)           
+            panel.sigma = source_strength(panel, v)
+               
+        A, B, C = self.influence_coeff_matrices(mesh)
+        
+        RHS = right_hand_side(body_panels, B)
+        RHS = RHS + additional_right_hand_side(body_panels, wake_panels, C)
+        
+        doublet_strengths = np.linalg.solve(A, RHS)
+        
+        doublet_strength_old = np.zeros(len(body_panels))
+        for panel_i in body_panels:
+            
+            doublet_strength_old[panel_i.id] = panel_i.mu
+            
+            panel_i.mu = doublet_strengths[panel_i.id]
+            
+            if panel_i.id in mesh.TrailingEdge["suction side"]:
+                id_j = mesh.wake_sheddingPanels[panel_i.id][-1]
+                panel_j = mesh.panels[id_j]
+                panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
+                    
+            elif panel_i.id in mesh.TrailingEdge["pressure side"]:
+                id_j = mesh.wake_sheddingPanels[panel_i.id][-1]
+                panel_j = mesh.panels[id_j]
+                panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
+        
+
+        # compute Velocity and pressure coefficient at panels' control points
+               
+        for panel in body_panels:
+            
+            v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
+            r_cp = panel.r_cp
+            v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            # V_wind - Vo = V_fs
+            # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
+            v = v.transformation(mesh.R.T)
+            
+            # Velocity caclulation with least squares approach (faster)
+            
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = panel_velocity(panel, panel_neighbours, v)
+            
+          
+            # Velocity calculation with disturbance velocity functions
+            
+            # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
+            # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
+            # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
+            # παρ' ότι πολύ πιο αργή
+            
+            # panel.Velocity = Velocity(v, panel.r_cp, body_panels,
+            #                           wake_panels)
+            
+            # pressure coefficient calculation
+            # Katz & Plotkin eq. 13.168
+            
+            panel.Cp = 1 - (panel.Velocity.norm()/v.norm())**2
+            
+            # dφ/dt = dμ/dt
+            phi_dot = (panel.mu - doublet_strength_old[panel.id])/self.dt
+            
+            panel.Cp = panel.Cp - 2 * phi_dot
+    
+    def solve(self, mesh:PanelAeroMesh, dt, iters):
+        self.dt = dt
+        self.set_V_fs(mesh.Vo, self.V_wind)
+        
+        for i in range(iters):
+            mesh.move_body(dt)
+            mesh.shed_wake(self.V_wind, dt, self.wake_shed_factor)
+            self.advance_solution(mesh)
+            mesh.convect_wake(induced_velocity, dt)
+            # mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
+            #                                plot_wake=True)
+            # mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
+            #                               plot_wake=True)
+            
+        
+        mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
+                                       plot_wake=True)
+        mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
+                                      plot_wake=True)
+           
+    @staticmethod
+    def influence_coeff_matrices(mesh:PanelAeroMesh):
+        
+        # Compute Influence coefficient matrices
+        # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
+        
+        Nb = len(mesh.panels_id["body"])
+        Nw = len(mesh.panels_id["wake"])
+        Nte = len(mesh.TrailingEdge["suction side"])
+        B = np.zeros((Nb, Nb))
+        C = np.zeros((Nb, Nb + Nw))
+        A = np.zeros_like(B)
+        
+        # loop all over panels' control points
+        for id_i in mesh.panels_id["body"]:
+            panel_i = mesh.panels[id_i]
+            r_cp = panel_i.r_cp
+            
+            # loop all over panels
+            for id_j in mesh.panels_id["body"]:
+                
+                panel_j = mesh.panels[id_j]
+                # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
+                # C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
+                B[id_i][id_j], C[id_i][id_j] = influence_coeff(r_cp, panel_j)
+                A[id_i][id_j] = C[id_i][id_j]
+                
+                if id_j in mesh.TrailingEdge["suction side"]:
+                    for id_k in mesh.wake_sheddingPanels[id_j]:
+                        panel_k = mesh.panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        if id_k == mesh.wake_sheddingPanels[id_j][-1]:
+                            A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                        
+                elif id_j in mesh.TrailingEdge["pressure side"]:
+                    for id_k in mesh.wake_sheddingPanels[id_j]:
+                        panel_k = mesh.panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        if id_k == mesh.wake_sheddingPanels[id_j][-1]:
+                            A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                
+        return A, B, C
+
+
+
 # function definitions for functions used in solve method
 
 def source_strength(panel, V_fs):
@@ -223,9 +397,42 @@ def right_hand_side(body_panels, B):
         for panel_j in body_panels:
             id_j = panel_j.id
             RHS[id_i] = RHS[id_i] - panel_j.sigma * B[id_i][id_j]
-            
-    return RHS
         
+        
+        
+    return RHS
+
+def additional_right_hand_side(body_panels, wake_panels, C):
+    
+    Nb = len(body_panels)
+    RHS = np.zeros(Nb)
+    
+    # loop all over panels' control points
+    for panel_i in body_panels:
+        id_i = panel_i.id
+        
+        # loop all over wake panels
+        for panel_j in wake_panels:
+            """
+            Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
+            """ 
+            id_j = panel_j.id
+            RHS[id_i] = RHS[id_i] - panel_j.mu * C[id_i][id_j]
+            
+    
+    # Nb, _ = C.shape
+    # RHS = np.zeros(Nb)
+    
+    # # loop all over body panels' control points
+    # for id_i in range(Nb):
+        
+    #     # loop all over wake panels 
+    #     for panel_j in wake_panels:
+    #         id_j = panel_j.id
+    #         RHS[id_i] = RHS[id_j] - panel_j.mu * C[id_i][id_j]
+    
+    return RHS
+
 def panel_velocity(panel, panel_neighbours, V_fs):
     """
     V = Vx*ex + Vy*ey + Vz*ez or u*i + V*j  + w*k (global coordinate system)
@@ -272,13 +479,13 @@ def panel_velocity(panel, panel_neighbours, V_fs):
     V = V_fs + V_disturb
     
     return V
-            
-def Velocity(r_p, panels, V_fs):
+
+def body_induced_velocity(r_p, body_panels):
     # Velocity calculation with disturbance velocity functions
     
-    velocity = V_fs
+    velocity = Vector((0, 0, 0))
     
-    for panel in panels:
+    for panel in body_panels:
         
         # Doublet panels
         velocity = (velocity
@@ -289,10 +496,43 @@ def Velocity(r_p, panels, V_fs):
         # velocity = (velocity
         #             + Src_disturb_velocity(r_p, panel)
         #             + Vrtx_ring_disturb_velocity(r_p, panel))
-    
+        
     
     return velocity
 
+def wake_induce_velocity(r_p, wake_panels):
+    """
+    Vortex ring panels handle distortion. In unsteady solution method, because of the wake roll-up, hence the distortion of the wake panels, we can use vortex rings or triangular panels to surpass this problem
+    """
+    velocity = Vector((0, 0, 0))
+    
+    for panel in wake_panels:
+        
+        # Doublet panels
+        # velocity = velocity + Dblt_disturb_velocity(r_p, panel)
+
+        # Vortex ring panels
+    
+        velocity = velocity + Vrtx_ring_disturb_velocity(r_p, panel)
+    
+    return velocity
+
+def induced_velocity(r_p, body_panels, wake_panels=[]):
+    if wake_panels == []:
+        velocity = body_induced_velocity(r_p, body_panels)
+    else:
+        velocity = (body_induced_velocity(r_p, body_panels) 
+                    + wake_induce_velocity(r_p, wake_panels))
+    
+    return velocity
+          
+def Velocity(V_fs, r_p, body_panels, wake_panels=[]):
+    # Velocity calculation with disturbance velocity functions
+    
+    velocity = V_fs + induced_velocity(r_p, body_panels, wake_panels)
+      
+    return velocity
+   
 def AerodynamicForce(panels, ReferenceArea):
     ref_area = ReferenceArea
     C_force = Vector((0, 0, 0))

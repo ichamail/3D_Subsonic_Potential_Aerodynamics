@@ -120,7 +120,91 @@ class Panel:
             r_24 = r_4 - r_2
             cross_prod = Vector.cross_product(r_31, r_24)
             self.area = 0.5 * cross_prod.norm()               
+
+    # unsteady features
+    
+    def move(self, v_rel, Vo, omega, R, dt):
         
+        """
+        v_rel = velocity relative to the inertial frame of reference. (e.g. v_rel = wind speed => v_rel + v_body = v_freestream)    
+                
+        Ιδιότητα Πρόσθεσης:
+        ω_f"/f = ω_f"/f' + ω_f'/f
+        
+        1)
+        f"=f  =>  ω_f"/f' = ω_f/f' και ω_f"/f = 0 
+        => 0 = ω_f/f' + ω_f'/f
+        => ω_f/f' = - ω_f'/f
+        
+        2)
+        F:αδρανειακό συστημα αναφοράς, F:OXYZ
+        f:μεταφερόμενο σύστημα αναφοράς, f:O'xyz
+        f:προσδεδεμένο σύστημα αναφοράς στο στερεό, f':O'x'y'z'
+        
+        Από ιδιότητα πρόσθεσης: 
+        ω_f'/F = ω_f'/f + ω_f/F
+        (ω_f/F=0) => ω_f'/F = ω_f'/f
+        
+        από 1) ω_f/f' = - ω_f'/f => ω_f'/F = - ω_F/f'
+        (ω_F/F = ω_F/f' + ω_f'/F => 0 = ω_F/f' + ω_f'/F => ω_f'/F = - ω_F/f')
+        
+        3)
+        Μεταφορά παραγώγου διανύσματος από το σύστημα αναφοράς f' στο σύστημα ανφοράς f:
+        (r_dot)f = (r_dot)f' + (ω)f'/f X r
+        
+        
+        r = ro' + r' => r_dot = ro'_dot + r'_dot =>
+        (r_dot)F = (ro'_dot)F + (r'_dot)F => ...
+        (r'_dot)f' = (r_dot)F - [ (ro'_dot)F + (ω)f'/F X r']
+        r':position vector of node measured from bodyfixed frame of reference f'
+        r: position vector of node measured from inertial frame of reference F
+        ω: angular velocity of body-fixed frame observed from inetial frame of reference F (or from frame of refernce f)
+         
+        (Δες και χειρόγραφες σημειώσεις για περισσότερες λεπτομέρειες)
+        """
+        
+        # Vo: velocity vector of body-fixed frame's origin
+        # omega: body-fixed frame's angular velocity
+        # v_rel: vector of velocity relative to inertial frame (e.g. wind speed)
+        # R: Rotation matrix of body-fixed frame of reference
+        
+        
+        for i in range(self.num_vertices):
+            # r_vertex : position vector of panel's vertex meassured from body-fixed frame of reference f'
+             
+            v = v_rel - (Vo + Vector.cross_product(omega, self.r_vertex[i]))
+            
+            dr = v*dt
+            dr = dr.transformation(R.T)
+                        
+            self.r_vertex[i] = self.r_vertex[i] + dr
+            
+                
+        self.set_centroid()
+        self.set_n() 
+        self.set_l() 
+        self.set_m()
+        self.set_R()
+        
+        # λογικά δεν χρειάζονται ανανέωση
+        self.set_r_vertex_local()
+        self.set_char_length()
+        self.set_area()
+
+    def update_vertices_location(self, vertex_list):
+        for i in range(self.num_vertices):
+            self.r_vertex[i] = vertex_list[i]
+        
+        self.set_centroid()
+        self.set_n() 
+        self.set_l() 
+        self.set_m()
+        self.set_R()
+        self.set_r_vertex_local()
+        self.set_char_length()
+        self.set_area()
+   
+    
 class quadPanel(Panel):
     def __init__(self, vertex0:Vector, vertex1:Vector,
                  vertex2:Vector, vertex3:Vector):
@@ -137,6 +221,7 @@ class quadPanel(Panel):
         self.set_r_vertex_local()
         self.set_char_length()
         self.set_area()
+
         
 class triPanel(Panel):
     def __init__(self, vertex0:Vector, vertex1:Vector,
