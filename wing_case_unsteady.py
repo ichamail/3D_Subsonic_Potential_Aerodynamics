@@ -6,7 +6,7 @@ from vector_class import Vector
 from matplotlib import pyplot as plt
 from plot_functions import plot_Cp_SurfaceContours
 import numpy as np
-import time
+from time import perf_counter
 
 # create wing object   
 root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
@@ -34,7 +34,41 @@ wing_mesh.set_origin_velocity(Vo)
 
 V_wind = Vector((0, 0, 0))
 panel_method = UnSteady_PanelMethod(V_wind)
+
+t_start = perf_counter()        
 panel_method.solve(wing_mesh, 0.5, 20)
+t_end = perf_counter()
+solution_time = t_end-t_start
+print("solution time + compile time = " + str(solution_time))
+
+wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
+                                   num_x_wakeShells, num_y_Shells,
+                                   mesh_shell_type="quadrilateral")
+
+wing_mesh.set_body_fixed_frame_origin(xo=0, yo=0, zo=0)
+wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(-10), yaw=0)
+
+omega = Vector((0, 0, 0))
+wing_mesh.set_angular_velocity(omega)
+
+Vo = Vector((-1, 0, 0))
+wing_mesh.set_origin_velocity(Vo)
+
+
+V_wind = Vector((0, 0, 0))
+panel_method = UnSteady_PanelMethod(V_wind)
+
+t_start = perf_counter()        
+panel_method.solve(wing_mesh, 0.5, 20)
+t_end = perf_counter()
+solution_time = t_end-t_start
+print("solution time = " + str(solution_time))
+
+################ Results ###############
+
+wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150,azimuth=-120, plot_wake=True)
+wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120, plot_wake=True)
+
 
 # Pressure Coefficient Distribution across root's airfoil section 
 near_root_panels = wing_mesh.give_leftSide_near_root_panels()

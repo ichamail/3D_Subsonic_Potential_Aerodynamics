@@ -482,8 +482,9 @@ class Wing:
             vec2 = Vector((x2, y2, z2))
             
             bisector = vec1 + vec2
-            bisector = 1/bisector.norm() * bisector
-            bisector = 10 * C_r * bisector
+            bisector = bisector/bisector.norm()
+            # bisector = 10 * C_r * bisector
+            bisector = bisector * 10 * C_r
             
             X[:, j] = np.linspace(x[0], x[0] + bisector.x, num_x_shells+1)
             Y[:, j] = y[j]

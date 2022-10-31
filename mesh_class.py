@@ -6,6 +6,7 @@ from plot_functions import set_axes_equal
 import numpy as np
 from vector_class import Vector
 from panel_class import Panel, triPanel, quadPanel
+from numba import typed
 
 
 class Mesh:
@@ -207,7 +208,9 @@ class Mesh:
         
         # (r'_dot)f' 
         # r':position vector of node measured from bodyfixed frame of reference f'
-        v = v_rel - (self.Vo + Vector.cross_product(self.omega, r))
+        # v = v_rel - (self.Vo + Vector.cross_product(self.omega, r))
+        v = v_rel - (self.Vo + self.omega.cross(r))
+        
         
         dr = v*dt
         dr = dr.transformation(self.R.T)
@@ -386,7 +389,8 @@ class PanelMesh(Mesh):
         self.panels = None
         self.panels_num = None
         self.panel_neighbours = self.shell_neighbours
-        self.CreatePanels()         
+        # self.CreatePanels()
+        self.CreatePanels_jit()         
         
     def CreatePanels(self):
         panels = []
@@ -407,6 +411,23 @@ class PanelMesh(Mesh):
         self.panels = panels
         self.panels_num = len(panels)
 
+    def CreatePanels_jit(self):
+        panels = []
+        for shell_id, shell in enumerate(self.shells):
+            vertex_list = []
+            for node_id in shell:
+                [x, y, z] = self.nodes[node_id]
+                vertex_list.append((x, y, z))
+            
+            vertex_array = np.array(vertex_list)
+            
+            panels.append(Panel(vertex_array))
+            
+            panels[-1].id = shell_id
+                
+        self.panels = panels
+        self.panels_num = len(panels)
+    
     def give_neighbours(self, panel):
         
         neighbours_id_list = self.panel_neighbours[panel.id]
@@ -451,7 +472,7 @@ class PanelMesh(Mesh):
             r_cp = panel.r_cp
             n = panel.n
             scale = 0.1
-            n = n.scalar_product(scale)
+            n = n * scale
             ax.scatter(r_cp.x, r_cp.y, r_cp.z, color='k', s=5)
             ax.quiver(r_cp.x, r_cp.y, r_cp.z, n.x, n.y, n.z, color='r')
                 
@@ -474,7 +495,9 @@ class PanelMesh(Mesh):
         
         light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
         face_normals = [panel.n for panel in self.panels]
-        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        # dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        dot_prods = [-light_vec.dot(face_normal) 
+                     for face_normal in face_normals]
         min = np.min(dot_prods)
         max = np.max(dot_prods)
         target_min = 0.2 # darker gray
@@ -529,7 +552,9 @@ class PanelMesh(Mesh):
         
         light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
         face_normals = [panel.n.transformation(self.R) for panel in self.panels]
-        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        # dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        dot_prods = [-light_vec.dot(face_normal) 
+                     for face_normal in face_normals]
         min = np.min(dot_prods)
         max = np.max(dot_prods)
         target_min = 0.2 # darker gray
@@ -601,7 +626,10 @@ class PanelMesh(Mesh):
         
         light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
         face_normals = [panel.n for panel in self.panels]
-        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        # dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        dot_prods = [-light_vec.dot(face_normal) 
+                     for face_normal in face_normals]
+        
         min = np.min(dot_prods)
         max = np.max(dot_prods)
         target_min = 0.2 # darker gray
@@ -719,14 +747,33 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             
             self.panels[-1].id = shell_id
     
+    def add_wakePanels_jit(self):
+        num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
+        id_end = self.shells_id["wake"][-1]
+        id_start = id_end - num_TrailingEdge_panels + 1
+                
+        for shell_id in range(id_start, id_end+1):
+            vertex_list = []
+            for node_id in self.shells[shell_id]:
+                node = self.nodes[node_id]
+                vertex_list.append(node)
+            
+            vertex_array = np.array(vertex_list)
+            
+            self.panels.append(Panel(vertex_array))
+            
+            self.panels[-1].id = shell_id
+        
     def shed_wake(self, v_rel, dt, wake_shed_factor=1):
         if self.panels_id["wake"] == []:
             super().shed_wake(v_rel, dt, wake_shed_factor)
-            self.add_wakePanels()
+            # self.add_wakePanels()
+            self.add_wakePanels_jit()
         else:
             self.move_panels(self.panels_id["wake"], v_rel, dt*wake_shed_factor)
             super().shed_wake(v_rel, dt, wake_shed_factor)        
-            self.add_wakePanels()
+            # self.add_wakePanels()
+            self.add_wakePanels_jit()
    
     def convect_wake(self, induced_velocity_function, dt):
         
@@ -752,6 +799,8 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
                 node = self.nodes[node_id]
                 vertex = Vector(node)
                 vertex_list.append(vertex)
+                
+            vertex_list = typed.List(vertex_list)
             
             self.panels[shell_id].update_vertices_location(vertex_list)
            
@@ -789,7 +838,9 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         
         light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
         face_normals = [panel.n.transformation(self.R) for panel in body_panels]
-        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        # dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        dot_prods = [-light_vec.dot(face_normal) 
+                     for face_normal in face_normals]
         min = np.min(dot_prods)
         max = np.max(dot_prods)
         target_min = 0.2 # darker gray
@@ -886,7 +937,9 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         
         light_vec = light_vector(magnitude=1, alpha=-45, beta=-45)
         face_normals = [panel.n for panel in body_panels]
-        dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        # dot_prods = [-light_vec * face_normal for face_normal in face_normals]
+        dot_prods = [-light_vec.dot(face_normal) 
+                     for face_normal in face_normals]
         min = np.min(dot_prods)
         max = np.max(dot_prods)
         target_min = 0.2 # darker gray

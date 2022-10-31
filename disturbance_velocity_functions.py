@@ -2,8 +2,9 @@ import numpy as np
 from vector_class import Vector
 from panel_class import Panel, quadPanel, triPanel
 from is_inside_polygon import is_inside_polygon
+from numba import jit
 
-
+@jit(nopython=True)
 def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
     
     n = panel.num_vertices
@@ -136,6 +137,7 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
     
     return disturb_velocity
 
+@jit(nopython=True)
 def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
     n = panel.num_vertices
     r_vertex = panel.r_vertex_local
@@ -234,6 +236,7 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
 
     return disturb_velocity
 
+@jit(nopython=True)
 def Vrtx_ring_disturb_velocity(r_p:Vector, panel:Panel, epsilon = 10**(-6)):
     
     # with a vortex ring we work with global coordinates
@@ -258,7 +261,8 @@ def Vrtx_ring_disturb_velocity(r_p:Vector, panel:Panel, epsilon = 10**(-6)):
         norm1 = r_1.norm()
         norm2 = r_2.norm()
         
-        vec12 = Vector.cross_product(r_1, r_2)
+        # vec12 = Vector.cross_product(r_1, r_2)
+        vec12 = r_1.cross(r_2)
         norm12 = vec12.norm()
         
         if norm1 < epsilon or norm2 < epsilon or norm12**2 < epsilon:
@@ -272,10 +276,10 @@ def Vrtx_ring_disturb_velocity(r_p:Vector, panel:Panel, epsilon = 10**(-6)):
             vec1 = r_1/norm1
             vec2 = r_2/norm2
             vec3 = vec1 - vec2
-            # term2 = Vector.dot_product(r_0, vec3)
-            term2 = r_0 * vec3
-            # velocity_term = vec12.scalar_product(term1 * term2)
-            velocity_term = term1 * term2 * vec12
+            # term2 = r_0 * vec3
+            term2 = r_0.dot(vec3)
+            # velocity_term = term1 * term2 * vec12
+            velocity_term = vec12 * term1 * term2
             
             
         disturb_velocity = disturb_velocity + velocity_term

@@ -4,6 +4,8 @@ from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_
 from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
 from mesh_class import PanelMesh, PanelAeroMesh
 from Algorithms import LeastSquares
+from numba import typed, jit, prange
+from python_object_to_numba_object import pyObjToNumbaObj
 
 
 class PanelMethod:
@@ -42,9 +44,11 @@ class Steady_Wakeless_PanelMethod(PanelMethod):
         for panel in mesh.panels:
             panel.sigma = source_strength(panel, self.V_fs) 
         
-        B, C = self.influence_coeff_matrices(mesh.panels)
+        # B, C = self.influence_coeff_matrices(mesh.panels)
+        B, C = self.influence_coeff_matrices(typed.List(mesh.panels))
         
-        RHS = right_hand_side(mesh.panels, B)
+        # RHS = right_hand_side(mesh.panels, B)
+        RHS = right_hand_side(typed.List(mesh.panels), B)
         
         doublet_strengths = np.linalg.solve(C, RHS)
         
@@ -99,7 +103,32 @@ class Steady_Wakeless_PanelMethod(PanelMethod):
                 
         return B, C
 
+    @staticmethod
+    @jit(nopython=True)
+    def influence_coeff_matrices(panels):
+        
+        # Compute Influence coefficient matrices
+        # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
+        
+        n = len(panels)
+        B = np.zeros((n, n))
+        C = np.zeros_like(B)
+        
+        # loop all over panels' control points
+        for i in prange(n):
+            panel_i = panels[i]
+            r_cp = panel_i.r_cp
+            
+            # loop all over panels
+            for j in prange(n):
+                panel_j = panels[j]
+                # B[i][j] = Src_influence_coeff(r_cp, panel_j)
+                # C[i][j] = Dblt_influence_coeff(r_cp, panel_j)
+                B[i][j], C[i][j] = influence_coeff(r_cp, panel_j)
+                
+        return B, C
 
+    
 class Steady_PanelMethod(PanelMethod):
     
     def __init__(self, V_freestream):
@@ -115,7 +144,8 @@ class Steady_PanelMethod(PanelMethod):
                
         A, B, C = self.influence_coeff_matrices(mesh)
         
-        RHS = right_hand_side(body_panels, B)
+        # RHS = right_hand_side(body_panels, B)
+        RHS = right_hand_side(typed.List(body_panels), B)
         
         doublet_strengths = np.linalg.solve(A, RHS)
         
@@ -199,6 +229,62 @@ class Steady_PanelMethod(PanelMethod):
                 
         return A, B, C
 
+    def influence_coeff_matrices(self, mesh:PanelMesh):
+        
+        # Compute Influence coefficient matrices
+        # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
+              
+        panels = typed.List(mesh.panels)
+        panels_id = pyObjToNumbaObj(mesh.panels_id)
+        TrailingEdge = pyObjToNumbaObj(mesh.TrailingEdge)
+        wake_sheddingShells = pyObjToNumbaObj(mesh.wake_sheddingShells)
+                
+        A, B, C = self.jit_influence_coeff_matrices(panels, panels_id,
+                                                TrailingEdge, wake_sheddingShells)
+        
+        return A, B, C
+
+    @staticmethod
+    @jit(nopython=True, parallel=True)
+    def jit_influence_coeff_matrices(panels:list, panels_id:dict,
+                                TrailingEdge:dict, wake_sheddingShells:dict):
+        
+        Nb = len(panels_id["body"])
+        Nw = len(panels_id["wake"])
+        B = np.zeros((Nb, Nb))
+        C = np.zeros((Nb, Nb+Nw))
+        A = np.zeros_like(B)
+        
+        # loop all over panels' control points
+        for i in prange(Nb):
+            id_i = panels_id["body"][i]
+            panel_i = panels[id_i]
+            r_cp = panel_i.r_cp
+            
+            # loop all over panels
+            for j in prange(Nb):
+                id_j = panels_id["body"][j]
+                panel_j = panels[id_j]
+                
+                # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
+                # C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
+                B[id_i][id_j], C[id_i][id_j] = influence_coeff(r_cp, panel_j)
+                A[id_i][id_j] = C[id_i][id_j]
+                
+                if id_j in TrailingEdge["suction side"]:
+                    for id_k in wake_sheddingShells[id_j]:
+                        panel_k = panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                            
+                elif id_j in TrailingEdge["pressure side"]:
+                    for id_k in wake_sheddingShells[id_j]:
+                        panel_k = panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                    
+        return A, B, C
+
 
 class UnSteady_PanelMethod(PanelMethod):
     
@@ -239,7 +325,8 @@ class UnSteady_PanelMethod(PanelMethod):
             
             v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
             r_cp = panel.r_cp
-            v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            # v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            v = v_rel - (mesh.Vo + mesh.omega.cross(r_cp))
             # V_wind - Vo = V_fs
             # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
             v = v.transformation(mesh.R.T)           
@@ -247,8 +334,11 @@ class UnSteady_PanelMethod(PanelMethod):
                
         A, B, C = self.influence_coeff_matrices(mesh)
         
-        RHS = right_hand_side(body_panels, B)
-        RHS = RHS + additional_right_hand_side(body_panels, wake_panels, C)
+        # RHS = right_hand_side(body_panels, B)
+        # RHS = RHS + additional_right_hand_side(body_panels, wake_panels, C)
+        RHS = right_hand_side(typed.List(body_panels), B)
+        RHS = RHS + additional_right_hand_side(typed.List(body_panels),
+                                               typed.List(wake_panels), C)
         
         doublet_strengths = np.linalg.solve(A, RHS)
         
@@ -276,7 +366,8 @@ class UnSteady_PanelMethod(PanelMethod):
             
             v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
             r_cp = panel.r_cp
-            v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            # v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+            v = v_rel - (mesh.Vo + mesh.omega.cross(r_cp))
             # V_wind - Vo = V_fs
             # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
             v = v.transformation(mesh.R.T)
@@ -322,10 +413,10 @@ class UnSteady_PanelMethod(PanelMethod):
             #                               plot_wake=True)
             
         
-        mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
-                                       plot_wake=True)
-        mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
-                                      plot_wake=True)
+        # mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
+        #                                plot_wake=True)
+        # mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
+        #                               plot_wake=True)
            
     @staticmethod
     def influence_coeff_matrices(mesh:PanelAeroMesh):
@@ -370,14 +461,71 @@ class UnSteady_PanelMethod(PanelMethod):
                 
         return A, B, C
 
+    def influence_coeff_matrices(self, mesh:PanelAeroMesh):
+        
+        # Compute Influence coefficient matrices
+        # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)      
+        
+        panels = typed.List(mesh.panels)
+        panels_id = pyObjToNumbaObj(mesh.panels_id)
+        TrailingEdge = pyObjToNumbaObj(mesh.TrailingEdge)
+        wake_sheddingPanels = pyObjToNumbaObj(mesh.wake_sheddingPanels)
+        
+        A, B, C = self.jit_influence_coeff_matrices(panels, panels_id,
+                                                    TrailingEdge, wake_sheddingPanels)
+                
+        return A, B, C
+    
+    @staticmethod
+    @jit(nopython=True, parallel=True)
+    def jit_influence_coeff_matrices(panels:list, panels_id:dict,
+                                TrailingEdge:dict, wake_sheddingPanels:dict):
+        
+        Nb = len(panels_id["body"])
+        Nw = len(panels_id["wake"])
+        B = np.zeros((Nb, Nb))
+        C = np.zeros((Nb, Nb + Nw))
+        A = np.zeros_like(B)
+        
+    
+        # loop all over panels' control points
+        for id_i in panels_id["body"]:
+            panel_i = panels[id_i]
+            r_cp = panel_i.r_cp
+            
+            # loop all over panels
+            for id_j in panels_id["body"]:
+                
+                panel_j = panels[id_j]
+                # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
+                # C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
+                B[id_i][id_j], C[id_i][id_j] = influence_coeff(r_cp, panel_j)
+                A[id_i][id_j] = C[id_i][id_j]
+                
+                if id_j in TrailingEdge["suction side"]:
+                    for id_k in wake_sheddingPanels[id_j]:
+                        panel_k = panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        if id_k == wake_sheddingPanels[id_j][-1]:
+                            A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                        
+                elif id_j in TrailingEdge["pressure side"]:
+                    for id_k in wake_sheddingPanels[id_j]:
+                        panel_k = panels[id_k]
+                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                        if id_k == wake_sheddingPanels[id_j][-1]:
+                            A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                
+        return A, B, C
 
-
+    
 # function definitions for functions used in solve method
 
 def source_strength(panel, V_fs):
     # Katz & Plotkin eq 9.12
     # Katz & Plotkin defines normal vector n with opposite direction (inward)
-    source_strength = - (panel.n * V_fs)
+    # source_strength = - (panel.n * V_fs)
+    source_strength = - (V_fs.dot(panel.n))
     return source_strength
 
 def right_hand_side(body_panels, B):
@@ -402,6 +550,29 @@ def right_hand_side(body_panels, B):
         
     return RHS
 
+@jit(nopython=True, parallel = True)
+def right_hand_side(body_panels, B):
+    
+    # Calculate right-hand-side 
+    # Katz & Plotkin eq(12.35, 12.36)
+        
+    Nb = len(body_panels)
+    RHS = np.zeros(Nb)
+    
+    # loop all over panels' control points
+    for i in prange(Nb):
+        panel_i = body_panels[i]
+        id_i = panel_i.id
+        RHS[id_i] = 0
+        
+        # loop all over panels
+        for j in prange(Nb):
+            panel_j = body_panels[j]
+            id_j = panel_j.id
+            RHS[id_i] = RHS[id_i] - panel_j.sigma * B[id_i][id_j]
+            
+    return RHS
+
 def additional_right_hand_side(body_panels, wake_panels, C):
     
     Nb = len(body_panels)
@@ -415,7 +586,7 @@ def additional_right_hand_side(body_panels, wake_panels, C):
         for panel_j in wake_panels:
             """
             Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
-            """ 
+            """
             id_j = panel_j.id
             RHS[id_i] = RHS[id_i] - panel_j.mu * C[id_i][id_j]
             
@@ -428,6 +599,44 @@ def additional_right_hand_side(body_panels, wake_panels, C):
         
     #     # loop all over wake panels 
     #     for panel_j in wake_panels:
+    #         id_j = panel_j.id
+    #         RHS[id_i] = RHS[id_j] - panel_j.mu * C[id_i][id_j]
+    
+    return RHS
+
+@jit(nopython=True, parallel=True)
+def additional_right_hand_side(body_panels, wake_panels, C):
+    
+    Nb = len(body_panels)
+    Nw = len(wake_panels)
+    RHS = np.zeros(Nb)
+    
+    # loop all over panels' control points
+    for i in prange(Nb):
+        panel_i = body_panels[i]
+        id_i = panel_i.id
+        
+        # loop all over wake panels
+        for j in prange(Nw):
+            """
+            Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
+            """ 
+            panel_j = wake_panels[j]
+            id_j = panel_j.id
+            RHS[id_i] = RHS[id_i] - panel_j.mu * C[id_i][id_j]
+            
+    
+    # without using body_panels list as function argument
+    # Nb, _ = C.shape
+    # Nw = len(wake_panels)
+    # RHS = np.zeros(Nb)
+    
+    # # loop all over body panels' control points
+    # for id_i in prange(Nb):
+        
+    #     # loop all over wake panels 
+    #     for j in prange(Nw):
+    #         panel_j = wake_panels[j] 
     #         id_j = panel_j.id
     #         RHS[id_i] = RHS[id_j] - panel_j.mu * C[id_i][id_j]
     
@@ -500,6 +709,30 @@ def body_induced_velocity(r_p, body_panels):
     
     return velocity
 
+@jit(nopython=True, parallel=False)
+def body_induced_velocity(r_p, body_panels):
+    # Velocity calculation with disturbance velocity functions
+    
+    velocity = Vector((0, 0, 0))
+    
+    for i in prange(len(body_panels)):
+        panel = body_panels[i]
+        # Doublet panels
+        # velocity = (velocity
+        #             + Src_disturb_velocity(r_p, panel)
+        #             + Dblt_disturb_velocity(r_p, panel))
+        
+        velocity += Src_disturb_velocity(r_p, panel)
+        velocity += Dblt_disturb_velocity(r_p, panel)
+        
+        # Vortex ring panels
+        # velocity = (velocity
+        #             + Src_disturb_velocity(r_p, panel)
+        #             + Vrtx_ring_disturb_velocity(r_p, panel))
+        
+    
+    return velocity
+
 def wake_induce_velocity(r_p, wake_panels):
     """
     Vortex ring panels handle distortion. In unsteady solution method, because of the wake roll-up, hence the distortion of the wake panels, we can use vortex rings or triangular panels to surpass this problem
@@ -517,10 +750,34 @@ def wake_induce_velocity(r_p, wake_panels):
     
     return velocity
 
+@jit(nopython=True, parallel=False)
+def wake_induce_velocity(r_p, wake_panels):
+    """
+    Vortex ring panels handle distortion. In unsteady solution method, because of the wake roll-up, hence the distortion of the wake panels, we can use vortex rings or triangular panels to surpass this problem
+    """
+    velocity = Vector((0, 0, 0))
+    
+    for i in prange(len(wake_panels)):
+        panel = wake_panels[i]
+        
+        # Doublet panels
+        # velocity = velocity + Dblt_disturb_velocity(r_p, panel)
+
+        # Vortex ring panels
+    
+        velocity += Vrtx_ring_disturb_velocity(r_p, panel)
+        
+    return velocity
+
 def induced_velocity(r_p, body_panels, wake_panels=[]):
+    
+    body_panels = typed.List(body_panels)
+    
     if wake_panels == []:
         velocity = body_induced_velocity(r_p, body_panels)
     else:
+        wake_panels = typed.List(wake_panels)
+        
         velocity = (body_induced_velocity(r_p, body_panels) 
                     + wake_induce_velocity(r_p, wake_panels))
     
@@ -537,13 +794,14 @@ def AerodynamicForce(panels, ReferenceArea):
     ref_area = ReferenceArea
     C_force = Vector((0, 0, 0))
     for panel in panels:
-        C_force = C_force + (-panel.Cp*panel.area/ref_area)*panel.n
-    
+        # C_force = C_force + (-panel.Cp*panel.area/ref_area)*panel.n
+        C_force = C_force + panel.n * (-panel.Cp*panel.area/ref_area)
     return C_force
 
 def inducedDragCoefficient(AerodynamicForce, V_fs):
     C_force = AerodynamicForce
-    CD_vector = (C_force * V_fs/V_fs.norm()) * V_fs/V_fs.norm()
+    # CD_vector = (C_force * V_fs/V_fs.norm()) * V_fs/V_fs.norm()
+    CD_vector = V_fs/V_fs.norm() * (C_force.dot(V_fs/V_fs.norm()))
     return CD_vector
 
 def LiftCoefficient(AerodynamicForce, V_fs):

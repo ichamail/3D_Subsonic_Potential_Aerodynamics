@@ -2,8 +2,9 @@ import numpy as np
 from vector_class import Vector
 from panel_class import Panel, quadPanel, triPanel
 from is_inside_polygon import is_inside_polygon
+from numba import jit
 
-
+@jit(nopython=True)
 def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     n = panel.num_vertices
     r_vertex = panel.r_vertex_local
@@ -108,6 +109,7 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     
     return B
 
+@jit(nopython=True)
 def Dblt_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     n = panel.num_vertices
     r_vertex = panel.r_vertex_local
@@ -166,6 +168,7 @@ def Dblt_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
         
     return C
 
+@jit(nopython=True)
 def influence_coeff(r_p:Vector, panel:Panel, alpha=10):
     n = panel.num_vertices
     r_vertex = panel.r_vertex_local

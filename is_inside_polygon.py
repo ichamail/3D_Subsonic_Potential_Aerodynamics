@@ -1,3 +1,7 @@
+from numba import jit
+import numba
+
+@jit(nopython=True)
 def onSegment(p:tuple, q:tuple, r:tuple) -> bool:
     """
     # https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
@@ -14,7 +18,7 @@ def onSegment(p:tuple, q:tuple, r:tuple) -> bool:
          
     return False
 
-
+@jit(nopython=True)
 def orientation(p:tuple, q:tuple, r:tuple) -> int:
     """
     To find orientation of ordered triplet (p, q, r).
@@ -39,7 +43,7 @@ def orientation(p:tuple, q:tuple, r:tuple) -> int:
     else:
         return 2 # Clock or counterclock
 
-
+@jit(nopython=True)
 def doIntersect(p1:tuple, q1:tuple, p2:tuple, q2:tuple) -> bool:    
     """
     The main function that returns true if
@@ -78,7 +82,7 @@ def doIntersect(p1:tuple, q1:tuple, p2:tuple, q2:tuple) -> bool:
  
     return False
 
-
+@jit(nopython=True)
 def is_inside_polygon(points:list, p:tuple) -> bool:
     """
     Returns true if the point p lies
@@ -123,7 +127,9 @@ def is_inside_polygon(points:list, p:tuple) -> bool:
 
 if __name__ == '__main__':
     polygon1 = [ (0, 0), (10, 0), (10, 10), (0, 10) ]
-        
+    
+    polygon1 = numba.typed.List(polygon1)
+       
     p = (1, 1)
     if (is_inside_polygon(points = polygon1, p = p)):
         print('Yes')
