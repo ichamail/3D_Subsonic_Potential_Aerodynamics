@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class Vector:
     
     def __init__(self, components:tuple):
@@ -14,22 +15,7 @@ class Vector:
     def norm(self):
         norm = np.sqrt(self.x**2 + self.y**2 + self.z**2)
         return norm
-    
-    def scalar_product(self, scalar:float):
-        x_comp = scalar * self.x
-        y_comp = scalar * self.y
-        z_comp = scalar * self.z
-        components = (x_comp, y_comp, z_comp)
-        scaled_vector = Vector(components)
         
-        # ίσως θα πρέπει να το ορίσω έτσι το βαθμωτό γινόμενο για να μην 
-        # δημιουργώ συνέχεια νέα Vector Objects
-        # self.x = scalar * self.x
-        # self.y = scalar * self.y
-        # self.z = scalar * self.z
-        
-        return scaled_vector
-    
     def transformation(self, Matrix:np.ndarray(shape=(3,3), dtype=float)):
         A = Matrix.copy()
         x_comp = A[0][0] * self.x + A[0][1] * self.y + A[0][2] * self.z
@@ -69,22 +55,8 @@ class Vector:
         z = self.z + vector.z
         components = (x, y, z)
         return Vector(components)
-    
-    def __radd__(self, vector):
-        x = self.x + vector.x
-        y = self.y + vector.y
-        z = self.z + vector.z
-        components = (x, y, z)
-        return Vector(components)
-    
+       
     def __sub__(self, vector):
-        x = self.x - vector.x
-        y = self.y - vector.y
-        z = self.z - vector.z
-        components = (x, y, z)
-        return Vector(components)
-    
-    def __rsub__(self, vector):
         x = self.x - vector.x
         y = self.y - vector.y
         z = self.z - vector.z
@@ -123,6 +95,9 @@ class Vector:
             components = (x, y, z)
             return Vector(components)
     
+    def __matmul__(self, vector):
+        return self.x*vector.x + self.y*vector.y + self.z*vector.z
+        
     def __truediv__(self, scalar):
         x = self.x / scalar
         y = self.y / scalar
