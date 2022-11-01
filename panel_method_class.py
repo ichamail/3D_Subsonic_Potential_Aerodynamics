@@ -718,12 +718,12 @@ def body_induced_velocity(r_p, body_panels):
     for i in prange(len(body_panels)):
         panel = body_panels[i]
         # Doublet panels
-        # velocity = (velocity
-        #             + Src_disturb_velocity(r_p, panel)
-        #             + Dblt_disturb_velocity(r_p, panel))
+        velocity = (velocity
+                    + Src_disturb_velocity(r_p, panel)
+                    + Dblt_disturb_velocity(r_p, panel))
         
-        velocity += Src_disturb_velocity(r_p, panel)
-        velocity += Dblt_disturb_velocity(r_p, panel)
+        # velocity += Src_disturb_velocity(r_p, panel)
+        # velocity += Dblt_disturb_velocity(r_p, panel)
         
         # Vortex ring panels
         # velocity = (velocity
@@ -764,8 +764,8 @@ def wake_induce_velocity(r_p, wake_panels):
         # velocity = velocity + Dblt_disturb_velocity(r_p, panel)
 
         # Vortex ring panels
-    
-        velocity += Vrtx_ring_disturb_velocity(r_p, panel)
+        velocity = velocity + Vrtx_ring_disturb_velocity(r_p, panel)
+        # velocity += Vrtx_ring_disturb_velocity(r_p, panel)
         
     return velocity
 
