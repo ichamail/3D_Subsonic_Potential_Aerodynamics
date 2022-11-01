@@ -391,12 +391,13 @@ class Panel:
         n = self.num_vertices
         r_cp = self.r_cp
         r_vertex = self.r_vertex
-        r_vertex_local = self.r_vertex_local
+        self.r_vertex_local = self.r_vertex.copy()
         R = self.R
         
         for i in range(n):           
-            r_vertex_local_i = r_vertex[i] - r_cp
-            r_vertex_local.append(r_vertex_local_i.transformation(R))
+            self.r_vertex_local[i] = r_vertex[i] - r_cp
+            self.r_vertex_local[i] = self.r_vertex_local[i].transformation(R)
+        
         
     def set_char_length(self):
         r_1 = self.r_vertex[0]
