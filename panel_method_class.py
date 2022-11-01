@@ -320,6 +320,8 @@ class UnSteady_PanelMethod(PanelMethod):
                     
         body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
         wake_panels = [mesh.panels[id] for id in mesh.panels_id["wake"]]
+        body_panels = typed.List(body_panels)
+        wake_panels = typed.List(wake_panels)
                 
         for panel in body_panels:
             
@@ -334,12 +336,9 @@ class UnSteady_PanelMethod(PanelMethod):
                
         A, B, C = self.influence_coeff_matrices(mesh)
         
-        # RHS = right_hand_side(body_panels, B)
-        # RHS = RHS + additional_right_hand_side(body_panels, wake_panels, C)
-        RHS = right_hand_side(typed.List(body_panels), B)
-        RHS = RHS + additional_right_hand_side(typed.List(body_panels),
-                                               typed.List(wake_panels), C)
-        
+        RHS = right_hand_side(body_panels, B)
+        RHS = RHS + additional_right_hand_side(body_panels, wake_panels, C)
+                
         doublet_strengths = np.linalg.solve(A, RHS)
         
         doublet_strength_old = np.zeros(len(body_panels))
@@ -407,6 +406,10 @@ class UnSteady_PanelMethod(PanelMethod):
             mesh.shed_wake(self.V_wind, dt, self.wake_shed_factor)
             self.advance_solution(mesh)
             mesh.convect_wake(induced_velocity, dt)
+            
+            # mesh.convect_wake(jit_induced_velocity, dt)
+            
+            
             # mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
             #                                plot_wake=True)
             # mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
@@ -788,6 +791,58 @@ def Velocity(V_fs, r_p, body_panels, wake_panels=[]):
     
     velocity = V_fs + induced_velocity(r_p, body_panels, wake_panels)
       
+    return velocity
+
+@jit(nopython=True, parallel=True)
+def jit_body_induce_velocity(r_p, body_panels):
+    velocity_array = np.zeros((3, len(body_panels)))
+            
+    for i in prange(len(body_panels)):
+        velocity = Src_disturb_velocity(r_p, body_panels[i]) + \
+            Vrtx_ring_disturb_velocity(r_p, body_panels[i])
+        velocity_array[0][i] = velocity.x
+        velocity_array[1][i] = velocity.y
+        velocity_array[2][i] = velocity.z
+        
+    vx = np.sum(velocity_array[0])
+    vy = np.sum(velocity_array[1])
+    vz = np.sum(velocity_array[2])
+    velocity = Vector((vx, vy, vz))
+    return velocity
+
+@jit(nopython=True, parallel=True)
+def jit_wake_induced_velocity(r_p, wake_panels):
+    velocity_array = np.zeros((3, len(wake_panels)))
+            
+    for i in prange(len(wake_panels)):
+        velocity = Vrtx_ring_disturb_velocity(r_p, wake_panels[i])
+        velocity_array[0][i] = velocity.x
+        velocity_array[1][i] = velocity.y
+        velocity_array[2][i] = velocity.z
+    
+    vx = np.sum(velocity_array[0])
+    vy = np.sum(velocity_array[1])
+    vz = np.sum(velocity_array[2])
+    velocity = Vector((vx, vy, vz))
+    
+    return velocity
+
+def jit_induced_velocity(r_p, body_panels, wake_panels=[]):
+    
+    velocity = Vector((0, 0, 0))
+    
+    if wake_panels == []:
+        body_panels = typed.List(body_panels)
+        
+        velocity = jit_body_induce_velocity(r_p, body_panels)
+    else:
+        
+        body_panels = typed.List(body_panels)
+        wake_panels = typed.List(wake_panels)
+        
+        velocity = jit_body_induce_velocity(r_p, body_panels) \
+            + jit_wake_induced_velocity(r_p, wake_panels)
+    
     return velocity
    
 def AerodynamicForce(panels, ReferenceArea):
