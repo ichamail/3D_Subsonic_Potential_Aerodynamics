@@ -1,7 +1,7 @@
 from airfoil_class import Airfoil
 from wing_class import Wing
 from wing_mesh_generator import generate_WingPanelMesh
-from panel_method_class import UnSteady_PanelMethod
+from panel_method_class import AerodynamicForce, Center_of_Pressure, Cm_about_point, LiftCoefficient, UnSteady_PanelMethod, inducedDragCoefficient
 from vector_class import Vector
 from matplotlib import pyplot as plt
 from plot_functions import plot_Cp_SurfaceContours
@@ -67,8 +67,27 @@ plt.show()
 body_panels = [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]
 plot_Cp_SurfaceContours(body_panels, elevation=-150, azimuth=-120)
 
-CL = panel_method.LiftCoeff(wing_mesh.panels, wing.RefArea)
-CD = panel_method.inducedDragCoeff(wing_mesh.panels, wing.RefArea)
+CL = panel_method.LiftCoeff(wing_mesh, wing.RefArea)
+CD = panel_method.inducedDragCoeff(wing_mesh, wing.RefArea)
 
 print("CL = " + str(CL))
 print("CD = " + str(CD))
+
+CF = AerodynamicForce(body_panels, wing.RefArea)
+print(CF.x, CF.y, CF.z)
+
+# CL = LiftCoefficient(CF, panel_method.V_fs.transformation(wing_mesh.R.T))
+# CD = inducedDragCoefficient(CF, panel_method.V_fs.transformation(wing_mesh.R.T))
+
+CL = LiftCoefficient(CF.transformation(wing_mesh.R), panel_method.V_fs)
+CD = inducedDragCoefficient(CF.transformation(wing_mesh.R), panel_method.V_fs)
+
+print(CL.x, CL.y, CL.z)
+print(CD.x, CD.y, CD.z)
+
+r_point = Vector((0.25*wing.root_airfoil.chord, 0, 0))
+Cm = Cm_about_point(r_point, body_panels, wing.RefArea)
+r_cop = Center_of_Pressure(body_panels, wing.RefArea)
+
+print(Cm.x, Cm.y, Cm.z)
+print(r_cop.x, r_cop.y, r_cop.z)

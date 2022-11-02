@@ -66,8 +66,8 @@ plt.show()
 body_panels = [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]
 plot_Cp_SurfaceContours(body_panels, elevation=-150, azimuth=-120)
 
-CL = panel_method.LiftCoeff(wing_mesh.panels, wing.RefArea)
-CD = panel_method.inducedDragCoeff(wing_mesh.panels, wing.RefArea)
+CL = panel_method.LiftCoeff(body_panels, wing.RefArea)
+CD = panel_method.inducedDragCoeff(body_panels, wing.RefArea)
 
 print("CL = " + str(CL))
 print("CD = " + str(CD))
