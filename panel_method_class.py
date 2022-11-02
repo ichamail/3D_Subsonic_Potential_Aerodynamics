@@ -553,6 +553,58 @@ def LiftCoefficient(AerodynamicForce, V_fs):
     CL_vector = C_force - CD_vector
     return CL_vector
 
+def Cm_about_point(r_point, body_panels, ReferenceArea):
+    """
+    r_point: position vector meassured from body-fixed frame of reference f'
+    
+    Cm = Σ(r_i X CF_i) = Σ{(r_cp_i - r_p) X CF_i}
+    
+    Cm: moment coefficient about point p
+    C_F = n * (-Cp * A/A_ref)
+    Cp: panel's pressure coefficient
+    A: panel's area
+    A_ref: wing's reference area
+    r_cp: panel's control point
+    r_p: r_point
+    r_cp = r + r_p
+    """
+    Cm = Vector((0, 0, 0))
+    
+    for panel in body_panels:
+        C_Fi =  (-panel.Cp * panel.area/ReferenceArea) * panel.n
+        r = panel.r_cp - r_point
+        Cm = Cm + Vector.cross_product(r, C_Fi)
+    
+    return Cm
+
+def Center_of_Pressure(body_panels, ReferenceArea):
+    """
+    a X b = c => b = (c X a)/(a*a) + ka, k: arbitary scalar constant
+    
+    r_CoP X F = Σ{r X Fi} => F X r_CoP = - Σ{r X Fi} =>
+    => r_CoP = (- Σ{r X Fi} X F)/(F*F) + kF 
+    => r_CoP = (F X Σ{r X Fi} )/(F*F) + kF
+    
+    r_CoP: position vector of Center of Pressure
+    F: Aerodynamic force = ΣFi
+    r: position vector of the point where the force Fi act meassured from the body-fixed frame of reference f'
+    r X Fi : moment of force Fi about body-fixed frame's of refernce origin
+    Σ{r X Fi}: resultant Moment about the origin of the body-fixed frame of reference f'
+    """
+    
+    CF = AerodynamicForce(body_panels, ReferenceArea)
+    
+    # r_o: position vector of point about which Cm is calculated
+    # r_o is meassured from body-fixed frame of reference f'
+    r_o = Vector((0, 0, 0))  
+    Cm = Cm_about_point(r_o, body_panels, ReferenceArea)
+    
+    k = 0 # arbitary constant
+    # r_cop.z = 0 =>  [CF.cross(Cm) / CF.norm()**2].z + k*CF.z = 0 =>
+    k =-(Vector.cross_product(CF, Cm) / CF.norm()**2).z / CF.z 
+    r_cop = Vector.cross_product(CF, Cm) / CF.norm()**2 + k*CF
+    
+    return r_cop
         
 if __name__ == "__main__":
     from mesh_class import PanelMesh
