@@ -73,21 +73,11 @@ CD = panel_method.inducedDragCoeff(wing_mesh, wing.RefArea)
 print("CL = " + str(CL))
 print("CD = " + str(CD))
 
-CF = AerodynamicForce(body_panels, wing.RefArea)
-print(CF.x, CF.y, CF.z)
+r_c4 = Vector((wing.root_airfoil.chord, 0, 0))
+Cm = Cm_about_point(r_c4, body_panels, wing.RefArea)
 
-# CL = LiftCoefficient(CF, panel_method.V_fs.transformation(wing_mesh.R.T))
-# CD = inducedDragCoefficient(CF, panel_method.V_fs.transformation(wing_mesh.R.T))
+r_CoP = Center_of_Pressure(body_panels, wing.RefArea)
 
-CL = LiftCoefficient(CF.transformation(wing_mesh.R), panel_method.V_fs)
-CD = inducedDragCoefficient(CF.transformation(wing_mesh.R), panel_method.V_fs)
-
-print(CL.x, CL.y, CL.z)
-print(CD.x, CD.y, CD.z)
-
-r_point = Vector((0.25*wing.root_airfoil.chord, 0, 0))
-Cm = Cm_about_point(r_point, body_panels, wing.RefArea)
-r_cop = Center_of_Pressure(body_panels, wing.RefArea)
-
-print(Cm.x, Cm.y, Cm.z)
-print(r_cop.x, r_cop.y, r_cop.z)
+print("CMx = " + str(Cm.x) + ", CMy = " + str(Cm.y) + ", CMz = " + str(Cm.z))
+print("r_CoP = " + str(r_CoP.x)+"ex + " + str(r_CoP.y) + "ey + " 
+      + str(r_CoP.z) + "ez")
