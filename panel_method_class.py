@@ -226,6 +226,22 @@ class UnSteady_PanelMethod(PanelMethod):
         # V_wind: wind velocity vector observed from inertial frame of reference F
         self.V_wind = V_wind
         self.V_fs = V_wind - Vo
+    
+    def LiftCoeff(self, mesh, ReferenceArea):
+        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        C_force = AerodynamicForce(body_panels, ReferenceArea)
+        C_force = C_force.transformation(mesh.R)
+        CL_vec = LiftCoefficient(C_force, self.V_fs)
+        CL = CL_vec.norm()
+        return CL
+    
+    def inducedDragCoeff(self, mesh, ReferenceArea):
+        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        C_force = AerodynamicForce(body_panels, ReferenceArea)
+        C_force = C_force.transformation(mesh.R)
+        CD_vec = inducedDragCoefficient(C_force, self.V_fs)
+        CD = CD_vec.norm()
+        return CD
             
     def set_WakeShedFactor(self, wake_shed_factor):
         self.wake_shed_factor = wake_shed_factor
