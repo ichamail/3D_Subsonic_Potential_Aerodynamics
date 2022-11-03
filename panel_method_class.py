@@ -295,7 +295,16 @@ class UnSteady_PanelMethod(PanelMethod):
         self.V_wind = V_wind
         self.set_V_fs(Vo=Vector((0, 0, 0)), V_wind=self.V_wind)
         self.wake_shed_factor = 0.3
+        self.triangular_wakePanels = False
         self.dt = 0.1
+    
+    def set_wakePanelType(self, type:str):
+        if type == "triangular":
+            self.triangular_wakePanels = True
+        elif type == "quadrilateral":
+            self.triangular_wakePanels = False
+        else:
+            self.triangular_wakePanels = False            
     
     def set_V_wind(self, Velocity, alpha, beta):
         # alpha: angle between X-axis & Y-axis of inertial frame of reference F
@@ -368,11 +377,20 @@ class UnSteady_PanelMethod(PanelMethod):
                 id_j = mesh.wake_sheddingPanels[panel_i.id][-1]
                 panel_j = mesh.panels[id_j]
                 panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
+                if self.triangular_wakePanels:
+                    id_j = mesh.wake_sheddingPanels[panel_i.id][-2]
+                    panel_j = mesh.panels[id_j]
+                    panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
+                    
                     
             elif panel_i.id in mesh.TrailingEdge["pressure side"]:
                 id_j = mesh.wake_sheddingPanels[panel_i.id][-1]
                 panel_j = mesh.panels[id_j]
                 panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
+                if self.triangular_wakePanels:
+                    id_j = mesh.wake_sheddingPanels[panel_i.id][-2]
+                    panel_j = mesh.panels[id_j]
+                    panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
         
 
         # compute Velocity and pressure coefficient at panels' control points
@@ -414,12 +432,17 @@ class UnSteady_PanelMethod(PanelMethod):
             panel.Cp = panel.Cp - 2 * phi_dot
     
     def solve(self, mesh:PanelAeroMesh, dt, iters):
+        if self.triangular_wakePanels:
+            type = "triangular"
+        else:
+            type = "quadrilateral"
+            
         self.dt = dt
         self.set_V_fs(mesh.Vo, self.V_wind)
         
         for i in range(iters):
             mesh.move_body(dt)
-            mesh.shed_wake(self.V_wind, dt, self.wake_shed_factor)
+            mesh.shed_wake(self.V_wind, dt, self.wake_shed_factor, type)
             self.advance_solution(mesh)
             mesh.convect_wake(induced_velocity, dt)
             
@@ -437,8 +460,7 @@ class UnSteady_PanelMethod(PanelMethod):
         # mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
         #                               plot_wake=True)
            
-    @staticmethod
-    def influence_coeff_matrices(mesh:PanelAeroMesh):
+    def influence_coeff_matrices(self, mesh:PanelAeroMesh):
         
         # Compute Influence coefficient matrices
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
@@ -470,12 +492,18 @@ class UnSteady_PanelMethod(PanelMethod):
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         if id_k == mesh.wake_sheddingPanels[id_j][-1]:
                             A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                        elif (id_k == mesh.wake_sheddingPanels[id_j][-2]
+                              and self.triangular_wakePanels):
+                            A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
                         
                 elif id_j in mesh.TrailingEdge["pressure side"]:
                     for id_k in mesh.wake_sheddingPanels[id_j]:
                         panel_k = mesh.panels[id_k]
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         if id_k == mesh.wake_sheddingPanels[id_j][-1]:
+                            A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                        elif (id_k == mesh.wake_sheddingPanels[id_j][-2]
+                              and self.triangular_wakePanels):
                             A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
                 
         return A, B, C
@@ -490,15 +518,22 @@ class UnSteady_PanelMethod(PanelMethod):
         TrailingEdge = pyObjToNumbaObj(mesh.TrailingEdge)
         wake_sheddingPanels = pyObjToNumbaObj(mesh.wake_sheddingPanels)
         
+        if self.triangular_wakePanels:
+            wake_type = "triangular"
+        else:
+            wake_type = "quadrilateral"
+        
         A, B, C = self.jit_influence_coeff_matrices(panels, panels_id,
-                                                    TrailingEdge, wake_sheddingPanels)
+                                                    TrailingEdge, wake_sheddingPanels,
+                                                    wake_type)
                 
         return A, B, C
     
     @staticmethod
     @jit(nopython=True, parallel=True)
     def jit_influence_coeff_matrices(panels:list, panels_id:dict,
-                                TrailingEdge:dict, wake_sheddingPanels:dict):
+                                TrailingEdge:dict, wake_sheddingPanels:dict,
+                                wake_type:str):
         
         Nb = len(panels_id["body"])
         Nw = len(panels_id["wake"])
@@ -527,12 +562,18 @@ class UnSteady_PanelMethod(PanelMethod):
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         if id_k == wake_sheddingPanels[id_j][-1]:
                             A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
-                        
+                        elif (id_k == wake_sheddingPanels[id_j][-2]
+                              and wake_type=="triangular"):
+                            A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+         
                 elif id_j in TrailingEdge["pressure side"]:
                     for id_k in wake_sheddingPanels[id_j]:
                         panel_k = panels[id_k]
                         C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
                         if id_k == wake_sheddingPanels[id_j][-1]:
+                            A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                        elif (id_k == wake_sheddingPanels[id_j][-2]
+                            and wake_type=="triangular"):
                             A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
                 
         return A, B, C
