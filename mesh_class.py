@@ -66,14 +66,6 @@ class Mesh:
         
         return neighbours
 
-    
-        
-        ro = self.ro + self.Vo*dt
-        theta = self.theta + self.omega*dt
-        
-        self.set_body_fixed_frame_origin(ro.x, ro.y, ro.z)
-        self.set_body_fixed_frame_orientation(theta.x, theta.y, theta.z)
-
     def add_extra_neighbours(self):
          
         old_shell_neighbours = {}
@@ -324,45 +316,79 @@ class AeroMesh(Mesh):
             id = self.nodes_id["wake"][-1] + 1
             self.nodes_id["wake"].append(id)
         
-    def add_wakeShells(self):
+    def add_wakeShells(self, type="quadrilateral"):
         
         num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
         first_id = self.nodes_id["wake"][-1] - 2*num_TrailingEdge_nodes + 1 
         ny = num_TrailingEdge_nodes
         for i in range(ny-1):
             
-            shell = [i + first_id,
-                     (i + 1) + first_id,
-                     (i + 1 + ny) + first_id,
-                     (i + ny) + first_id]
-            
-            self.shells.append(shell)
-            
-            if self.shells_id["wake"] == []:
-                id = self.shells_id["body"][-1] + 1
-            else:
-                id = self.shells_id["wake"][-1] + 1
-            
-            # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
-            self.shells_id["wake"].append(id)
-            
-            
-            value_list_id = id
-            
-            key_id = self.TrailingEdge["pressure side"][i]
-            self.wake_sheddingShells[key_id].append(value_list_id)
-            
-            key_id = self.TrailingEdge["suction side"][i]
-            self.wake_sheddingShells[key_id].append(value_list_id)        
-        
-    def shed_wake(self, v_rel, dt, wake_shed_factor=1):
+            if type=="quadrilateral":
+                shell = [i + first_id,
+                        (i + 1) + first_id,
+                        (i + 1 + ny) + first_id,
+                        (i + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                if self.shells_id["wake"] == []:
+                    id = self.shells_id["body"][-1] + 1
+                else:
+                    id = self.shells_id["wake"][-1] + 1
+                
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                self.shells_id["wake"].append(id)
+                
+                
+                value_list_id = id
+                
+                key_id = self.TrailingEdge["pressure side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                
+                key_id = self.TrailingEdge["suction side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                
+            elif type=="triangular":
+                shell = [i + first_id,
+                        (i + 1) + first_id,
+                        (i + 1 + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                shell = [i + first_id,
+                        (i + 1 + ny) + first_id,
+                        (i + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                if self.shells_id["wake"] == []:
+                    id = self.shells_id["body"][-1] + 1
+                else:
+                    id = self.shells_id["wake"][-1] + 1
+                
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                self.shells_id["wake"].append(id)
+                self.shells_id["wake"].append(id+1)
+                
+                
+                value_list_id = id
+                
+                key_id = self.TrailingEdge["pressure side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id + 1)
+                
+                key_id = self.TrailingEdge["suction side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id+1)
+    
+    def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
                 
         if self.nodes_id["wake"] == []:
             self.initialize_wake_nodes()
                       
         self.move_nodes(self.nodes_id["wake"], v_rel, dt*wake_shed_factor)    
         self.add_wakeNodes()
-        self.add_wakeShells()
+        self.add_wakeShells(type)
 
     def nodes_to_convect(self):
         num_TrailingEdge_nodes = len(self.TrailingEdge["suction side"]) + 1
@@ -451,7 +477,7 @@ class PanelMesh(Mesh):
             r_cp = panel.r_cp
             n = panel.n
             scale = 0.1
-            n = n.scalar_product(scale)
+            n = n * scale
             ax.scatter(r_cp.x, r_cp.y, r_cp.z, color='k', s=5)
             ax.quiver(r_cp.x, r_cp.y, r_cp.z, n.x, n.y, n.z, color='r')
                 
@@ -699,11 +725,14 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
     
     ### unsteady features ###
     
-    def add_wakePanels(self):
+    def add_wakePanels(self, type="quadrilateral"):
                 
         num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
         id_end = self.shells_id["wake"][-1]
-        id_start = id_end - num_TrailingEdge_panels + 1
+        if type == "quadrilateral":
+            id_start = id_end - num_TrailingEdge_panels + 1
+        elif type == "triangular":
+            id_start = id_end - 2*num_TrailingEdge_panels + 1
                 
         for shell_id in range(id_start, id_end+1):
             vertex = []
@@ -719,14 +748,14 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             
             self.panels[-1].id = shell_id
     
-    def shed_wake(self, v_rel, dt, wake_shed_factor=1):
+    def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
         if self.panels_id["wake"] == []:
-            super().shed_wake(v_rel, dt, wake_shed_factor)
-            self.add_wakePanels()
+            super().shed_wake(v_rel, dt, wake_shed_factor, type)
+            self.add_wakePanels(type)
         else:
             self.move_panels(self.panels_id["wake"], v_rel, dt*wake_shed_factor)
-            super().shed_wake(v_rel, dt, wake_shed_factor)        
-            self.add_wakePanels()
+            super().shed_wake(v_rel, dt, wake_shed_factor, type)        
+            self.add_wakePanels(type)
    
     def convect_wake(self, induced_velocity_function, dt):
         
