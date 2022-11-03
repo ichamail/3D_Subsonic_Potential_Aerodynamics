@@ -761,11 +761,14 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
     
     ### unsteady features ###
     
-    def add_wakePanels(self):
-                
+    def add_wakePanels(self, type="quadrilateral"):
+
         num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
         id_end = self.shells_id["wake"][-1]
-        id_start = id_end - num_TrailingEdge_panels + 1
+        if type == "quadrilateral":
+            id_start = id_end - num_TrailingEdge_panels + 1
+        elif type == "triangular":
+            id_start = id_end - 2*num_TrailingEdge_panels + 1
                 
         for shell_id in range(id_start, id_end+1):
             vertex = []
@@ -781,10 +784,13 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             
             self.panels[-1].id = shell_id
     
-    def add_wakePanels_jit(self):
+    def add_wakePanels_jit(self, type="quadrilateral"):
         num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
         id_end = self.shells_id["wake"][-1]
-        id_start = id_end - num_TrailingEdge_panels + 1
+        if type == "quadrilateral":
+            id_start = id_end - num_TrailingEdge_panels + 1
+        elif type == "triangular":
+            id_start = id_end - 2*num_TrailingEdge_panels + 1
                 
         for shell_id in range(id_start, id_end+1):
             vertex_list = []
@@ -798,16 +804,16 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             
             self.panels[-1].id = shell_id
         
-    def shed_wake(self, v_rel, dt, wake_shed_factor=1):
+    def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
         if self.panels_id["wake"] == []:
-            super().shed_wake(v_rel, dt, wake_shed_factor)
-            # self.add_wakePanels()
-            self.add_wakePanels_jit()
+            super().shed_wake(v_rel, dt, wake_shed_factor, type)
+            # self.add_wakePanels(type)
+            self.add_wakePanels_jit(type)
         else:
             self.move_panels(self.panels_id["wake"], v_rel, dt*wake_shed_factor)
-            super().shed_wake(v_rel, dt, wake_shed_factor)        
-            # self.add_wakePanels()
-            self.add_wakePanels_jit()
+            super().shed_wake(v_rel, dt, wake_shed_factor, type)        
+            # self.add_wakePanels(type)
+            self.add_wakePanels_jit(type)
    
     def convect_wake(self, induced_velocity_function, dt):
         
