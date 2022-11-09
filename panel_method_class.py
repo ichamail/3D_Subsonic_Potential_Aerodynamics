@@ -150,19 +150,18 @@ class Steady_PanelMethod(PanelMethod):
         doublet_strengths = np.linalg.solve(A, RHS)
         
         for panel_i in (body_panels):
-            
             panel_i.mu = doublet_strengths[panel_i.id]
-            
-            if panel_i.id in mesh.TrailingEdge["suction side"]:
-                for id_j in mesh.wake_sheddingPanels[panel_i.id]:
-                    panel_j = mesh.panels[id_j]
-                    panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
                     
-            elif panel_i.id in mesh.TrailingEdge["pressure side"]:
-                for id_j in mesh.wake_sheddingPanels[panel_i.id]:
-                    panel_j = mesh.panels[id_j]
-                    panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
+        for id_i in mesh.TrailingEdge["suction side"]:
+            for id_j in mesh.wake_sheddingPanels[id_i]:
+                panel_j = mesh.panels[id_j]
+                panel_j.mu = panel_j.mu + doublet_strengths[id_i]
         
+        for id_i in mesh.TrailingEdge["pressure side"]:
+            for id_j in mesh.wake_sheddingPanels[id_i]:
+                panel_j = mesh.panels[id_j]
+                panel_j.mu = panel_j.mu - doublet_strengths[id_i]
+                
 
         # compute Velocity and pressure coefficient at panels' control points
         V_fs_norm = self.V_fs.norm()
@@ -270,18 +269,20 @@ class Steady_PanelMethod(PanelMethod):
                 # C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
                 B[id_i][id_j], C[id_i][id_j] = influence_coeff(r_cp, panel_j)
                 A[id_i][id_j] = C[id_i][id_j]
-                
-                if id_j in TrailingEdge["suction side"]:
-                    for id_k in wake_sheddingShells[id_j]:
-                        panel_k = panels[id_k]
-                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
-                        A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
-                            
-                elif id_j in TrailingEdge["pressure side"]:
-                    for id_k in wake_sheddingShells[id_j]:
-                        panel_k = panels[id_k]
-                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
-                        A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                        
+            for j in prange(len(TrailingEdge["suction side"])):
+                id_j = TrailingEdge["suction side"][j]
+                for id_k in wake_sheddingShells[id_j]:
+                    panel_k = panels[id_k]
+                    C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                    A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+            
+            for j in prange(len(TrailingEdge["pressure side"])):
+                id_j = TrailingEdge["pressure side"][j]
+                for id_k in wake_sheddingShells[id_j]:
+                    panel_k = panels[id_k]
+                    C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                    A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
                     
         return A, B, C
 
@@ -372,26 +373,24 @@ class UnSteady_PanelMethod(PanelMethod):
             doublet_strength_old[panel_i.id] = panel_i.mu
             
             panel_i.mu = doublet_strengths[panel_i.id]
-            
-            if panel_i.id in mesh.TrailingEdge["suction side"]:
-                id_j = mesh.wake_sheddingPanels[panel_i.id][-1]
-                panel_j = mesh.panels[id_j]
-                panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
-                if self.triangular_wakePanels:
-                    id_j = mesh.wake_sheddingPanels[panel_i.id][-2]
-                    panel_j = mesh.panels[id_j]
-                    panel_j.mu = panel_j.mu + doublet_strengths[panel_i.id]
                     
-                    
-            elif panel_i.id in mesh.TrailingEdge["pressure side"]:
-                id_j = mesh.wake_sheddingPanels[panel_i.id][-1]
+        for id_i in mesh.TrailingEdge["suction side"]:
+            id_j = mesh.wake_sheddingPanels[id_i][-1]
+            panel_j = mesh.panels[id_j]
+            panel_j.mu = panel_j.mu + doublet_strengths[id_i]
+            if self.triangular_wakePanels:
+                id_j = mesh.wake_sheddingPanels[id_i][-2]
                 panel_j = mesh.panels[id_j]
-                panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
-                if self.triangular_wakePanels:
-                    id_j = mesh.wake_sheddingPanels[panel_i.id][-2]
-                    panel_j = mesh.panels[id_j]
-                    panel_j.mu = panel_j.mu - doublet_strengths[panel_i.id]
-        
+                panel_j.mu = panel_j.mu + doublet_strengths[id_i]
+                
+        for id_i in mesh.TrailingEdge["pressure side"]:
+            id_j = mesh.wake_sheddingPanels[id_i][-1]
+            panel_j = mesh.panels[id_j]
+            panel_j.mu = panel_j.mu - doublet_strengths[id_i]
+            if self.triangular_wakePanels:
+                id_j = mesh.wake_sheddingPanels[id_i][-2]
+                panel_j = mesh.panels[id_j]
+                panel_j.mu = panel_j.mu - doublet_strengths[id_i]       
 
         # compute Velocity and pressure coefficient at panels' control points
                
@@ -441,8 +440,8 @@ class UnSteady_PanelMethod(PanelMethod):
         self.set_V_fs(mesh.Vo, self.V_wind)
         
         for i in range(iters):
-            mesh.move_body(dt)
-            mesh.shed_wake(self.V_wind, dt, self.wake_shed_factor, type)
+            mesh.move_body(self.dt)
+            mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
             self.advance_solution(mesh)
             mesh.convect_wake(induced_velocity, dt)
             
@@ -541,40 +540,44 @@ class UnSteady_PanelMethod(PanelMethod):
         C = np.zeros((Nb, Nb + Nw))
         A = np.zeros_like(B)
         
-    
         # loop all over panels' control points
-        for id_i in panels_id["body"]:
+        for i in prange(Nb):
+            id_i = panels_id["body"][i]
             panel_i = panels[id_i]
             r_cp = panel_i.r_cp
             
             # loop all over panels
-            for id_j in panels_id["body"]:
-                
+            for j in prange(Nb):
+                id_j = panels_id["body"][j]
                 panel_j = panels[id_j]
+                
                 # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
                 # C[id_i][id_j] = Dblt_influence_coeff(r_cp, panel_j)
                 B[id_i][id_j], C[id_i][id_j] = influence_coeff(r_cp, panel_j)
                 A[id_i][id_j] = C[id_i][id_j]
-                
-                if id_j in TrailingEdge["suction side"]:
-                    for id_k in wake_sheddingPanels[id_j]:
-                        panel_k = panels[id_k]
-                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
-                        if id_k == wake_sheddingPanels[id_j][-1]:
-                            A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
-                        elif (id_k == wake_sheddingPanels[id_j][-2]
-                              and wake_type=="triangular"):
-                            A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
-         
-                elif id_j in TrailingEdge["pressure side"]:
-                    for id_k in wake_sheddingPanels[id_j]:
-                        panel_k = panels[id_k]
-                        C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
-                        if id_k == wake_sheddingPanels[id_j][-1]:
-                            A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
-                        elif (id_k == wake_sheddingPanels[id_j][-2]
+                                            
+            for j in prange(len(TrailingEdge["suction side"])):
+                id_j = TrailingEdge["suction side"][j]
+                for id_k in wake_sheddingPanels[id_j]:
+                    panel_k = panels[id_k]
+                    C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                    if id_k == wake_sheddingPanels[id_j][-1]:
+                        A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                    elif (id_k == wake_sheddingPanels[id_j][-2]
                             and wake_type=="triangular"):
-                            A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                        A[id_i][id_j] = A[id_i][id_j] + C[id_i][id_k]
+                        
+            for j in prange(len(TrailingEdge["pressure side"])):
+                id_j = TrailingEdge["pressure side"][j]
+                for id_k in wake_sheddingPanels[id_j]:
+                    panel_k = panels[id_k]
+                    C[id_i][id_k] = Dblt_influence_coeff(r_cp, panel_k)
+                    if id_k == wake_sheddingPanels[id_j][-1]:
+                        A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                    elif (id_k == wake_sheddingPanels[id_j][-2]
+                        and wake_type=="triangular"):
+                        A[id_i][id_j] = A[id_i][id_j] - C[id_i][id_k]
+                    
                 
         return A, B, C
 
