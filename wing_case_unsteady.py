@@ -1,7 +1,7 @@
 from airfoil_class import Airfoil
 from wing_class import Wing
 from wing_mesh_generator import generate_WingPanelMesh
-from panel_method_class import AerodynamicForce, Center_of_Pressure, Cm_about_point, LiftCoefficient, UnSteady_PanelMethod, inducedDragCoefficient
+from panel_method_class import Center_of_Pressure, Cm_about_point,UnSteady_PanelMethod
 from vector_class import Vector
 from matplotlib import pyplot as plt
 from plot_functions import plot_Cp_SurfaceContours
