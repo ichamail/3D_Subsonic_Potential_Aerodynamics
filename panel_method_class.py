@@ -22,7 +22,10 @@ class PanelMethod:
     def LiftCoeff(self, panels, ReferenceArea):
         C_force = AerodynamicForce(panels, ReferenceArea)
         CL_vec = LiftCoefficient(C_force, self.V_fs)
-        CL = CL_vec.norm()
+        if CL_vec.z <=0:
+            CL = CL_vec.norm()
+        else:
+            CL = -CL_vec.norm()
         return CL
 
     def inducedDragCoeff(self, panels, ReferenceArea):
@@ -241,7 +244,10 @@ class UnSteady_PanelMethod(PanelMethod):
         C_force = AerodynamicForce(body_panels, ReferenceArea)
         V_fs = self.V_fs.transformation(mesh.R.T)
         CL_vec = LiftCoefficient(C_force, V_fs)
-        CL = CL_vec.norm()
+        if CL_vec.z <=0:
+            CL = CL_vec.norm()
+        else:
+            CL = -CL_vec.norm()
         return CL
     
     def inducedDragCoeff(self, mesh, ReferenceArea):
