@@ -1,4 +1,3 @@
-from turtle import st
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from Algorithms import light_vector
@@ -6,6 +5,7 @@ from plot_functions import set_axes_equal
 import numpy as np
 from vector_class import Vector
 from panel_class import Panel, triPanel, quadPanel
+from copy import deepcopy
 
 
 class Mesh:
@@ -978,7 +978,30 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         ax.set_zlim3d(z.min(), z.max())
         set_axes_equal(ax)
         
-        plt.show()        
+        plt.show()
+    
+    def copy(self):
+        nodes = deepcopy(self.nodes)
+        shells = deepcopy(self.shells)
+        nodes_id = deepcopy(self.nodes_id)
+        shells_id = deepcopy(self.shells_id)
+        TrailingEdge = deepcopy(self.TrailingEdge)
+        wake_sheddingShells = deepcopy(self.wake_sheddingShells)
+        WingTip = deepcopy(self.WingTip)
+        
+        mesh = PanelAeroMesh(nodes, shells, nodes_id, shells_id, TrailingEdge,
+                             wake_sheddingShells, WingTip)
+        
+        (xo, yo, zo) = self.origin
+        mesh.set_body_fixed_frame_origin(xo, yo, zo)
+        
+        (roll, pitch, yaw) = self.orientation
+        mesh.set_body_fixed_frame_orientation(roll, pitch, yaw)
+        
+        mesh.set_origin_velocity(self.Vo)
+        mesh.set_angular_velocity(self.omega)
+        
+        return mesh
 
 
 
