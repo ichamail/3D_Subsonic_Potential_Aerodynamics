@@ -487,7 +487,7 @@ class Wing:
             bisector = bisector * 10 * C_r
             
             X[:, j] = np.linspace(x[0], x[0] + bisector.x, num_x_shells+1)
-            Y[:, j] = y[j]
+            Y[:, j] = y[0]
             Z[:, j] = np.linspace(z[0], z[0]+ bisector.z, num_x_shells+1)
         
         wake_nodes = []
@@ -591,7 +591,7 @@ class Wing:
                                                 twist, delta, gamma)
                         
             X[:, j] = np.linspace(x[0], x[0] + vec.x, num_x_shells+1)
-            Y[:, j] = y[j]
+            Y[:, j] = y[0]
             Z[:, j] = np.linspace(z[0], z[0]+ vec.z, num_x_shells+1)
         
         wake_nodes = []
