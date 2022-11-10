@@ -31,7 +31,10 @@ class PanelMethod:
     def inducedDragCoeff(self, panels, ReferenceArea):
         C_force = AerodynamicForce(panels, ReferenceArea)
         CD_vec = inducedDragCoefficient(C_force, self.V_fs)
-        CD = CD_vec.norm()
+        if CD_vec.x >= 0:
+            CD = CD_vec.norm()
+        else:
+            CD = -CD_vec.norm()
         return CD
     
 
@@ -255,7 +258,10 @@ class UnSteady_PanelMethod(PanelMethod):
         C_force = AerodynamicForce(body_panels, ReferenceArea)
         V_fs = self.V_fs.transformation(mesh.R.T)
         CD_vec = inducedDragCoefficient(C_force, V_fs)
-        CD = CD_vec.norm()
+        if CD_vec.x >= 0:
+            CD = CD_vec.norm()
+        else:
+            CD = -CD_vec.norm()
         return CD
             
     def set_WakeShedFactor(self, wake_shed_factor):
