@@ -141,8 +141,19 @@ class Wing:
         elif mesh_shell_type=="triangular":
             
             # pressure and suction sides
-            for j in range(nx):
-                for i in range(ny-1):
+            for j in range(nx//2):
+                
+                for i in range((ny-1)//2):
+                    
+                    shells.append([(i+j*ny),
+                                   (i+j*ny)+1,
+                                   ((i+j*ny) + ny)%len(nodes)])
+                    
+                    shells.append([((i+j*ny)+1 + ny)%len(nodes),
+                                   ((i+j*ny)+ny)%len(nodes),
+                                   (i+j*ny)+1])                   
+                    
+                for i in range((ny-1)//2, ny-1):
                     
                     shells.append([(i+j*ny),
                                    (i+j*ny)+1,
@@ -151,6 +162,28 @@ class Wing:
                     shells.append([((i+j*ny)+1 + ny)%len(nodes),
                                    ((i+j*ny)+ny)%len(nodes),
                                    (i+j*ny)])
+                
+            for j in range(nx//2, nx):
+                
+                for i in range((ny-1)//2):
+                    
+                    shells.append([(i+j*ny),
+                                   (i+j*ny)+1,
+                                   ((i+j*ny)+1 + ny)%len(nodes)])
+                    
+                    shells.append([((i+j*ny)+1 + ny)%len(nodes),
+                                   ((i+j*ny)+ny)%len(nodes),
+                                   (i+j*ny)])
+                
+                for i in range((ny-1)//2, ny-1):
+                    
+                    shells.append([(i+j*ny),
+                                   (i+j*ny)+1,
+                                   ((i+j*ny) + ny)%len(nodes)])
+                    
+                    shells.append([((i+j*ny)+1 + ny)%len(nodes),
+                                   ((i+j*ny)+ny)%len(nodes),
+                                   (i+j*ny)+1])                   
                        
         return nodes, shells         
         
@@ -911,7 +944,7 @@ if __name__=="__main__":
       
     root_airfoil = Airfoil(name="naca0018", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012", chord_length=0.8)
-    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
+    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=40, dihedral=0,
                 twist=0)
     
     num_x_bodyShells = 10
@@ -919,7 +952,7 @@ if __name__=="__main__":
         
     wing_nodes, wing_shells = wing.generate_wingMesh(num_x_bodyShells,
                                                      num_y_Shells,
-                                                     "quadrilateral")    
+                                                     "triangular")    
     wing_mesh = PanelMesh(wing_nodes, wing_shells)
     # wing_mesh.plot_shells(elevation=-150, azimuth=-120)
     # wing_mesh.plot_panels(elevation=-150, azimuth=-120)  
