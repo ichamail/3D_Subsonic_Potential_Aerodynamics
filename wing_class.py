@@ -563,7 +563,19 @@ class Wing:
         elif mesh_shell_type=="triangular":
             
             for j in range(nx-1):
-                for i in range(ny-1):
+                # left side
+                for i in range((ny-1)//2):
+                    
+                    wake_shells.append([(i+j*ny),
+                                        ((i+j*ny)+1 + ny),
+                                        (i+j*ny)+1])
+                    
+                    wake_shells.append([(i+j*ny),
+                                        ((i+j*ny) + ny),
+                                        (i+j*ny)+1 + ny])
+                       
+                # right side
+                for i in range((ny-1)//2, ny-1):
                     
                     wake_shells.append([(i+j*ny),
                                         ((i+j*ny)+ny),
