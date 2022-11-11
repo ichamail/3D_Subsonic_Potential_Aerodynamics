@@ -354,14 +354,15 @@ class AeroMesh(Mesh):
             
             # left side
             for i in range((ny-1)//2):
-                shell = [i + first_id,
-                        (i + 1) + first_id,
+                
+                shell = [(i+ 1) + first_id,
+                        (i + 1 + ny) + first_id,
                         (i + ny) + first_id]
                 
                 self.shells.append(shell)
                 
-                shell = [(i+ 1) + first_id,
-                        (i + 1 + ny) + first_id,
+                shell = [i + first_id,
+                        (i + 1) + first_id,
                         (i + ny) + first_id]
                 
                 self.shells.append(shell)
@@ -389,14 +390,14 @@ class AeroMesh(Mesh):
             for i in range((ny-1)//2, ny-1):
                 
                 shell = [i + first_id,
-                        (i + 1) + first_id,
-                        (i + 1 + ny) + first_id]
+                        (i + 1 + ny) + first_id,
+                        (i + ny) + first_id]
                 
                 self.shells.append(shell)
                 
                 shell = [i + first_id,
-                        (i + 1 + ny) + first_id,
-                        (i + ny) + first_id]
+                        (i + 1) + first_id,
+                        (i + 1 + ny) + first_id]
                 
                 self.shells.append(shell)
                 
