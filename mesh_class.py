@@ -321,9 +321,11 @@ class AeroMesh(Mesh):
         num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
         first_id = self.nodes_id["wake"][-1] - 2*num_TrailingEdge_nodes + 1 
         ny = num_TrailingEdge_nodes
-        for i in range(ny-1):
+        
+        if type=="quadrilateral":
             
-            if type=="quadrilateral":
+            for i in range(ny-1):
+                
                 shell = [i + first_id,
                         (i + 1) + first_id,
                         (i + 1 + ny) + first_id,
@@ -347,8 +349,45 @@ class AeroMesh(Mesh):
                 
                 key_id = self.TrailingEdge["suction side"][i]
                 self.wake_sheddingShells[key_id].append(value_list_id)
+                        
+        elif type=="triangular":
+            
+            # left side
+            for i in range((ny-1)//2):
+                shell = [i + first_id,
+                        (i + 1) + first_id,
+                        (i + ny) + first_id]
                 
-            elif type=="triangular":
+                self.shells.append(shell)
+                
+                shell = [(i+ 1) + first_id,
+                        (i + 1 + ny) + first_id,
+                        (i + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                if self.shells_id["wake"] == []:
+                    id = self.shells_id["body"][-1] + 1
+                else:
+                    id = self.shells_id["wake"][-1] + 1
+                
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                self.shells_id["wake"].append(id)
+                self.shells_id["wake"].append(id+1)
+                
+                value_list_id = id
+                
+                key_id = self.TrailingEdge["pressure side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id + 1)
+                
+                key_id = self.TrailingEdge["suction side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id+1)
+                
+            # right side
+            for i in range((ny-1)//2, ny-1):
+                
                 shell = [i + first_id,
                         (i + 1) + first_id,
                         (i + 1 + ny) + first_id]
@@ -369,7 +408,6 @@ class AeroMesh(Mesh):
                 # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
                 self.shells_id["wake"].append(id)
                 self.shells_id["wake"].append(id+1)
-                
                 
                 value_list_id = id
                 

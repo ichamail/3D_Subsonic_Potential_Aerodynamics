@@ -562,7 +562,19 @@ class Wing:
         elif mesh_shell_type=="triangular":
             
             for j in range(nx-1):
-                for i in range(ny-1):
+                # left side
+                for i in range((ny-1)//2):
+                    
+                    wake_shells.append([(i+j*ny),
+                                        ((i+j*ny)+1 + ny),
+                                        (i+j*ny)+1])
+                    
+                    wake_shells.append([(i+j*ny),
+                                        ((i+j*ny) + ny),
+                                        (i+j*ny)+1 + ny])
+                       
+                # right side
+                for i in range((ny-1)//2, ny-1):
                     
                     wake_shells.append([(i+j*ny),
                                         ((i+j*ny)+ny),
@@ -571,7 +583,7 @@ class Wing:
                     wake_shells.append([((i+j*ny)+ny),
                                         ((i+j*ny)+1 + ny),
                                         (i+j*ny)+1])
-                
+                    
         return wake_nodes, wake_shells
     
     def generate_wakeMesh2(self, V_fs:Vector,
@@ -962,7 +974,7 @@ if __name__=="__main__":
       
     root_airfoil = Airfoil(name="naca0018", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012", chord_length=0.8)
-    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=40, dihedral=0,
+    wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
                 twist=0)
     
     num_x_bodyShells = 10
