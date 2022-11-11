@@ -153,33 +153,9 @@ class Wing:
             #                        ((i+j*ny)+ny)%len(nodes),
             #                        (i+j*ny)])
                     
-            # pressure side
-            # symmetrical
+            # symmetrical meshing 
+            # suction side
             for j in range(nx//2):
-                
-                # left side
-                for i in range((ny-1)//2):
-                    
-                    shells.append([(i+j*ny),
-                                   (i+j*ny)+1,
-                                   ((i+j*ny) + ny)%len(nodes)])
-                    
-                    shells.append([((i+j*ny)+1 + ny)%len(nodes),
-                                   ((i+j*ny)+ny)%len(nodes),
-                                   (i+j*ny)+1])                   
-                # right side  
-                for i in range((ny-1)//2, ny-1):
-                    
-                    shells.append([(i+j*ny),
-                                   (i+j*ny)+1,
-                                   ((i+j*ny)+1 + ny)%len(nodes)])
-                    
-                    shells.append([((i+j*ny)+1 + ny)%len(nodes),
-                                   ((i+j*ny)+ny)%len(nodes),
-                                   (i+j*ny)])
-            
-            # suction side   
-            for j in range(nx//2, nx):
                 
                 # left side
                 for i in range((ny-1)//2):
@@ -201,7 +177,31 @@ class Wing:
                     
                     shells.append([((i+j*ny)+1 + ny)%len(nodes),
                                    ((i+j*ny)+ny)%len(nodes),
-                                   (i+j*ny)+1])                
+                                   (i+j*ny)+1])
+                    
+            # pressure side   
+            for j in range(nx//2, nx):
+                
+                # left side
+                for i in range((ny-1)//2):
+                    
+                    shells.append([(i+j*ny),
+                                   (i+j*ny)+1,
+                                   ((i+j*ny) + ny)%len(nodes)])
+                    
+                    shells.append([((i+j*ny)+1 + ny)%len(nodes),
+                                   ((i+j*ny)+ny)%len(nodes),
+                                   (i+j*ny)+1])                   
+                # right side  
+                for i in range((ny-1)//2, ny-1):
+                    
+                    shells.append([(i+j*ny),
+                                   (i+j*ny)+1,
+                                   ((i+j*ny)+1 + ny)%len(nodes)])
+                    
+                    shells.append([((i+j*ny)+1 + ny)%len(nodes),
+                                   ((i+j*ny)+ny)%len(nodes),
+                                   (i+j*ny)])                
                               
         return nodes, shells         
         
