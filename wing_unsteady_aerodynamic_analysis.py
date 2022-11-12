@@ -79,8 +79,8 @@ wing_mesh.set_angular_velocity(omega)
 
 
 # Panel Method Parameters
-dt = 0.2 # 0.2
-iterations = 150 # 50 
+dt = 0.5 # 0.2
+iterations = 60 # 50 
 wake_shed_factor = 0.3
 wake_panel_type = "quadrilateral"  # "quadrilateral" "triangular"
 V_wind = Vector((0, 0, 0))
@@ -121,6 +121,7 @@ csv_results_row_list = [["AoA", "CL", "CD",
                  "CM_root_c/4_x", "CM_root_c/4_y", "CM_root_c/4_z", "CM_root_tip_x", "CM_root_tip_y", "CM_root_tip_z",
                  "CoP_x", "CoP_y", "CoP_z"]]
 for AoA in AoA_list:
+    print(AoA)
     mesh = wing_mesh.copy()
     mesh.set_body_fixed_frame_orientation(0, np.deg2rad(-AoA), 0)
     unsteady_panel_method.solve(mesh, dt, iterations)

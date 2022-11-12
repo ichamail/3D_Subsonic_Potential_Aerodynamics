@@ -452,6 +452,7 @@ class UnSteady_PanelMethod(PanelMethod):
         self.set_V_fs(mesh.Vo, self.V_wind)
         
         for i in range(iters):
+            print(i)
             mesh.move_body(self.dt)
             mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
             self.advance_solution(mesh)
