@@ -68,14 +68,6 @@ class Mesh:
         
         return neighbours
 
-    
-        
-        ro = self.ro + self.Vo*dt
-        theta = self.theta + self.omega*dt
-        
-        self.set_body_fixed_frame_origin(ro.x, ro.y, ro.z)
-        self.set_body_fixed_frame_orientation(theta.x, theta.y, theta.z)
-
     def add_extra_neighbours(self):
          
         old_shell_neighbours = {}
@@ -490,8 +482,8 @@ class PanelMesh(Mesh):
         for shell_id, shell in enumerate(self.shells):
             vertex_list = []
             for node_id in shell:
-                [x, y, z] = self.nodes[node_id]
-                vertex_list.append((x, y, z))
+                node = self.nodes[node_id]
+                vertex_list.append(node)
             
             vertex_array = np.array(vertex_list)
             
