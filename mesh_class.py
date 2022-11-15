@@ -68,14 +68,6 @@ class Mesh:
         
         return neighbours
 
-    
-        
-        ro = self.ro + self.Vo*dt
-        theta = self.theta + self.omega*dt
-        
-        self.set_body_fixed_frame_origin(ro.x, ro.y, ro.z)
-        self.set_body_fixed_frame_orientation(theta.x, theta.y, theta.z)
-
     def add_extra_neighbours(self):
          
         old_shell_neighbours = {}
@@ -316,10 +308,19 @@ class AeroMesh(Mesh):
         first_wake_node_id = last_body_node_id + 1
         
         for id in range(num_TrailingEdge_nodes):
-                self.nodes.append(self.nodes[id])
-                id = first_wake_node_id + id
-                self.nodes_id["wake"].append(id)
+            self.nodes.append(self.nodes[id])
+            id = first_wake_node_id + id
+            self.nodes_id["wake"].append(id)
     
+    def initialize_wake_nodes(self):
+        last_body_node_id = self.nodes_id["body"][-1]
+        first_wake_node_id = last_body_node_id + 1
+               
+        for i, TrailingEdge_node_id in enumerate(self.nodes_id["trailing edge"]):
+            self.nodes.append(self.nodes[TrailingEdge_node_id])
+            wake_node_id = first_wake_node_id + i
+            self.nodes_id["wake"].append(wake_node_id)
+
     def add_wakeNodes(self):
         
         num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
@@ -327,10 +328,121 @@ class AeroMesh(Mesh):
             self.nodes.append(self.nodes[id])
             id = self.nodes_id["wake"][-1] + 1
             self.nodes_id["wake"].append(id)
-        
+
+    def add_wakeNodes(self):
+                    
+        for TrailingEdge_node_id in self.nodes_id["trailing edge"]:
+            self.nodes.append(self.nodes[TrailingEdge_node_id])
+            wake_node_id = self.nodes_id["wake"][-1] + 1
+            self.nodes_id["wake"].append(wake_node_id)
+     
     def add_wakeShells(self, type="quadrilateral"):
         
         num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
+        first_id = self.nodes_id["wake"][-1] - 2*num_TrailingEdge_nodes + 1 
+        ny = num_TrailingEdge_nodes
+        
+        if type=="quadrilateral":
+            
+            for i in range(ny-1):
+                
+                shell = [i + first_id,
+                        (i + 1) + first_id,
+                        (i + 1 + ny) + first_id,
+                        (i + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                if self.shells_id["wake"] == []:
+                    id = self.shells_id["body"][-1] + 1
+                else:
+                    id = self.shells_id["wake"][-1] + 1
+                
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                self.shells_id["wake"].append(id)
+                
+                
+                value_list_id = id
+                
+                key_id = self.TrailingEdge["pressure side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                
+                key_id = self.TrailingEdge["suction side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                        
+        elif type=="triangular":
+            
+            # left side
+            for i in range((ny-1)//2):
+                
+                shell = [(i+ 1) + first_id,
+                        (i + 1 + ny) + first_id,
+                        (i + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                shell = [i + first_id,
+                        (i + 1) + first_id,
+                        (i + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                if self.shells_id["wake"] == []:
+                    id = self.shells_id["body"][-1] + 1
+                else:
+                    id = self.shells_id["wake"][-1] + 1
+                
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                self.shells_id["wake"].append(id)
+                self.shells_id["wake"].append(id+1)
+                
+                value_list_id = id
+                
+                key_id = self.TrailingEdge["pressure side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id + 1)
+                
+                key_id = self.TrailingEdge["suction side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id+1)
+                
+            # right side
+            for i in range((ny-1)//2, ny-1):
+                
+                shell = [i + first_id,
+                        (i + 1 + ny) + first_id,
+                        (i + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                shell = [i + first_id,
+                        (i + 1) + first_id,
+                        (i + 1 + ny) + first_id]
+                
+                self.shells.append(shell)
+                
+                if self.shells_id["wake"] == []:
+                    id = self.shells_id["body"][-1] + 1
+                else:
+                    id = self.shells_id["wake"][-1] + 1
+                
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                self.shells_id["wake"].append(id)
+                self.shells_id["wake"].append(id+1)
+                
+                value_list_id = id
+                
+                key_id = self.TrailingEdge["pressure side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id + 1)
+                
+                key_id = self.TrailingEdge["suction side"][i]
+                self.wake_sheddingShells[key_id].append(value_list_id)
+                self.wake_sheddingShells[key_id].append(value_list_id+1)
+
+    def add_wakeShells(self, type="quadrilateral"):
+        
+        num_TrailingEdge_nodes = len(self.nodes_id["trailing edge"])
         first_id = self.nodes_id["wake"][-1] - 2*num_TrailingEdge_nodes + 1 
         ny = num_TrailingEdge_nodes
         
@@ -490,8 +602,8 @@ class PanelMesh(Mesh):
         for shell_id, shell in enumerate(self.shells):
             vertex_list = []
             for node_id in shell:
-                [x, y, z] = self.nodes[node_id]
-                vertex_list.append((x, y, z))
+                node = self.nodes[node_id]
+                vertex_list.append(node)
             
             vertex_array = np.array(vertex_list)
             

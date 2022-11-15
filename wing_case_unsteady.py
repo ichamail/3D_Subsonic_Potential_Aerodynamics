@@ -9,21 +9,22 @@ import numpy as np
 from time import perf_counter
 
 # create wing object   
-root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
-tip_airfoil = Airfoil(name="naca0012_new", chord_length=1)
-wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
+root_airfoil = Airfoil(name="naca0018_new", chord_length=1)
+tip_airfoil = Airfoil(name="naca0012_new", chord_length=0.5)
+wing = Wing(root_airfoil, tip_airfoil,
+            semi_span=2, sweep=25, dihedral=-10, twist=-3)
 
 # generate wing mesh
-num_x_bodyShells = 10
+num_x_bodyShells = 15
 num_x_wakeShells = 0
-num_y_Shells = 10
+num_y_Shells = 25
 
 wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
                                    num_x_wakeShells, num_y_Shells,
                                    mesh_shell_type="quadrilateral")
 
 wing_mesh.set_body_fixed_frame_origin(xo=0, yo=0, zo=0)
-wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(-20), yaw=0)
+wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(20), yaw=0)
 
 omega = Vector((0, 0, 0))
 wing_mesh.set_angular_velocity(omega)
@@ -35,9 +36,9 @@ wing_mesh.set_origin_velocity(Vo)
 V_wind = Vector((0, 0, 0))
 panel_method = UnSteady_PanelMethod(V_wind)
 panel_method.set_wakePanelType("triangular")
-
-t_start = perf_counter()        
-panel_method.solve(wing_mesh, 0.15, 60)
+panel_method.set_WakeShedFactor(1)
+t_start = perf_counter()
+panel_method.solve(wing_mesh, 0.1, 60)
 t_end = perf_counter()
 solution_time = t_end-t_start
 print("solution time + compile time = " + str(solution_time))
