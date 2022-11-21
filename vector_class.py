@@ -25,7 +25,7 @@ class Vector:
         return norm
         
     def transformation(self, Matrix:np.ndarray(shape=(3,3), dtype=float)):
-        A = Matrix.copy()
+        A = np.copy(Matrix)
         x_comp = A[0][0] * self.x + A[0][1] * self.y + A[0][2] * self.z
         y_comp = A[1][0] * self.x + A[1][1] * self.y + A[1][2] * self.z
         z_comp = A[2][0] * self.x + A[2][1] * self.y + A[2][2] * self.z
