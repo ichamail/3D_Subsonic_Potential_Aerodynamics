@@ -56,9 +56,9 @@ class WingCrossSection:
             
             ey_local = span_vec/span_vec.norm()
             
-            z_scale = np.sqrt(2/(vec_prev.dot(vec_next) + 1))           
+            z_scale = np.sqrt(2/(vec_prev * vec_next + 1))           
         
-        ez_local = ex_local.cross(ey_local) * z_scale
+        ez_local = Vector.cross_product(ex_local, ey_local) * z_scale
         
         
         # local frame of reference after twist
