@@ -471,7 +471,36 @@ class UnSteady_PanelMethod(PanelMethod):
         #                                plot_wake=True)
         # mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
         #                               plot_wake=True)
-           
+        pass
+    
+    def solve_steady(self, mesh:PanelAeroMesh, RefArea, dt, iters):
+        if self.triangular_wakePanels:
+            type = "triangular"
+        else:
+            type = "quadrilateral"
+            
+        self.dt = dt
+        self.set_V_fs(mesh.Vo, self.V_wind)
+        
+        CL_prev, CD_prev = 0, 0
+        
+        for i in range(iters):
+            print(i)
+            mesh.move_body(self.dt)
+            mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
+            self.advance_solution(mesh)
+            mesh.convect_wake(induced_velocity, dt)
+            
+            CL = self.LiftCoeff(mesh, RefArea)
+            CD = self.inducedDragCoeff(mesh, RefArea)
+            
+            print(CL, CD)
+            if abs(CL-CL_prev)<= 10**(-4) and abs(CD-CD_prev)<=10**(-4):
+                break
+            
+            CL_prev, CD_prev = CL, CD 
+            
+                  
     def influence_coeff_matrices(self, mesh:PanelAeroMesh):
         
         # Compute Influence coefficient matrices
@@ -659,10 +688,10 @@ def additional_right_hand_side(body_panels, wake_panels, C):
         id_i = panel_i.id
         
         # loop all over wake panels
+        """
+        Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
+        """
         for panel_j in wake_panels:
-            """
-            Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
-            """
             id_j = panel_j.id
             RHS[id_i] = RHS[id_i] - panel_j.mu * C[id_i][id_j]
             
@@ -693,10 +722,11 @@ def additional_right_hand_side(body_panels, wake_panels, C):
         id_i = panel_i.id
         
         # loop all over wake panels
+        """
+        Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
+        """ 
         for j in prange(Nw):
-            """
-            Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
-            """ 
+            
             panel_j = wake_panels[j]
             id_j = panel_j.id
             RHS[id_i] = RHS[id_i] - panel_j.mu * C[id_i][id_j]
