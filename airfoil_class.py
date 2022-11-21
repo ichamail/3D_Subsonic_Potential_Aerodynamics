@@ -4,7 +4,7 @@ import numpy as np
 
 class Airfoil:
     
-    filePath="C:/Users/winuser/PythonProjects/Panel Methods 3D/coord_seligFmt/"
+    filePath="coord_seligFmt/"
     
     def __init__(self, name:str, chord_length:float=1,
                  x_coords = None, y_coords = None):
