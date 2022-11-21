@@ -242,6 +242,10 @@ class AeroMesh(Mesh):
         self.TrailingEdge = TrailingEdge
         self.wake_sheddingShells = wake_sheddingShells
         self.WingTip = WingTip
+        
+        # if empty dict
+        if not self.wake_sheddingShells:
+            self.init_wake_sheddingShells()
     
     def free_TrailingEdge(self):
         """
@@ -295,7 +299,16 @@ class AeroMesh(Mesh):
                     break
         
         return near_root_shells_id
+    
+    def init_wake_sheddingShells(self):
+        # if not empty dict
+        if self.TrailingEdge:
 
+            for j in range(len(self.TrailingEdge["suction side"])):
+
+                self.wake_sheddingShells[self.TrailingEdge["suction side"][j]] = []
+
+                self.wake_sheddingShells[self.TrailingEdge["pressure side"][j]] = []
 
     ### unsteady features  ###
     def initialize_wake_nodes(self):
