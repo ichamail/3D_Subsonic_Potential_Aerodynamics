@@ -2,6 +2,7 @@ import numpy as np
 from numpy.linalg import inv
 from scipy.stats import beta
 from vector_class import Vector
+from matplotlib import pyplot as plt
 
 def LeastSquares(A, b):
     transposed = A.T
@@ -11,6 +12,10 @@ def LeastSquares(A, b):
 
 def DenserAtBoundaries(start, end, num_points, alpha):
     '''
+    Beta distribution
+    
+    Cumulative distribution function of beta distribution
+    
     alpha exists in (-oo, +oo)
     when alpha is 1 => evenly spaced
     when alpha < 1 denser at boundaries
@@ -19,6 +24,26 @@ def DenserAtBoundaries(start, end, num_points, alpha):
     x = np.linspace(0, 1, num_points)
     a = b = 2-alpha
     return start + beta.cdf(x, a, b) * (end-start)
+
+def cosspace(start, end, num_points):
+    mean = (start+end)/2
+    amp = (end-start)/2
+    return mean + amp * np.cos(np.linspace(np.pi, 0, num_points))
+
+def test_spacing(start, end, num_points, alpha):
+
+
+    x = np.linspace(start, end, num_points)
+    y1 = np.linspace(start, end, num_points)
+    y2 = DenserAtBoundaries(start, end, num_points, alpha)
+    y3 = cosspace(start, end, num_points)
+
+    plt.plot(x, y1, "r", label="linear spacing")
+    plt.plot(x, y2, "b", label = "prob dens func Beta, α=" + str(alpha))
+    plt.plot(x, y3, "m", label="cosine spacing")
+
+    plt.legend()
+    plt.show()
 
 def cubic_function(x):
     
@@ -83,4 +108,4 @@ if __name__ == "__main__":
     x = LeastSquares(A, b)
     print(x)
     
-    
+    test_spacing(0, 100, 100, alpha=-0.15)
