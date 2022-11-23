@@ -46,8 +46,11 @@ class Wing:
         self.root_airfoil.new_x_spacing2(num_x_points)
         self.tip_airfoil.new_x_spacing2(num_x_points)       
 
-    def generate_bodyMesh(self, num_x_shells:int, num_y_shells:int,
-                           mesh_shell_type:str="quadrilateral"):
+    def generate_mesh(self, num_x_shells:int, num_y_shells:int,
+                           mesh_shell_type:str="quadrilateral",
+                           mesh_main_surface=True, mesh_tips=True, mesh_wake=True,
+                           num_x_wake_shells = 1,
+                           standard_mesh_format =True):
                 
         self.new_x_spacing(num_x_shells)
         
@@ -56,7 +59,7 @@ class Wing:
         # x-axis: chord wise direction from leading edge to trailing edge
         # y-axis: spanwise direction form root to tip
         # z-axis: from top to bottom
-        
+                
         x_root = self.root_airfoil.x_coords 
         z_root = - self.root_airfoil.y_coords
         x_tip = self.tip_airfoil.x_coords
@@ -155,224 +158,344 @@ class Wing:
         
         node_id(0, 0)  # call node_id() to access i_max, and j_max
         shells = []
-        if mesh_shell_type=="quadrilateral":
-                                       
-            # pressure and suction sides
-            for i in range(i_max):
-                for j in range(j_max):
-                    
-                    add_shell(
-                        node_id(i, j),
-                        node_id(i+1, j),
-                        node_id(i+1, j+1),
-                        node_id(i, j+1)
-                    )
-                               
-        elif mesh_shell_type=="triangular":
+        
+        if mesh_main_surface:
             
-            # symmetrical meshing 
-            for i in range(i_max):
+            if mesh_shell_type=="quadrilateral":
+                                        
+                # pressure and suction sides
+                for i in range(i_max):
+                    for j in range(j_max):
+                        
+                        add_shell(
+                            node_id(i, j),
+                            node_id(i+1, j),
+                            node_id(i+1, j+1),
+                            node_id(i, j+1)
+                        )
+                                
+            elif mesh_shell_type=="triangular":
                 
-                for j in range(j_max):
+                # symmetrical meshing 
+                for i in range(i_max):
                     
-                    # suction side
-                    if i < i_max//2:
+                    for j in range(j_max):
                         
-                        # right side
-                        if j < j_max//2:
-                            add_shell(    
-                                node_id(i, j),
-                                node_id(i+1, j),
-                                node_id(i+1, j+1),
-                                node_id(i, j+1)
-                            )
-                        
-                        # left side    
-                        else:
-                            add_shell(    
-                                node_id(i+1, j),
-                                node_id(i+1, j+1),
-                                node_id(i, j+1),
-                                node_id(i, j)
-                            )
+                        # suction side
+                        if i < i_max//2:
+                            
+                            # right side
+                            if j < j_max//2:
+                                add_shell(    
+                                    node_id(i, j),
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1)
+                                )
+                            
+                            # left side    
+                            else:
+                                add_shell(    
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1),
+                                    node_id(i, j)
+                                )
 
-                    # suction side
-                    else:
+                        # suction side
+                        else:
+                            
+                            # right side
+                            if j < j_max//2:
+                                add_shell(    
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1),
+                                    node_id(i, j)
+                                )
+                            
+                            # left side
+                            else:
+                                add_shell(    
+                                    node_id(i, j),
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1)
+                                )
+        
+        
+        if mesh_tips:
+            
+            last_id = len(nodes) -1  # last node id
+            id = last_id
+            
+            for j in [0, j_max]:
+                # j=0 root or right tip
+                # j-j_max yip or left tip
+                
+                if j==0:
+                    add_face = add_shell
+                elif j==j_max:
+                    add_face = lambda *node_ids: add_shell(*node_ids,
+                                                            reverse_order=True)
+                
+                # root or right tip   
+                id = id + 1
+                   
+                # trailing edge   
+                i = 0
+                     
+                vec = (Vector(nodes[node_id(i+1, j)])
+                        + Vector(nodes[node_id(i_max-i-1, j)])) / 2
+                node = (vec.x, vec.y, vec.z)
+                nodes.append(node)
+                
+                add_face(
+                    node_id(i, j),
+                    node_id(i_max - i - 1, j),
+                    id
+                )
+                
+                add_face(
+                    node_id(i, j),
+                    id,
+                    node_id(i+1, j),
+                )
+                
+                for i in range(1, i_max//2 - 1):
+                    id = id+1
+                    
+                    vec = (Vector(nodes[node_id(i+1, j)])
+                        + Vector(nodes[node_id(i_max-i-1, j)])) / 2
+                    node = (vec.x, vec.y, vec.z)
+                    nodes.append(node)
+                                
+                    add_face(
+                        node_id(i, j),
+                        id-1,
+                        id,
+                        node_id(i+1, j)   
+                    )
+                    
+                    add_face(
+                        id-1,
+                        node_id(i_max-i, j),
+                        node_id(i_max - i - 1, j),
+                        id    
+                    )
+                    
+                # leading edge
+                i = i+1           
+                add_face(
+                    node_id(i, j),
+                    id,
+                    node_id(i+1, j)
+                )
+                
+                add_face(
+                    id,
+                    node_id(i+2, j),  # node_id(i_max - i, j),
+                    node_id(i+1, j),  # node_id(i_max - i - 1, j)     
+                )
+            
+            extra_wing_tip_node_ids = [(last_id+1)+i for i in range(i_max-2)]
+        
+        
+        if mesh_wake:
+            
+            x = np.zeros((num_x_wake_shells+1, j_max+1))
+            y = np.zeros_like(x)
+            z = np.zeros_like(x)
                         
+            C_root  = self.root_airfoil.chord
+            
+            for j in range(j_max+1):
+                
+                vec1 = (
+                    Vector(nodes[node_id(0, j)]) - Vector(nodes[node_id(1, j)])
+                )
+                                
+                vec2 = (
+                    Vector(nodes[node_id(i_max, j)]) 
+                    - Vector(nodes[node_id(i_max - 1, j)])
+                )
+                                
+                bisector = vec1+vec2
+                
+                bisector = bisector/bisector.norm()
+                
+                bisector = bisector * C_root * 10
+                
+                (x0, y0, z0) = nodes[node_id(0, j)]
+                x[:, j] = np.linspace(x0, x0 + bisector.x, num_x_wake_shells+1)
+                y[:, j] = np.linspace(y0, y0 + bisector.y, num_x_wake_shells+1)
+                z[:, j] = np.linspace(z0, z0 + bisector.z, num_x_wake_shells+1)
+            
+            
+            num_body_nodes = len(nodes)
+            for i in range(1, num_x_wake_shells+1):
+                for j in range(j_max + 1):
+                    node = (x[i][j], y[i][j], z[i][j])
+                    nodes.append(node)
+            
+            def wake_node_id(chord_wise_index, span_wise_index):
+                nx = num_x_wake_shells + 1
+
+                global i_max_wake
+                i_max_wake = nx - 1
+                i = chord_wise_index
+                j = span_wise_index
+                
+                if i==0:
+                    id = node_id(i, j)
+                
+                else:
+                                   
+                    id = j + i*ny + (num_body_nodes - ny)
+                
+                return id
+            
+            # call wake_node_id() so i_max_wake can be accessed
+            wake_node_id(0, 0)
+            
+            if mesh_shell_type=="quadrilateral":
+                
+                for i in range(i_max_wake):
+                    for j in range(j_max):
+                        add_shell(
+                            wake_node_id(i, j),
+                            wake_node_id(i, j+1),
+                            wake_node_id(i+1, j+1),
+                            wake_node_id(i+1, j)
+                        )
+                    
+            elif mesh_shell_type=="triangular":
+                
+                for i in range(i_max_wake):
+                    for j in range(j_max):
                         # right side
                         if j < j_max//2:
-                            add_shell(    
-                                node_id(i+1, j),
-                                node_id(i+1, j+1),
-                                node_id(i, j+1),
-                                node_id(i, j)
+                            add_shell(
+                                    wake_node_id(i, j),
+                                    wake_node_id(i, j+1),
+                                    wake_node_id(i+1, j+1),
+                                    wake_node_id(i+1, j)
                             )
-                        
                         # left side
                         else:
-                            add_shell(    
-                                node_id(i, j),
-                                node_id(i+1, j),
-                                node_id(i+1, j+1),
-                                node_id(i, j+1)
-                            )
-                                                              
-        return nodes, shells         
-       
-    def generate_wingTipMesh(self, num_x_shells,
-                             mesh_shell_type:str="quadrilateral"):
+                            add_shell(
+                                    wake_node_id(i, j+1),
+                                    wake_node_id(i+1, j+1),
+                                    wake_node_id(i+1, j),
+                                    wake_node_id(i, j)
+                            )            
         
+        if standard_mesh_format:
+            
+            return nodes, shells
+        
+        else:
+            
+            if mesh_main_surface:
+                
+                main_surface_nodes_ids = [
+                    node_id(i, j) for i in range(i_max) for j in range(j_max+1)
+                ]
+                
+                suction_side_nodes_ids = [
+                    node_id(i, j) 
+                    for i in range(i_max//2 + 1) for j in range(j_max + 1)
+                ]
+                
+                pressure_side_nodes_ids = [
+                    node_id(i, j) 
+                    for i in range(i_max//2, i_max + 1)
+                    for j in range(j_max + 1)
+                ]
+                
+                trailing_edge_nodes_ids = [
+                    node_id(0, j) for j in range(j_max+1)
+                ]
+            else:
+                main_surface_nodes_ids = []
+                suction_side_nodes_ids = []
+                pressure_side_nodes_ids = []
+                trailing_edge_nodes_ids = []
+            
+            
+            if mesh_tips:
+                right_tip_nodes_ids = [node_id(i, 0) for i in range(i_max)] \
+                + extra_wing_tip_node_ids[0:len(extra_wing_tip_node_ids)//2]
+
+                left_tip_nodes_ids = [node_id(i, j_max) for i in range(i_max)] \
+                    + extra_wing_tip_node_ids[len(extra_wing_tip_node_ids)//2:]
+                    
+                wing_tips_nodes_ids = right_tip_nodes_ids + left_tip_nodes_ids 
+            
+            else:
+                extra_wing_tip_node_ids = []
+                right_tip_nodes_ids = []
+                left_tip_nodes_ids = []
+                wing_tips_nodes_ids = []   
+                            
+            
+            if mesh_wake:
+                wake_nodes_ids = [
+                    wake_node_id(i, j) 
+                    for i in range(i_max_wake + 1) for j in range(j_max + 1)
+                ]
+                
+                wake_lines = [
+                    [wake_node_id(i, j) for i in range(i_max_wake + 1)]
+                    for j in range(j_max + 1)
+                ]
+                
+                wake_lines = np.array(wake_lines)
+            
+            else:
+                wake_nodes_ids = []
+                wake_lines = []
+            
+            
+            body_nodes_ids = main_surface_nodes_ids + extra_wing_tip_node_ids
+            
+            nodes_ids_dict = {
+            "body": body_nodes_ids,
+            "main surface" : main_surface_nodes_ids,
+            "suction side": suction_side_nodes_ids,
+            "pressure side": pressure_side_nodes_ids,
+            "wing tips": wing_tips_nodes_ids,
+            "right wing tip": right_tip_nodes_ids,
+            "left wing tip": left_tip_nodes_ids,
+            "trailing edge": trailing_edge_nodes_ids,
+            "wake": wake_nodes_ids,
+            "wake lines": wake_lines
+        }
+                                                     
+            return nodes, shells, nodes_ids_dict
+    
+    def generate_mesh2(self, num_x_shells:int, num_y_shells:int,
+                           mesh_shell_type:str="quadrilateral",
+                           mesh_main_surface=True, mesh_tips=True, mesh_wake=True,
+                           num_x_wake_shells = 1,
+                           V_fs = Vector((1, 0, 0)),
+                           standard_mesh_format =True):
+        
+        """
+        generate_mesh (if chosen to) generates a steady wake in the same direction as the bisector vector of trailing edge
+        
+        generate_mesh2 (if chosen to) generates a plane steady wake in free stream's vector direction
+        """
+        
+              
         self.new_x_spacing(num_x_shells)
-                
-        Ct = self.tip_airfoil.chord
-        
-        x_upper, z_upper = self.tip_airfoil.give_suctionSide()
-        x_chord = x_upper.copy()
-        z_chord = np.zeros_like(x_chord)
-        y_chord = self.semi_span * np.ones_like(x_chord)
-        
-        x_tip = self.tip_airfoil.x_coords.copy()
-        z_tip = -self.tip_airfoil.y_coords.copy()
-        y_tip = self.semi_span * np.ones_like(z_tip)
-        
-        twist = np.deg2rad(self.twist)
-        delta = np.deg2rad(self.sweep)
-        gamma = np.deg2rad(self.dihedral)
-        
-        x_chord, y_chord, z_chord = self.move_airfoil_section(x_chord, y_chord,
-                                                              z_chord, self.semi_span, Ct,twist, delta, gamma)
-        
-        x_tip, y_tip, z_tip = self.move_airfoil_section(x_tip, y_tip, z_tip,
-                                                        self.semi_span, Ct,
-                                                        twist, delta, gamma)
-        index = len(x_upper)
-        x_tip_upper, x_tip_lower = x_tip[0:index], np.flip(x_tip[index:])
-        y_tip_upper, y_tip_lower = y_tip[0:index], np.flip(y_tip[index:])
-        z_tip_upper, z_tip_lower = z_tip[0:index], np.flip(z_tip[index:])
-        
-        
-        # generate nodes
-        # left wingtip
-        x_first, y_first, z_first = x_chord[0], y_chord[0], z_chord[0]
-        x_last, y_last, z_last = x_chord[-1], y_chord[-1], z_chord[-1]
-        nodes = []                      
-        nodes.append((x_first, y_first, z_first))
-        for i in range(1, len(x_upper)-1):
-            nodes.append((x_tip_upper[i], y_tip_upper[i], z_tip_upper[i]))
-            
-            nodes.append((x_chord[i], y_chord[i], z_chord[i]))
-            
-            nodes.append((x_tip_lower[i], y_tip_lower[i], z_tip_lower[i]))
-                
-        nodes.append((x_last, y_last, z_last))
-        
-        # right wingtip
-        x_first, y_first, z_first = x_chord[0], -y_chord[0], z_chord[0]
-        x_last, y_last, z_last = x_chord[-1], -y_chord[-1], z_chord[-1]
-                     
-        nodes.append((x_first, y_first, z_first))
-        for i in range(1, len(x_upper)-1):
-            
-            nodes.append((x_tip_upper[i], -y_tip_upper[i], z_tip_upper[i]))
-            
-            nodes.append((x_chord[i], -y_chord[i], z_chord[i]))
-            
-            nodes.append((x_tip_lower[i], -y_tip_lower[i], z_tip_lower[i]))
-                
-        nodes.append((x_last, y_last, z_last))
-        
-        # generate shells
-        shells = []
-        ni = len(x_upper)  # x_tip_upper + first + last nodes
-        nj = 3
-        
-        if mesh_shell_type == "quadrilateral":       
-            # left tip
-            const = -2   
-            for i in range(ni-1):
-                for j in range(nj-1):
-            
-                    if i==0:
-                        shells.append([0, j+1, j+2])
-                    elif i == ni-2:
-                        shells.append([(const + i*nj + j),
-                                    (const + (i+1)*nj),
-                                    (const + i*nj + j+1)])
-                    else:
-                        shells.append([(const + i*nj + j),
-                                    (const + (i+1)*nj +j),
-                                    (const + (i+1)*nj + j+1),
-                                    (const + i*nj + j+1)])
-            
-            # right tip
-            const = const + int(len(nodes)/2)
-            for i in range(ni-1):
-                for j in range(nj-1):
-                            
-                    if i==0:
-                        shells.append([const+2, const+2 + j+2, const+2 + j+1])
-                    elif i == ni-2:
-                        shells.append([(const + i*nj + j),
-                                    (const + i*nj + j+1),
-                                    (const + (i+1)*nj)])
-                    else:
-                        shells.append([(const + i*nj + j),
-                                    (const + i*nj + j+1),
-                                    (const + (i+1)*nj + j+1),
-                                    (const + (i+1)*nj +j)])
-                                
-        elif mesh_shell_type == "triangular":
-            # left tip
-            const = -2   
-            for i in range(ni-1):
-                for j in range(nj-1):
-            
-                    if i==0:
-                        shells.append([0, j+1, j+2])
-                    elif i == ni-2:
-                        shells.append([(const + i*nj + j),
-                                    (const + (i+1)*nj),
-                                    (const + i*nj + j+1)])
-                    else:
-                        shells.append([(const + i*nj + j),
-                                    (const + (i+1)*nj +j),
-                                    (const + i*nj + j+1)])
-                        
-                        shells.append([(const + (i+1)*nj +j),
-                                    (const + (i+1)*nj + j+1),
-                                    (const + i*nj + j+1)])
-            
-            # right tip
-            const = const + int(len(nodes)/2)
-            for i in range(ni-1):
-                for j in range(nj-1):
-                            
-                    if i==0:
-                        shells.append([const+2, const+2 + j+2, const+2 + j+1])
-                    elif i == ni-2:
-                        shells.append([(const + i*nj + j),
-                                    (const + i*nj + j+1),
-                                    (const + (i+1)*nj)])
-                    else:
-                        shells.append([(const + i*nj + j),
-                                    (const + i*nj + j+1),
-                                    (const + (i+1)*nj +j)])
-                        
-                        shells.append([(const + i*nj + j+1),
-                                    (const + (i+1)*nj + j+1),
-                                    (const + (i+1)*nj +j)])
-        
-        return nodes, shells
-                       
-    def generate_wakeMesh(self, num_x_shells:int, num_y_shells:int,
-                          mesh_shell_type:str='quadrilateral'):
         
         # wing's coordinate system:
         # origin: root airfoils leading edge
         # x-axis: chord wise direction from leading edge to trailing edge
         # y-axis: spanwise direction form root to tip
         # z-axis: from top to bottom
-        
+                
         x_root = self.root_airfoil.x_coords 
         z_root = - self.root_airfoil.y_coords
         x_tip = self.tip_airfoil.x_coords
@@ -389,13 +512,16 @@ class Wing:
         
         y = np.array([*y_right, *y_left[1:]])
         
-        nx, ny = num_x_shells + 1, len(y)
+        nx = len(x_root)
+        ny = len(y)
+        
         X = np.zeros((nx, ny))
-        Y = np.zeros_like(X)
-        Z = np.zeros_like(X)
+        Y = np.zeros((nx, ny))
+        Z = np.zeros((nx, ny))
         
         C_r = self.root_airfoil.chord
         C_t = self.tip_airfoil.chord
+        lamda = self.taper_ratio
         half_span = self.semi_span
         
         # dimensionless coords
@@ -410,7 +536,7 @@ class Wing:
         gamma = np.deg2rad(self.dihedral)
         
         for j in range(ny):
-            
+                        
             C_y = interpolation(C_r, C_t, abs(span_percentage[j]))
             
             x_coords = interpolation(x_root, x_tip, abs(span_percentage[j]))
@@ -422,49 +548,33 @@ class Wing:
             y_coords = span_percentage[j] * half_span * np.ones_like(x_coords)
             span_location = y_coords[0]
             z_coords = z_coords * C_y
-                        
+            
+            
             x, y, z = self.move_airfoil_section(x_coords, y_coords, z_coords,
                                                 span_location, C_y,
-                                                twist, delta, gamma)
-                       
-            x1 = x[0] - x[1]
-            y1 = 0
-            z1 = z[0] - z[1]
+                                                twist, delta, gamma)           
             
-            x2 = x[-1] - x[-2]
-            y2 = 0
-            z2 = z[-1] - z[-2]
-            
-            vec1 = Vector((x1, y1, z1))
-            vec2 = Vector((x2, y2, z2))
-            
-            bisector = vec1 + vec2
-            bisector = 1/bisector.norm() * bisector
-            bisector = 10 * C_r * bisector
-            
-            X[:, j] = np.linspace(x[0], x[0] + bisector.x, num_x_shells+1)
-            Y[:, j] = y[0]
-            Z[:, j] = np.linspace(z[0], z[0]+ bisector.z, num_x_shells+1)
+            X[:, j] = x 
+            Y[:, j] = y
+            Z[:, j] = z 
         
-        wake_nodes = []
-               
+        nodes = []
         for i in range(nx):
             for j in range(ny):
                 node = (X[i][j], Y[i][j], Z[i][j])                    
-                wake_nodes.append(node)
-        
+                nodes.append(node)
         
         def node_id(chord_wise_index, span_wise_index):
-                            
+            
             global j_max, i_max
             j_max = ny-1
-            i_max = nx-1
+            i_max = nx  # i_max = nx-1 when double node at trailing edge
             i = chord_wise_index
             j = span_wise_index
-            node_id = (j + i*ny)
+            node_id = (j + i*ny)%(nx*ny)
             return node_id
-        
-        def add_wakeShell(*node_ids, reverse_order=False):
+         
+        def add_shell(*node_ids, reverse_order=False):
             # node_id_list should be in counter clock wise order
 
             if reverse_order:
@@ -473,373 +583,325 @@ class Wing:
                 
             if len(node_ids) == 4:
                 if mesh_shell_type=="quadrilateral":
-                    wake_shells.append(list(node_ids))
+                    shells.append(list(node_ids))
                 elif mesh_shell_type=="triangular":
                     index = node_ids
-                    wake_shells.append([index[0], index[1], index[2]])
-                    wake_shells.append([index[2], index[3], index[0]])
+                    shells.append([index[0], index[1], index[2]])
+                    shells.append([index[2], index[3], index[0]])
             
             elif len(node_ids) == 3:
-                wake_shells.append(list(node_ids))
+                shells.append(list(node_ids))
         
         node_id(0, 0)  # call node_id() to access i_max, and j_max
-              
-        wake_shells = []                       
-        if mesh_shell_type=="quadrilateral":
-            for i in range(i_max):
-                for j in range(j_max):
-                    add_wakeShell(
-                        node_id(i, j),
-                        node_id(i, j+1),
-                        node_id(i+1, j+1),
-                        node_id(i+1, j)
-                    )
+        shells = []
+        
+        if mesh_main_surface:
+            
+            if mesh_shell_type=="quadrilateral":
+                                        
+                # pressure and suction sides
+                for i in range(i_max):
+                    for j in range(j_max):
+                        
+                        add_shell(
+                            node_id(i, j),
+                            node_id(i+1, j),
+                            node_id(i+1, j+1),
+                            node_id(i, j+1)
+                        )
+                                
+            elif mesh_shell_type=="triangular":
+                
+                # symmetrical meshing 
+                for i in range(i_max):
                     
-        elif mesh_shell_type=="triangular":
-            for i in range(i_max):
-                for j in range(j_max):
-                    # right side
-                    if j < j_max//2:
-                        add_wakeShell(
-                                node_id(i, j),
-                                node_id(i, j+1),
-                                node_id(i+1, j+1),
-                                node_id(i+1, j)
-                            )
-                    # left side
-                    else:
-                        add_wakeShell(
-                                node_id(i, j+1),
-                                node_id(i+1, j+1),
-                                node_id(i+1, j),
-                                node_id(i, j)
-                            )
-        
-        return wake_nodes, wake_shells
-    
-    def generate_wakeMesh2(self, V_fs:Vector,
-                           num_x_shells:int, 
-                           num_y_shells:int,
-                           mesh_shell_type:str='quadrilateral'):
-        
-        """
-        generate_wakeMesh generates a steady wake in the same direction as the bisector vector of trailing edge
-        
-        generate_wakeMesh2 generates a plane steady wake in free stream's vector direction
-        """
-        
-        wake_direction_unit_vec = V_fs/V_fs.norm()
-        vec = 10 * self.root_airfoil.chord * wake_direction_unit_vec
-        
-        # wing's coordinate system:
-        # origin: root airfoils leading edge
-        # x-axis: chord wise direction from leading edge to trailing edge
-        # y-axis: spanwise direction form root to tip
-        # z-axis: from top to bottom
-        
-        x_root = self.root_airfoil.x_coords 
-        z_root = - self.root_airfoil.y_coords
-        x_tip = self.tip_airfoil.x_coords
-        z_tip = - self.tip_airfoil.y_coords
-        
-        # remove double node at leading edge
-        x_root, z_root = x_root[0:-1], z_root[0:-1]
-        x_tip, z_tip = x_tip[0:-1], z_tip[0:-1]
-                
-        y_right = DenserAtBoundaries(-self.semi_span, 0, num_y_shells + 1,
-                                     alpha=0.3)
-        y_left = DenserAtBoundaries(0, self.semi_span, num_y_shells + 1,
-                                    alpha=0.3)
-        
-        y = np.array([*y_right, *y_left[1:]])
-        
-        nx, ny = num_x_shells + 1, len(y)
-        X = np.zeros((nx, ny))
-        Y = np.zeros_like(X)
-        Z = np.zeros_like(X)
-        
-        C_r = self.root_airfoil.chord
-        C_t = self.tip_airfoil.chord
-        half_span = self.semi_span
-        
-        # dimensionless coords
-        x_root = x_root/C_r
-        z_root = z_root/C_r
-        x_tip = x_tip/C_t
-        z_tip = z_tip/C_t
-        span_percentage = y/half_span
-        root_twist = 0
-        tip_twist = np.deg2rad(self.twist)
-        delta = np.deg2rad(self.sweep)
-        gamma = np.deg2rad(self.dihedral)
-        
-        for j in range(ny):
+                    for j in range(j_max):
                         
-            C_y = interpolation(C_r, C_t, abs(span_percentage[j]))
-            
-            x_coords = interpolation(x_root, x_tip, abs(span_percentage[j]))
-            z_coords = interpolation(z_root, z_tip, abs(span_percentage[j]))
-            twist = interpolation(root_twist, tip_twist,
-                                  abs(span_percentage[j]))
-            
-            x_coords = x_coords * C_y
-            y_coords = span_percentage[j] * half_span * np.ones_like(x_coords)
-            span_location = y_coords[0]
-            z_coords = z_coords * C_y
-                        
-            x, y, z = self.move_airfoil_section(x_coords, y_coords, z_coords,
-                                                span_location, C_y,
-                                                twist, delta, gamma)
-                        
-            X[:, j] = np.linspace(x[0], x[0] + vec.x, num_x_shells+1)
-            Y[:, j] = y[0]
-            Z[:, j] = np.linspace(z[0], z[0]+ vec.z, num_x_shells+1)
-        
-        wake_nodes = []
-        for i in range(nx):
-            for j in range(ny):
-                node = (X[i][j], Y[i][j], Z[i][j])
-                wake_nodes.append(node)
-                
-        def node_id(chord_wise_index, span_wise_index):
+                        # suction side
+                        if i < i_max//2:
                             
-            global j_max, i_max
-            j_max = ny-1
-            i_max = nx-1
-            i = chord_wise_index
-            j = span_wise_index
-            node_id = (j + i*ny)
-            return node_id
-        
-        def add_wakeShell(*node_ids, reverse_order=False):
-            # node_id_list should be in counter clock wise order
+                            # right side
+                            if j < j_max//2:
+                                add_shell(    
+                                    node_id(i, j),
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1)
+                                )
+                            
+                            # left side    
+                            else:
+                                add_shell(    
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1),
+                                    node_id(i, j)
+                                )
 
-            if reverse_order:
-                node_ids = list(node_ids)
-                node_ids.reverse()
-                
-            if len(node_ids) == 4:
-                if mesh_shell_type=="quadrilateral":
-                    wake_shells.append(list(node_ids))
-                elif mesh_shell_type=="triangular":
-                    index = node_ids
-                    wake_shells.append([index[0], index[1], index[2]])
-                    wake_shells.append([index[2], index[3], index[0]])
-            
-            elif len(node_ids) == 3:
-                wake_shells.append(list(node_ids))
+                        # suction side
+                        else:
+                            
+                            # right side
+                            if j < j_max//2:
+                                add_shell(    
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1),
+                                    node_id(i, j)
+                                )
+                            
+                            # left side
+                            else:
+                                add_shell(    
+                                    node_id(i, j),
+                                    node_id(i+1, j),
+                                    node_id(i+1, j+1),
+                                    node_id(i, j+1)
+                                )
         
-        node_id(0, 0)  # call node_id() to access i_max, and j_max
-              
-        wake_shells = []                       
-        if mesh_shell_type=="quadrilateral":
-            for i in range(i_max):
-                for j in range(j_max):
-                    add_wakeShell(
+        
+        if mesh_tips:
+            
+            last_id = len(nodes) -1  # last node id
+            id = last_id
+            
+            for j in [0, j_max]:
+                # j=0 root or right tip
+                # j-j_max yip or left tip
+                
+                if j==0:
+                    add_face = add_shell
+                elif j==j_max:
+                    add_face = lambda *node_ids: add_shell(*node_ids,
+                                                            reverse_order=True)
+                
+                # root or right tip   
+                id = id + 1
+                   
+                # trailing edge   
+                i = 0
+                     
+                vec = (Vector(nodes[node_id(i+1, j)])
+                        + Vector(nodes[node_id(i_max-i-1, j)])) / 2
+                node = (vec.x, vec.y, vec.z)
+                nodes.append(node)
+                
+                add_face(
+                    node_id(i, j),
+                    node_id(i_max - i - 1, j),
+                    id
+                )
+                
+                add_face(
+                    node_id(i, j),
+                    id,
+                    node_id(i+1, j),
+                )
+                
+                for i in range(1, i_max//2 - 1):
+                    id = id+1
+                    
+                    vec = (Vector(nodes[node_id(i+1, j)])
+                        + Vector(nodes[node_id(i_max-i-1, j)])) / 2
+                    node = (vec.x, vec.y, vec.z)
+                    nodes.append(node)
+                                
+                    add_face(
                         node_id(i, j),
-                        node_id(i, j+1),
-                        node_id(i+1, j+1),
-                        node_id(i+1, j)
+                        id-1,
+                        id,
+                        node_id(i+1, j)   
                     )
                     
-        elif mesh_shell_type=="triangular":
-            for i in range(i_max):
-                for j in range(j_max):
-                    # right side
-                    if j < j_max//2:
-                        add_wakeShell(
-                                node_id(i, j),
-                                node_id(i, j+1),
-                                node_id(i+1, j+1),
-                                node_id(i+1, j)
+                    add_face(
+                        id-1,
+                        node_id(i_max-i, j),
+                        node_id(i_max - i - 1, j),
+                        id    
+                    )
+                    
+                # leading edge
+                i = i+1           
+                add_face(
+                    node_id(i, j),
+                    id,
+                    node_id(i+1, j)
+                )
+                
+                add_face(
+                    id,
+                    node_id(i+2, j),  # node_id(i_max - i, j),
+                    node_id(i+1, j),  # node_id(i_max - i - 1, j)     
+                )
+            
+            extra_wing_tip_node_ids = [(last_id+1)+i for i in range(i_max-2)]
+        
+        
+        if mesh_wake:
+            
+            wake_direction_unit_vec = V_fs/V_fs.norm()
+            vec = wake_direction_unit_vec * 10 * self.root_airfoil.chord 
+            
+            x = np.zeros((num_x_wake_shells+1, j_max+1))
+            y = np.zeros_like(x)
+            z = np.zeros_like(x)
+                        
+            C_root  = self.root_airfoil.chord
+            
+            for j in range(j_max+1):
+                                
+                (x0, y0, z0) = nodes[node_id(0, j)]
+                x[:, j] = np.linspace(x0, x0 + vec.x, num_x_wake_shells+1)
+                y[:, j] = np.linspace(y0, y0 + vec.y, num_x_wake_shells+1)
+                z[:, j] = np.linspace(z0, z0 + vec.z, num_x_wake_shells+1)
+            
+            
+            num_body_nodes = len(nodes)
+            for i in range(1, num_x_wake_shells+1):
+                for j in range(j_max + 1):
+                    node = (x[i][j], y[i][j], z[i][j])
+                    nodes.append(node)
+            
+            def wake_node_id(chord_wise_index, span_wise_index):
+                nx = num_x_wake_shells + 1
+
+                global i_max_wake
+                i_max_wake = nx - 1
+                i = chord_wise_index
+                j = span_wise_index
+                
+                if i==0:
+                    id = node_id(i, j)
+                
+                else:
+                                   
+                    id = j + i*ny + (num_body_nodes - ny)
+                
+                return id
+            
+            # call wake_node_id() so i_max_wake can be accessed
+            wake_node_id(0, 0)
+            
+            if mesh_shell_type=="quadrilateral":
+                
+                for i in range(i_max_wake):
+                    for j in range(j_max):
+                        
+                        add_shell(
+                            wake_node_id(i, j),
+                            wake_node_id(i, j+1),
+                            wake_node_id(i+1, j+1),
+                            wake_node_id(i+1, j)
+                        )
+                    
+            elif mesh_shell_type=="triangular":
+                
+                for i in range(i_max_wake):
+                    for j in range(j_max):
+                        
+                        # right side
+                        if j < j_max//2:
+                            add_shell(
+                                    wake_node_id(i, j),
+                                    wake_node_id(i, j+1),
+                                    wake_node_id(i+1, j+1),
+                                    wake_node_id(i+1, j)
                             )
-                    # left side
-                    else:
-                        add_wakeShell(
-                                node_id(i, j+1),
-                                node_id(i+1, j+1),
-                                node_id(i+1, j),
-                                node_id(i, j)
-                            )
+                            
+                        # left side
+                        else:
+                            add_shell(
+                                    wake_node_id(i, j+1),
+                                    wake_node_id(i+1, j+1),
+                                    wake_node_id(i+1, j),
+                                    wake_node_id(i, j)
+                            )            
         
-        return wake_nodes, wake_shells
-    
-    def generate_wingMesh(self, num_x_bodyShells:int, num_y_Shells:int,
-                          mesh_shell_type:str="quadrilateral",
-                          return_WingTip=False):
         
-                
-        body_nodes, body_shells = self.generate_bodyMesh(num_x_bodyShells,
-                                                         num_y_Shells,
-                                                         mesh_shell_type)
-        
-        wingTip_nodes, wingTip_shells = self.generate_wingTipMesh(
-                                                            num_x_bodyShells,
-                                                            mesh_shell_type)
-                
-        for id, wingTip_shell in enumerate(wingTip_shells):
-            for j in range(len(wingTip_shell)):
-                wingTip_shells[id][j] = wingTip_shells[id][j] + len(body_nodes)
-                
-        nodes = [*body_nodes, *wingTip_nodes]
-        shells = [*body_shells, *wingTip_shells]
-        
-        if return_WingTip:
-            id_start_left = len(body_shells)
-            id_end_left = id_start_left + int(len(wingTip_shells)/2) - 1
-            id_start_right = id_end_left + 1
-            id_end_right = id_start_right  + int(len(wingTip_shells)/2) - 1
+        if standard_mesh_format:
             
-            WingTip = {"left" : [id for id in range(id_start_left,
-                                                   id_end_left+1)],
-                       "right" : [id for id in range(id_start_right,
-                                                     id_end_right + 1)] }
+            return nodes, shells
+        
+        else:
             
-            return nodes, shells, WingTip
-        
-        return nodes, shells
-    
-    def generate_mesh(self, num_x_bodyShells:int,
-                      num_x_wakeShells:int, num_y_Shells:int,
-                      mesh_shell_type:str="quadrilateral",
-                      return_id_dicts=False):
-        
-        wing_nodes, wing_shells, WingTip = self.generate_wingMesh(
-            num_x_bodyShells, num_y_Shells, mesh_shell_type,return_WingTip=True)
-        
-        wake_nodes, wake_shells = self.generate_wakeMesh(num_x_wakeShells,
-                                                         num_y_Shells,
-                                                         mesh_shell_type)
-               
-        for i, wake_shell in enumerate(wake_shells):
-            for j in range(len(wake_shell)):
-                wake_shells[i][j] = wake_shells[i][j] + len(wing_nodes)
-                                                         
+            if mesh_main_surface:
                 
-        nodes = [*wing_nodes, *wake_nodes]
-        shells = [*wing_shells, *wake_shells]
-        
-        
-        if return_id_dicts:
-            nodes_id = {"body": [id for id in range(len(wing_nodes))],
-                        "wake": [id for id in
-                                 range(len(wing_nodes), len(nodes))]}
-        
-            shells_id = {"body": [id for id in range(len(wing_shells))],
-                         "wake": [id for id in
-                                  range(len(wing_shells), len(shells))]}
+                main_surface_nodes_ids = [
+                    node_id(i, j) for i in range(i_max) for j in range(j_max+1)
+                ]
+                
+                suction_side_nodes_ids = [
+                    node_id(i, j) 
+                    for i in range(i_max//2 + 1) for j in range(j_max + 1)
+                ]
+                
+                pressure_side_nodes_ids = [
+                    node_id(i, j) 
+                    for i in range(i_max//2, i_max + 1)
+                    for j in range(j_max + 1)
+                ]
+                
+                trailing_edge_nodes_ids = [
+                    node_id(0, j) for j in range(j_max+1)
+                ]
+            else:
+                main_surface_nodes_ids = []
+                suction_side_nodes_ids = []
+                pressure_side_nodes_ids = []
+                trailing_edge_nodes_ids = []
             
-            return nodes, shells, nodes_id, shells_id, WingTip
-        
-        return nodes, shells
-           
-    def generate_mesh2(self, V_fs:Vector, num_x_bodyShells,
-                       num_x_wakeShells, num_y_Shells,
-                       mesh_shell_type:str="quadrilateral",
-                       return_id_dicts=False):
-        
-        """
-        uses generate_wakeMesh2 method for wake meshing
-        """
-        
-        wing_nodes, wing_shells, WingTip = self.generate_wingMesh(
-            num_x_bodyShells, num_y_Shells, mesh_shell_type, return_WingTip=True)
-        
-        wake_nodes, wake_shells = self.generate_wakeMesh2(V_fs,
-                                                          num_x_wakeShells,
-                                                          num_y_Shells,
-                                                          mesh_shell_type)
-                
-        for i, wake_shell in enumerate(wake_shells):
-            for j in range(len(wake_shell)):
-                wake_shells[i][j] = wake_shells[i][j] + len(wing_nodes)
-                                                         
-                
-        nodes = [*wing_nodes,*wake_nodes]
-        shells = [*wing_shells,*wake_shells]
-        
-        if return_id_dicts:
-            nodes_id = {"body": [id for id in range(len(wing_nodes))],
-                        "wake": [id for id in
-                                 range(len(wing_nodes), len(nodes))]}
-        
-            shells_id = {"body": [id for id in range(len(wing_shells))],
-                         "wake": [id for id in
-                                  range(len(wing_shells), len(shells))]}
             
-            return nodes, shells, nodes_id, shells_id, WingTip
-        
-        return nodes, shells
-    
-    @staticmethod
-    def give_TrailingEdge_Shells_id(num_x_bodyShells:int, num_y_Shells:int,
-                                    mesh_shell_type:str="quadrilateral"):
-        
-        # x shells on Suction side + x shells on Pressure side
-        num_x_bodyShells = 2 * num_x_bodyShells
-        # ny shells on positive y axis + y shells on negative y axis
-        num_y_Shells = 2 * num_y_Shells
-        
-        if mesh_shell_type == "quadrilateral":
-            c1 = 0
-            c2 = 1
-             
-        elif mesh_shell_type == "triangular":
-            c1 = 1
-            c2 = 2
-        
-        # num_WingTipShells = num_x_bodyShells * c2 - 4*c1
-        num_WingTipShells = 2*num_x_bodyShells * c2 - 8*c1
-        num_WingTipShells = 0
-        
-        SS_TE_shell_id_list = []
-        PS_TE_shell_id_list = []
+            if mesh_tips:
+                right_tip_nodes_ids = [node_id(i, 0) for i in range(i_max)] \
+                + extra_wing_tip_node_ids[0:len(extra_wing_tip_node_ids)//2]
 
-        for i in range(num_y_Shells):
-            id = i * c2 + num_WingTipShells
-            SS_TE_shell_id_list.append(id)
+                left_tip_nodes_ids = [node_id(i, j_max) for i in range(i_max)] \
+                    + extra_wing_tip_node_ids[len(extra_wing_tip_node_ids)//2:]
+                    
+                wing_tips_nodes_ids = right_tip_nodes_ids + left_tip_nodes_ids 
             
-            id = (num_x_bodyShells - 1) * num_y_Shells * c2 + id + c1
-            PS_TE_shell_id_list.append(id)
-        
-        TrailingEdge = {"suction side" : SS_TE_shell_id_list,
-                        "pressure side" : PS_TE_shell_id_list}
-        
-        return TrailingEdge
-
-    @staticmethod
-    def give_wake_sheddingShells(num_x_wakeShells:int, TrailingEdge: dict,
-                                 mesh_shell_type:str="quadrilateral"):
-        
-        if mesh_shell_type == "quadrilateral":
-            c1 = 0
-            c2 = 1
-             
-        elif mesh_shell_type == "triangular":
-            c1 = 1
-            c2 = 2
-        
-        num_y_Shells = len(TrailingEdge["suction side"])
-        num_x_bodyShells = (TrailingEdge["pressure side"][-1] + 1)/num_y_Shells
-        num_x_bodyShells = int(num_x_bodyShells/c2)
-        num_WingTipShells = 2*num_x_bodyShells * c2 - 8*c1
-        
-        last_id = TrailingEdge["pressure side"][-1] + 1 + num_WingTipShells
-        
-        wake_sheddingShells_id = {}
-        for j in range(num_y_Shells):
-            id_list = []
-            for i in range(num_x_wakeShells):
-                for k in range(c2):
-                    id = last_id + j + k 
-                    id_list.append(id + c2*num_y_Shells*i)
-            last_id = last_id + k
+            else:
+                extra_wing_tip_node_ids = []
+                right_tip_nodes_ids = []
+                left_tip_nodes_ids = []
+                wing_tips_nodes_ids = []   
+                            
             
-            wake_sheddingShells_id[TrailingEdge["suction side"][j]] = id_list
-            wake_sheddingShells_id[TrailingEdge["pressure side"][j]] = id_list
-        
-        return wake_sheddingShells_id
-
+            if mesh_wake:
+                wake_nodes_ids = [
+                    wake_node_id(i, j) 
+                    for i in range(i_max_wake + 1) for j in range(j_max + 1)
+                ]
+                
+                wake_lines = [
+                    [wake_node_id(i, j) for i in range(i_max_wake + 1)]
+                    for j in range(j_max + 1)
+                ]
+                
+                wake_lines = np.array(wake_lines)
+            
+            else:
+                wake_nodes_ids = []
+                wake_lines = []
+            
+            
+            body_nodes_ids = main_surface_nodes_ids + extra_wing_tip_node_ids
+            
+            nodes_ids_dict = {
+            "body": body_nodes_ids,
+            "main surface" : main_surface_nodes_ids,
+            "suction side": suction_side_nodes_ids,
+            "pressure side": pressure_side_nodes_ids,
+            "wing tips": wing_tips_nodes_ids,
+            "right wing tip": right_tip_nodes_ids,
+            "left wing tip": left_tip_nodes_ids,
+            "trailing edge": trailing_edge_nodes_ids,
+            "wake": wake_nodes_ids,
+            "wake lines": wake_lines
+        }
+                                                     
+            return nodes, shells, nodes_ids_dict
+    
     @staticmethod
     def sweep_airfoil_section(x_coords, span_location, sweep_angle):
         x_coords = x_coords + abs(span_location) * np.tan(sweep_angle)
@@ -912,44 +974,18 @@ class Wing:
     
       
 if __name__=="__main__":
-    from mesh_class import PanelMesh
+    from mesh_class import PanelMesh, PanelAeroMesh
       
     root_airfoil = Airfoil(name="naca0012", chord_length=1)
     tip_airfoil = Airfoil(name="naca0012", chord_length=1)
     wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
                 twist=0)
     
-    num_x_bodyShells = 5
-    num_y_Shells = 1
-        
-    wing_nodes, wing_shells = wing.generate_wingMesh(num_x_bodyShells,
-                                                     num_y_Shells,
-                                                     "triangular")    
-    wing_mesh = PanelMesh(wing_nodes, wing_shells)
-    # wing_mesh.plot_shells(elevation=-150, azimuth=-120)
-    # wing_mesh.plot_panels(elevation=-150, azimuth=-120)  
+    nodes, shells, nodes_ids = wing.generate_mesh2(
+        num_x_shells=5, num_y_shells=1, mesh_shell_type="quadrilateral",
+        mesh_main_surface=True, mesh_tips=True, mesh_wake=True, num_x_wake_shells=3, V_fs=Vector((1, 0, 0)),
+        standard_mesh_format=False
+    )
     
-    
-    wing_mesh.set_body_fixed_frame_origin(0, 0, 0)
-    roll, pitch, yaw = np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
-    wing_mesh.set_body_fixed_frame_orientation(roll, pitch, yaw)
-    
-    wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120)
-    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
-    
-    omega = Vector((np.deg2rad(10), 0, 0))
-    Vo = Vector((-1, 0, 0))
-    V_wind = Vector((0, 0, 0))
-    dt = 1
-    wing_mesh.set_angular_velocity(omega)
-    wing_mesh.set_origin_velocity(Vo)
-    
-    for i in range(5):
-        
-        wing_mesh.move_body(dt)
-        wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
-        
-        wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120)
-
-    
-    pass
+    wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
+    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120, plot_wake=True) 
