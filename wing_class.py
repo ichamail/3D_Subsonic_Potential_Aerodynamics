@@ -252,14 +252,14 @@ class Wing:
                 
                 add_face(
                     node_id(i, j),
-                    node_id(i_max - i - 1, j),
-                    id
+                    id,
+                    node_id(i+1, j),
                 )
                 
                 add_face(
                     node_id(i, j),
-                    id,
-                    node_id(i+1, j),
+                    node_id(i_max - i - 1, j),
+                    id
                 )
                 
                 for i in range(1, i_max//2 - 1):
@@ -688,14 +688,14 @@ class Wing:
                 
                 add_face(
                     node_id(i, j),
-                    node_id(i_max - i - 1, j),
-                    id
+                    id,
+                    node_id(i+1, j),
                 )
                 
                 add_face(
                     node_id(i, j),
-                    id,
-                    node_id(i+1, j),
+                    node_id(i_max - i - 1, j),
+                    id
                 )
                 
                 for i in range(1, i_max//2 - 1):
