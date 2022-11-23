@@ -717,18 +717,12 @@ if __name__=="__main__":
                 half_span=1, sweep_angle=0, dihedral_angle=0, twist_angle=0)
     
     nodes, shells, nodes_id = wing.mesh_body(
-        4, 1, mesh_wake=True, wake_resolution=2, standard_mesh_format=False,
+        5, 1, mesh_wake=True, wake_resolution=3, standard_mesh_format=False,
         shellType="quads")
     
     
-    wing_mesh = PanelAeroMesh(nodes, shells, nodes_id) 
-    
+    wing_mesh = PanelAeroMesh(nodes, shells, nodes_id)
+        
     wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
-                                       plot_wake=False)
-    
-    
-    for shell_id, neigbours in enumerate(wing_mesh.shell_neighbours):
-        print(shell_id, neigbours)
-    
-    
+                                       plot_wake=True)
     
