@@ -1,7 +1,6 @@
 from airfoil_class import Airfoil
 from mesh_class import PanelAeroMesh
 from wing_class import Wing
-from wing_mesh_generator import generate_WingPanelMesh
 from panel_method_class import PanelMethod, Steady_Wakeless_PanelMethod
 from vector_class import Vector
 from matplotlib import pyplot as plt

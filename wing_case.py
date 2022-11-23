@@ -57,7 +57,7 @@ plt.show()
 
 
 # Surface Contour plot
-body_panels = [wing_mesh.panels[id] for id in wing_mesh.panels_id["body"]]
+body_panels = [wing_mesh.panels[id] for id in wing_mesh.panels_ids["body"]]
 plot_Cp_SurfaceContours(body_panels, elevation=-150, azimuth=-120)
 
 CL = panel_method.LiftCoeff(body_panels, wing.RefArea)

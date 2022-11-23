@@ -493,7 +493,7 @@ class AeroMesh(Mesh):
                 else:
                     id = self.shells_ids["wake"][-1] + 1
                 
-                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_ids
                 self.shells_ids["wake"].append(id)
                 
                 
@@ -527,7 +527,7 @@ class AeroMesh(Mesh):
                 else:
                     id = self.shells_ids["wake"][-1] + 1
                 
-                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_ids
                 self.shells_ids["wake"].append(id)
                 self.shells_ids["wake"].append(id+1)
                 
@@ -561,7 +561,7 @@ class AeroMesh(Mesh):
                 else:
                     id = self.shells_ids["wake"][-1] + 1
                 
-                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_ids
                 self.shells_ids["wake"].append(id)
                 self.shells_ids["wake"].append(id+1)
                 
@@ -886,7 +886,7 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
     def __init__(self, nodes: list, shells: list, nodes_id: dict):
         super().__init__(nodes, shells, nodes_id)
         
-        self.panels_id = self.shells_ids
+        self.panels_ids = self.shells_ids
         self.wake_sheddingPanels = self.wake_sheddingShells
     
     def free_TrailingEdge(self):
@@ -938,11 +938,11 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             self.panels[-1].id = shell_id
     
     def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
-        if self.panels_id["wake"] == []:
+        if self.panels_ids["wake"] == []:
             super().shed_wake(v_rel, dt, wake_shed_factor, type)
             self.add_wakePanels(type)
         else:
-            self.move_panels(self.panels_id["wake"], v_rel, dt*wake_shed_factor)
+            self.move_panels(self.panels_ids["wake"], v_rel, dt*wake_shed_factor)
             super().shed_wake(v_rel, dt, wake_shed_factor, type)        
             self.add_wakePanels(type)
    
@@ -951,8 +951,8 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         # create velocity list 
         node_id_list = self.nodes_to_convect()
         velocity_list = []
-        body_panels = [self.panels[id] for id in self.panels_id["body"]]
-        wake_panels = [self.panels[id] for id in self.panels_id["wake"]]
+        body_panels = [self.panels[id] for id in self.panels_ids["body"]]
+        wake_panels = [self.panels[id] for id in self.panels_ids["wake"]]
         for node_id in node_id_list:
             r_p = Vector(self.nodes[node_id])
             induced_velocity = induced_velocity_function(r_p, body_panels,
