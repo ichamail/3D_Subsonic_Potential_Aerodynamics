@@ -98,7 +98,7 @@ for AoA in AoA_list:
     steady_panel_method.set_V_fs(V_fs, AoA, SideSlipAngle)
     steady_panel_method.solve(mesh)
     
-    body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+    body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
     r_c4 = Vector((0.25*wing.root_airfoil.chord, 0, 0))
     r_o = Vector((0, 0, 0)) 
     

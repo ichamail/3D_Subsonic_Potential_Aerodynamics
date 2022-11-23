@@ -19,7 +19,7 @@ class Mesh:
         self.node_num = len(nodes)
         self.shell_num = len(shells)
 
-        self.shell_neighbours = self.find_shell_neighbours()
+        self.shell_neighbours = self.locate_shells_adjacency()
         
         
         
@@ -48,16 +48,19 @@ class Mesh:
 
     @staticmethod
     def do_intersect(shell_i, shell_j):
-        intersections = 0
-        for node_id in shell_i:
-            if node_id in shell_j:
-                intersections = intersections + 1
-        if intersections > 1 :
-            return True
-        else:
-            return False
+        # intersections = 0
+        # for node_id in shell_i:
+        #     if node_id in shell_j:
+        #         intersections = intersections + 1
+                
+        # if intersections > 1 :
+        #     return True
+        # else:
+        #     return False
+        
+        return sum(node_id in shell_j for node_id in shell_i)>1    
     
-    def find_shell_neighbours(self):
+    def locate_shells_adjacency(self):
         shells = self.shells
         neighbours=[]
         for i, shell_i in enumerate(shells):
@@ -67,6 +70,18 @@ class Mesh:
                     neighbours[-1].append(j)
         
         return neighbours
+
+    def eliminate_adjacency(self, id_list1, id_list2):
+        
+        for id in id_list1:
+            for neighbour_id in self.shell_neighbours[id]:
+                if neighbour_id in id_list2:
+                    self.shell_neighbours[id].remove(neighbour_id)
+        
+        for id in id_list2:
+            for neighbour_id in self.shell_neighbours[id]:
+                if neighbour_id in id_list1:
+                    self.shell_neighbours[id].remove(neighbour_id)
 
     def add_extra_neighbours(self):
          
@@ -233,24 +248,40 @@ class Mesh:
         
 class AeroMesh(Mesh):
     
-    def __init__(self, nodes: list, shells: list,
-                 nodes_id:dict = {},
-                 shells_id:dict = {},
-                 TrailingEdge:dict={},
-                 wake_sheddingShells:dict={},
-                 WingTip:dict={}):
+    def __init__(self, nodes: list, shells: list, nodes_ids:dict):
         super().__init__(nodes, shells)
         
-        self.nodes_id = nodes_id
-        self.shells_id = shells_id
-        self.TrailingEdge = TrailingEdge
-        self.wake_sheddingShells = wake_sheddingShells
-        self.WingTip = WingTip
+        self.nodes_ids = nodes_ids
+        self.shells_ids = {}
+        self.TrailingEdge = {}
+        self.wake_sheddingShells = {}
         
-        # if empty dict
-        if not self.wake_sheddingShells:
-            self.init_wake_sheddingShells()
+        self.set_shells_ids()
+        self.find_TrailingEdge()
+        self.set_wake_sheddingShells()
+        
+        self.free_TrailingEdge()
+        self.eliminate_main_surface_wing_tips_adjacency()
+        self.eliminate_body_wake_adjacency()
     
+    def find_TrailingEdge(self):
+        te = self.nodes_ids["trailing edge"]
+        ss = self.nodes_ids["suction side"]
+        
+        
+        ps = self.nodes_ids["pressure side"]
+        
+        SS_TE = [shell_id for shell_id, shell in enumerate(self.shells)
+                 if sum(node_id in te for node_id in shell)>1 
+                 and sum(node_id in ss for node_id in shell) >2
+                ]
+        PS_TE = [shell_id for shell_id, shell in enumerate(self.shells)
+                 if sum(node_id in te for node_id in shell)>1 
+                 and sum(node_id in ps for node_id in shell) > 2
+                ]
+                
+        self.TrailingEdge = {"suction side": SS_TE, "pressure side": PS_TE}
+
     def free_TrailingEdge(self):
         """
         if trailing edge shells (or panels) share trailing edge nodes then
@@ -269,20 +300,140 @@ class AeroMesh(Mesh):
                 if neighbour_id in self.TrailingEdge["suction side"]:
                     self.shell_neighbours[id].remove(neighbour_id)
 
+    def find_suction_side(self):
+        suction_side_nodes_ids = self.nodes_ids["suction side"]
+        suction_side_shells_ids = [
+            shell_id for shell_id, shell in enumerate(self.shells)
+            if sum(node_id in suction_side_nodes_ids for node_id in shell)>2
+        ]
+        
+        return suction_side_shells_ids
+    
+    def find_pressure_side(self):
+        pressure_side_nodes_ids = self.nodes_ids["pressure side"]
+        pressure_side_shells_ids = [
+            shell_id for shell_id, shell in enumerate(self.shells)
+            if sum(node_id in pressure_side_nodes_ids for node_id in shell)>2
+        ]
+        
+        return pressure_side_shells_ids
+    
+    def find_right_wing_tip(self):
+        right_wing_tip_nodes_ids = self.nodes_ids["right wing tip"]
+        right_wing_tip_shells_ids = [
+            shell_id for shell_id, shell in enumerate(self.shells)
+            if sum(node_id in right_wing_tip_nodes_ids for node_id in shell)>2
+        ]
+        return right_wing_tip_shells_ids
+    
+    def find_left_wing_tip(self):
+        left_wing_tip_nodes_ids =  self.nodes_ids["left wing tip"]
+        left_wing_tip_shells_ids = [
+            shell_id for shell_id, shell in enumerate(self.shells)
+            if sum(node_id in left_wing_tip_nodes_ids for node_id in shell)>2
+        ]
+        return left_wing_tip_shells_ids
+    
+    def find_wake(self):
+        wake_nodes_ids = self.nodes_ids["wake"]
+        wake_shells_ids = [
+            shell_id for shell_id, shell in enumerate(self.shells)
+            if sum(node_id in wake_nodes_ids for node_id in shell)>2
+        ]
+        
+        return wake_shells_ids
+    
+    def set_shells_ids(self):
+        
+        suction_side_shells_ids = self.find_suction_side()
+        pressure_side_shells_ids = self.find_pressure_side()
+        main_surface_shells_ids = suction_side_shells_ids\
+            +pressure_side_shells_ids
+        
+        right_wing_tip_shells_ids = self.find_right_wing_tip()
+        left_wing_tip_shells_ids = self.find_left_wing_tip()
+        wing_tips_shells_ids = right_wing_tip_shells_ids \
+            + left_wing_tip_shells_ids
+        
+        body_shells_ids = main_surface_shells_ids + wing_tips_shells_ids
+        
+        wake_shells_ids = self.find_wake()  
+        
+        self.shells_ids = {
+            "body": body_shells_ids,
+            "main surface": main_surface_shells_ids,
+            "suction side": suction_side_shells_ids,
+            "pressure side": pressure_side_shells_ids,
+            "wing tips": wing_tips_shells_ids,
+            "right tip": right_wing_tip_shells_ids,
+            "left tip" : left_wing_tip_shells_ids,
+            "wake": wake_shells_ids
+        }
+    
+    def init_wake_sheddingShells(self):
+        # if not empty dict
+        if self.TrailingEdge:
+
+            for j in range(len(self.TrailingEdge["suction side"])):
+
+                self.wake_sheddingShells[self.TrailingEdge["suction side"][j]] = []
+
+                self.wake_sheddingShells[self.TrailingEdge["pressure side"][j]] = []
+
+    def set_wake_sheddingShells(self):
+        
+        self.init_wake_sheddingShells()
+        
+        for wake_line_id in range(len(self.nodes_ids["wake lines"])-1):
+            
+            line = self.nodes_ids["wake lines"][wake_line_id]
+            next_line = self.nodes_ids["wake lines"][wake_line_id + 1]
+            
+            for te_shell_id in self.wake_sheddingShells:
+                te_shell = self.shells[te_shell_id]
+                
+                if sum(
+                    node_id in [line[0], next_line[0]]
+                    for node_id in te_shell
+                ) == 2:
+                        
+                        self.wake_sheddingShells[te_shell_id] = [
+                            shell_id for shell_id in self.shells_ids["wake"]
+                            if sum(
+                                node_id in [*line, *next_line]
+                                for node_id in self.shells[shell_id]
+                            ) > 2
+                        ]        
+      
     def add_extra_neighbours(self):
          
         old_shell_neighbours = {}
-        for id_i in self.shells_id["body"]:
+        for id_i in self.shells_ids["body"]:
             old_shell_neighbours[id_i] = self.shell_neighbours[id_i].copy()
             for id_j in self.shell_neighbours[id_i]:
                 old_shell_neighbours[id_j] = self.shell_neighbours[id_j].copy()
         
-        for id_i in self.shells_id["body"]:
+        for id_i in self.shells_ids["body"]:
             for id_j in old_shell_neighbours[id_i]:
                 for id_k in old_shell_neighbours[id_j]: 
                     if id_k!=id_i and id_k not in self.shell_neighbours[id_i]:
                         self.shell_neighbours[id_i].append(id_k)      
 
+    def eliminate_main_surface_wing_tips_adjacency(self):
+        
+        if "wing tips" in self.shells_ids and "main surface" in self.shells_ids:
+            
+            self.eliminate_adjacency(
+                self.shells_ids["wing tips"], self.shells_ids["main surface"]
+            )
+    
+    def eliminate_body_wake_adjacency(self):
+        
+        if "main surface" in self.shells_ids and "wake" in self.shells_ids:
+            self.eliminate_adjacency(
+                self.shells_ids["main surface"], self.shells_ids["wake"]
+            )
+    
     def give_near_root_shells_id(self):
         
         near_root_nodes_id = []
@@ -290,29 +441,19 @@ class AeroMesh(Mesh):
             if node[1] == 0:
                 near_root_nodes_id.append(node_id)
         
-        if self.shells_id:
-            body_shells_id = self.shells_id["body"]
+        if self.shells_ids:
+            body_shells_ids = self.shells_ids["body"]
         else:
-            body_shells_id = np.arange(len(self.shells))
+            body_shells_ids = np.arange(len(self.shells))
         
-        near_root_shells_id = []
-        for shell_id in body_shells_id:
+        near_root_shells_ids = []
+        for shell_id in body_shells_ids:
             for node_id in self.shells[shell_id]:
                 if node_id in near_root_nodes_id:
-                    near_root_shells_id.append(shell_id)
+                    near_root_shells_ids.append(shell_id)
                     break
         
-        return near_root_shells_id
-
-    def init_wake_sheddingShells(self):
-        # if not empty dict
-        if self.TrailingEdge:
-                            
-            for j in range(len(self.TrailingEdge["suction side"])):
-                
-                self.wake_sheddingShells[self.TrailingEdge["suction side"][j]] = []
-                
-                self.wake_sheddingShells[self.TrailingEdge["pressure side"][j]] = []                   
+        return near_root_shells_ids                   
 
     ### unsteady features  ###
     def initialize_wake_nodes(self):
@@ -350,13 +491,13 @@ class AeroMesh(Mesh):
                 
                 self.shells.append(shell)
                 
-                if self.shells_id["wake"] == []:
-                    id = self.shells_id["body"][-1] + 1
+                if self.shells_ids["wake"] == []:
+                    id = self.shells_ids["body"][-1] + 1
                 else:
-                    id = self.shells_id["wake"][-1] + 1
+                    id = self.shells_ids["wake"][-1] + 1
                 
-                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
-                self.shells_id["wake"].append(id)
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_ids
+                self.shells_ids["wake"].append(id)
                 
                 
                 value_list_id = id
@@ -384,14 +525,14 @@ class AeroMesh(Mesh):
                 
                 self.shells.append(shell)
                 
-                if self.shells_id["wake"] == []:
-                    id = self.shells_id["body"][-1] + 1
+                if self.shells_ids["wake"] == []:
+                    id = self.shells_ids["body"][-1] + 1
                 else:
-                    id = self.shells_id["wake"][-1] + 1
+                    id = self.shells_ids["wake"][-1] + 1
                 
-                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
-                self.shells_id["wake"].append(id)
-                self.shells_id["wake"].append(id+1)
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_ids
+                self.shells_ids["wake"].append(id)
+                self.shells_ids["wake"].append(id+1)
                 
                 value_list_id = id
                 
@@ -418,14 +559,14 @@ class AeroMesh(Mesh):
                 
                 self.shells.append(shell)
                 
-                if self.shells_id["wake"] == []:
-                    id = self.shells_id["body"][-1] + 1
+                if self.shells_ids["wake"] == []:
+                    id = self.shells_ids["body"][-1] + 1
                 else:
-                    id = self.shells_id["wake"][-1] + 1
+                    id = self.shells_ids["wake"][-1] + 1
                 
-                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_id
-                self.shells_id["wake"].append(id)
-                self.shells_id["wake"].append(id+1)
+                # Προσοχή θα ανανεωθεί και το λεξικό self.panels_ids
+                self.shells_ids["wake"].append(id)
+                self.shells_ids["wake"].append(id+1)
                 
                 value_list_id = id
                 
@@ -439,17 +580,17 @@ class AeroMesh(Mesh):
     
     def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
                 
-        if self.nodes_id["wake"] == []:
+        if self.nodes_ids["wake"] == []:
             self.initialize_wake_nodes()
                       
-        self.move_nodes(self.nodes_id["wake"], v_rel, dt*wake_shed_factor)    
+        self.move_nodes(self.nodes_ids["wake"], v_rel, dt*wake_shed_factor)    
         self.add_wakeNodes()
         self.add_wakeShells(type)
 
     def nodes_to_convect(self):
         num_TrailingEdge_nodes = len(self.TrailingEdge["suction side"]) + 1
-        id_start = self.nodes_id["wake"][0]
-        id_end = self.nodes_id["wake"][-1] - num_TrailingEdge_nodes
+        id_start = self.nodes_ids["wake"][0]
+        id_end = self.nodes_ids["wake"][-1] - num_TrailingEdge_nodes
         
         node_id_list = []
         for id in range(id_start, id_end+1):
@@ -770,15 +911,10 @@ class PanelMesh(Mesh):
 
 class PanelAeroMesh(AeroMesh, PanelMesh):
     
-    def __init__(self, nodes: list, shells: list,
-                 nodes_id: dict = {},
-                 shells_id: dict = {},
-                 TrailingEdge: dict = {},
-                 wake_sheddingShells: dict = {},
-                 WingTip: dict = {}):
-        super().__init__(nodes, shells, nodes_id, shells_id, TrailingEdge, wake_sheddingShells, WingTip)
+    def __init__(self, nodes: list, shells: list, nodes_ids: dict):
+        super().__init__(nodes, shells, nodes_ids)
         
-        self.panels_id = self.shells_id
+        self.panels_ids = self.shells_ids
         self.wake_sheddingPanels = self.wake_sheddingShells
     
     def free_TrailingEdge(self):
@@ -786,9 +922,9 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         self.panel_neighbours = self.shell_neighbours
       
     def give_near_root_panels(self):
-        near_root_shells_id = super().give_near_root_shells_id()
+        near_root_shells_ids = super().give_near_root_shells_id()
         near_root_panels = []
-        for id in near_root_shells_id:
+        for id in near_root_shells_ids:
             near_root_panels.append(self.panels[id])
         
         return near_root_panels
@@ -809,7 +945,7 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
     def add_wakePanels(self, type="quadrilateral"):
 
         num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
-        id_end = self.shells_id["wake"][-1]
+        id_end = self.shells_ids["wake"][-1]
         if type == "quadrilateral":
             id_start = id_end - num_TrailingEdge_panels + 1
         elif type == "triangular":
@@ -831,7 +967,7 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
     
     def add_wakePanels_jit(self, type="quadrilateral"):
         num_TrailingEdge_panels = len(self.TrailingEdge["pressure side"])
-        id_end = self.shells_id["wake"][-1]
+        id_end = self.shells_ids["wake"][-1]
         if type == "quadrilateral":
             id_start = id_end - num_TrailingEdge_panels + 1
         elif type == "triangular":
@@ -850,12 +986,12 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             self.panels[-1].id = shell_id
         
     def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
-        if self.panels_id["wake"] == []:
+        if self.panels_ids["wake"] == []:
             super().shed_wake(v_rel, dt, wake_shed_factor, type)
             # self.add_wakePanels(type)
             self.add_wakePanels_jit(type)
         else:
-            self.move_panels(self.panels_id["wake"], v_rel, dt*wake_shed_factor)
+            self.move_panels(self.panels_ids["wake"], v_rel, dt*wake_shed_factor)
             super().shed_wake(v_rel, dt, wake_shed_factor, type)        
             # self.add_wakePanels(type)
             self.add_wakePanels_jit(type)
@@ -865,8 +1001,8 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         # create velocity list 
         node_id_list = self.nodes_to_convect()
         velocity_list = []
-        body_panels = [self.panels[id] for id in self.panels_id["body"]]
-        wake_panels = [self.panels[id] for id in self.panels_id["wake"]]
+        body_panels = [self.panels[id] for id in self.panels_ids["body"]]
+        wake_panels = [self.panels[id] for id in self.panels_ids["wake"]]
         for node_id in node_id_list:
             r_p = Vector(self.nodes[node_id])
             induced_velocity = induced_velocity_function(r_p, body_panels,
@@ -877,7 +1013,7 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         super().convect_wake(velocity_list, dt)
         
         # update panel vertices' location
-        for shell_id in self.shells_id["wake"]:
+        for shell_id in self.shells_ids["wake"]:
             shell = self.shells[shell_id]          
             vertex_list = []
             for node_id in shell:
@@ -895,10 +1031,12 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         wake_shells = []
         vert_coords = []
         
-        if self.shells_id:
-            body_panels = [self.panels[id] for id in self.shells_id["body"]]
+        if self.shells_ids:
+            body_panels = [self.panels[id] for id in self.shells_ids["body"]]
             if plot_wake:
-                wake_panels = [self.panels[id] for id in self.shells_id["wake"]]
+                wake_panels = [
+                    self.panels[id] for id in self.shells_ids["wake"]
+                ]
         else:
             body_panels = self.panels
             
@@ -995,10 +1133,10 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         wake_shells = []
         vert_coords = []
         
-        if self.shells_id:
-            body_panels = [self.panels[id] for id in self.shells_id["body"]]
+        if self.shells_ids:
+            body_panels = [self.panels[id] for id in self.shells_ids["body"]]
             if plot_wake:
-                wake_panels = [self.panels[id] for id in self.shells_id["wake"]]
+                wake_panels = [self.panels[id] for id in self.shells_ids["wake"]]
         else:
             body_panels = self.panels
         
@@ -1092,13 +1230,13 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
     def copy(self):
         nodes = deepcopy(self.nodes)
         shells = deepcopy(self.shells)
-        nodes_id = deepcopy(self.nodes_id)
-        shells_id = deepcopy(self.shells_id)
+        nodes_ids = deepcopy(self.nodes_ids)
+        shells_ids = deepcopy(self.shells_ids)
         TrailingEdge = deepcopy(self.TrailingEdge)
         wake_sheddingShells = deepcopy(self.wake_sheddingShells)
         WingTip = deepcopy(self.WingTip)
         
-        mesh = PanelAeroMesh(nodes, shells, nodes_id, shells_id, TrailingEdge,
+        mesh = PanelAeroMesh(nodes, shells, nodes_ids, shells_ids, TrailingEdge,
                              wake_sheddingShells, WingTip)
         
         (xo, yo, zo) = self.origin

@@ -225,7 +225,8 @@ class BWB:
 
     def mesh_body(self, ChordWise_resolution, SpanWise_resolution,
                   SpanWise_spacing="uniform", shellType="quads",
-                  mesh_main_surface=True, mesh_tips=True, standard_mesh=True):
+                  mesh_main_surface=True, mesh_tips=True,
+                  mesh_wake=False, wake_resolution=10, standard_mesh_format=True):
         
         for wingXsection in self.wingXsection_list:
             wingXsection.airfoil.new_x_spacing2(ChordWise_resolution)
@@ -243,14 +244,18 @@ class BWB:
         
         nodes_ofSpanWiseLineS = []
         for line_x_perc, line_y_perc in zip(x_perc, y_perc):
+            
             nodes_ofSpanWiseLine = self.mesh_line(line_x_perc, line_y_perc,
                                                   resolution = SpanWise_resolution + 1,
                                                   spacing=SpanWise_spacing)
+            
             nodes_ofSpanWiseLineS.append(nodes_ofSpanWiseLine)
         
         nodes = np.concatenate(nodes_ofSpanWiseLineS)       
         
+        
         def node_id(chord_wise_index, span_wise_index):
+            
             ny = SpanWise_resolution * (len(self.wingXsection_list)-1) + 1
             nx = len(nodes_ofSpanWiseLineS)
             global j_max, i_max
@@ -260,6 +265,7 @@ class BWB:
             j = span_wise_index
             node_id = (j + i*ny)%(nx*ny)
             return node_id
+        
          
         def add_shell(*node_ids, reverse_order=False):
             # node_id_list should be in counter clock wise order
@@ -295,18 +301,6 @@ class BWB:
                         node_id(i, j+1)
                     )
 
-                if i == 0:
-                    suction_side_trailing_edge_shell_ids = [
-                        id for id in range(len(shells))
-                    ]
-                if i == i_max-2:
-                    id_start = len(shells)
-            id_end = len(shells)-1
-            pressure_side_trailing_edge_shell_ids=[
-                id for id in range(id_start, id_end+1)
-            ]
-            main_surface_shell_ids = [id for id in range(0, id_end+1)]
-                    
         # if mesh_tips:
             
         #     # root or right tip
@@ -355,9 +349,9 @@ class BWB:
         #             node_id(i_max-i, j_max)    
         #         )
         
-        extra_wing_tip_node_ids = []
         if mesh_tips:
-            id = len(nodes) -1  # last node id
+            last_id = len(nodes) -1  # last node id
+            id = last_id
             
             for j in [0, j_max]:
                 # j=0 root or right tip
@@ -371,13 +365,18 @@ class BWB:
                 
                 # root or right tip   
                 id = id + 1
-                extra_wing_tip_node_ids.append(id)
                    
                 # trailing edge   
                 i = 0      
                 node = (nodes[node_id(i+1, j)]
                         + nodes[node_id(i_max-i-1, j)]) / 2
                 nodes = np.vstack([nodes, node])
+                                
+                add_face(
+                    node_id(i, j),
+                    id,
+                    node_id(i+1, j),
+                )
                 
                 add_face(
                     node_id(i, j),
@@ -385,15 +384,8 @@ class BWB:
                     id
                 )
                 
-                add_face(
-                    node_id(i, j),
-                    id,
-                    node_id(i+1, j),
-                )
-                
                 for i in range(1, i_max//2 - 1):
                     id = id+1
-                    extra_wing_tip_node_ids.append(id)
                     
                     node = (nodes[node_id(i+1, j)]
                             + nodes[node_id(i_max-i-1, j)]) / 2
@@ -426,67 +418,155 @@ class BWB:
                     id,
                     node_id(i+2, j),  # node_id(i_max - i, j),
                     node_id(i+1, j),  # node_id(i_max - i - 1, j)     
-                )       
+                )
+            
+            extra_wing_tip_node_ids = [(last_id+1)+i for i in range(i_max-2)]
+        
+        if mesh_wake:
+            
+            x = np.zeros((wake_resolution+1, j_max+1))
+            y = np.zeros_like(x)
+            z = np.zeros_like(x)
+                        
+            C_root = max([wingXsection.chord
+                              for wingXsection in self.wingXsection_list])
+            
+            for j in range(j_max+1):
+                
+                components = tuple(nodes[node_id(0, j)] - nodes[node_id(1, j)])
+                vec1 = Vector(components)
+                
+                components = tuple(nodes[node_id(i_max, j)]
+                                   - nodes[node_id(i_max - 1, j)])
+                vec2 = Vector(components)
+                
+                bisector = vec1+vec2
+                
+                bisector = bisector/bisector.norm()
+                
+                bisector = bisector * C_root * 10
+                
+                (x0, y0, z0) = nodes[node_id(0, j)]
+                x[:, j] = np.linspace(x0, x0 + bisector.x, wake_resolution+1)
+                y[:, j] = np.linspace(y0, y0 + bisector.y, wake_resolution+1)
+                z[:, j] = np.linspace(z0, z0 + bisector.z, wake_resolution+1)
+            
+            
+            num_body_nodes = len(nodes)
+            for i in range(1, wake_resolution+1):
+                for j in range(j_max + 1):
+                    node = (x[i][j], y[i][j], z[i][j])
+                    nodes = np.vstack([nodes, np.array(node)])
+            
+            def wake_node_id(chord_wise_index, span_wise_index):
+                ny = SpanWise_resolution * (len(self.wingXsection_list)-1) + 1
+                nx = wake_resolution + 1
 
-                if j == 0:
-                    id_start = len(main_surface_shell_ids)
-                    id_end = len(shells)-1
-                    right_tip_shell_ids = [id for id in range(id_start,
-                                                              id_end+1)]
-                if j == j_max:
-                    id_start = id_end + 1
-                    id_end = len(shells)-1
-                    left_tip_shell_ids = [id for id in range(id_start,
-                                                             id_end+1)]
+                global i_max_wake
+                i_max_wake = nx - 1
+                i = chord_wise_index
+                j = span_wise_index
+                
+                if i==0:
+                    id = node_id(i, j)
+                
+                else:
+                                   
+                    id = j + i*ny + (num_body_nodes - ny)
+                
+                return id
+            
+            # call wake_node_id() so i_max_wake can be accessed
+            wake_node_id(0, 0)
+            
+            for i in range(i_max_wake):
+                for j in range(j_max):
+                    add_shell(
+                        wake_node_id(i, j),
+                        wake_node_id(i+1, j),
+                        wake_node_id(i+1, j+1),
+                        wake_node_id(i, j+1),
+                        reverse_order=True
+                )
         
-        # node and shell id dicts      
-        main_surface_node_ids = [node_id(i, j)
-                                 for i in range(i_max)
-                                 for j in range(j_max+1)]
+        
+        # store nodes information in nodes_id_dict
+        
+        if mesh_main_surface:
+            
+            suction_side_nodes_ids = [node_id(i, j)
+                                    for i in range(i_max//2 + 1)
+                                    for j in range(j_max + 1)]
+            
+            pressure_side_nodes_ids = [node_id(i, j)
+                                    for i in range(i_max//2, i_max + 1)
+                                    for j in range(j_max + 1)]
+                
+            main_surface_nodes_ids = [node_id(i, j)
+                                    for i in range(i_max)
+                                    for j in range(j_max+1)]
+            
+            trailing_edge_nodes_ids = [node_id(0, j) for j in range(j_max+1)]
+            
+        else:
+            suction_side_nodes_ids = []
+            pressure_side_nodes_ids = []
+            main_surface_nodes_ids = []
+            trailing_edge_nodes_ids = []
+        
+        
+        if mesh_tips:
+            
+            right_tip_nodes_ids = [node_id(i, 0) for i in range(i_max)] \
+                + extra_wing_tip_node_ids[0:len(extra_wing_tip_node_ids)//2]
 
-        body_node_ids = main_surface_node_ids + extra_wing_tip_node_ids
+            left_tip_nodes_ids = [node_id(i, j_max) for i in range(i_max)] \
+                + extra_wing_tip_node_ids[len(extra_wing_tip_node_ids)//2:]
+                
+            wing_tips_nodes_ids = right_tip_nodes_ids + left_tip_nodes_ids   
         
-        right_tip_node_ids = [node_id(i, 0) for i in range(i_max)] \
-            + extra_wing_tip_node_ids[0:len(extra_wing_tip_node_ids)//2]
-
-        left_tip_node_ids = [node_id(i, j_max) for i in range(i_max)] \
-            + extra_wing_tip_node_ids[len(extra_wing_tip_node_ids)//2:]
-        
-        wing_tips_node_ids = right_tip_node_ids + left_tip_node_ids
-        
-        trailing_edge_node_ids = [node_id(0, j) for j in range(j_max+1)]
+        else:
+            extra_wing_tip_node_ids = []
+            right_tip_nodes_ids = []
+            left_tip_nodes_ids = []
+            wing_tips_nodes_ids = []
         
         
-        nodes_id_dict = {
-            "body": body_node_ids,
-            "main surface" : main_surface_node_ids,
-            "wing tips": wing_tips_node_ids,
-            "right wing tip": right_tip_node_ids,
-            "left wing tip": left_tip_node_ids,
-            "trailing edge": trailing_edge_node_ids
-        }
+        if mesh_wake:
+            
+            wake_nodes_ids = [wake_node_id(i, j)
+                             for i in range(i_max_wake + 1)
+                             for j in range(j_max + 1)]
+            wake_lines = [[wake_node_id(i, j) for i in range(i_max_wake + 1)]
+                          for j in range(j_max + 1)]
+            wake_lines = np.array(wake_lines)
+            
+        else:
+            wake_nodes_ids = []
+            wake_lines = []
         
-        body_shell_ids = main_surface_shell_ids \
-            + left_tip_shell_ids + right_tip_shell_ids
         
-        shells_id_dict = {
-            "body": body_shell_ids,
-            "main surface": main_surface_shell_ids,
-            "wing tips": left_tip_shell_ids + right_tip_shell_ids,
-            "right tip": right_tip_shell_ids,
-            "left tip": left_tip_shell_ids,
-            "trailing edge": suction_side_trailing_edge_shell_ids \
-                + pressure_side_trailing_edge_shell_ids,
-            "suction side trailing edge": suction_side_trailing_edge_shell_ids,
-            "pressure side trailing edge": pressure_side_trailing_edge_shell_ids
+        body_nodes_ids = main_surface_nodes_ids + extra_wing_tip_node_ids 
+        
+        nodes_ids_dict = {
+            "body": body_nodes_ids,
+            "main surface" : main_surface_nodes_ids,
+            "suction side": suction_side_nodes_ids,
+            "pressure side": pressure_side_nodes_ids,
+            "wing tips": wing_tips_nodes_ids,
+            "right wing tip": right_tip_nodes_ids,
+            "left wing tip": left_tip_nodes_ids,
+            "trailing edge": trailing_edge_nodes_ids,
+            "wake": wake_nodes_ids,
+            "wake lines": wake_lines
         }
         
         nodes = [(node[0], node[1], node[2]) for node in nodes]
         
-        if standard_mesh:
+        if standard_mesh_format:
             return nodes, shells
         else:
-            return nodes, shells, nodes_id_dict, shells_id_dict
+            return nodes, shells, nodes_ids_dict
 
 
 class Wing(BWB):
@@ -592,7 +672,7 @@ class Wing(BWB):
      
 
 if __name__=="__main__":
-    from mesh_class import PanelMesh
+    from mesh_class import PanelMesh, PanelAeroMesh
     
     
     bwb = BWB(name = "first try",
@@ -628,13 +708,22 @@ if __name__=="__main__":
     bwb_mesh = PanelMesh(nodes, shells)
     bwb_mesh.plot_mesh_inertial_frame(elevation=-150,azimuth=-120)
     
+    
+    # test wing class and meshing
+    
     wing = Wing(name="random",
                 root_airfoil=Airfoil(name="naca0012_new", chord_length=1),
                 tip_airfoil=Airfoil(name="naca0012_new", chord_length=1),
                 half_span=1, sweep_angle=0, dihedral_angle=0, twist_angle=0)
     
-    nodes, shells = wing.mesh_body(10, 10, SpanWise_spacing="beta distribution")
-    wing_mesh = PanelMesh(nodes, shells)
-    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120)
+    nodes, shells, nodes_id = wing.mesh_body(
+        5, 1, mesh_wake=True, wake_resolution=3, standard_mesh_format=False,
+        shellType="quads")
+    
+    
+    wing_mesh = PanelAeroMesh(nodes, shells, nodes_id)
+        
+    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
+                                       plot_wake=True)
     
     

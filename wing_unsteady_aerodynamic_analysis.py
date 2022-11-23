@@ -126,7 +126,7 @@ for AoA in AoA_list:
     mesh.set_body_fixed_frame_orientation(0, np.deg2rad(-AoA), 0)
     unsteady_panel_method.solve(mesh, dt, iterations)
     
-    body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+    body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
     r_c4 = Vector((0.25*wing.root_airfoil.chord, 0, 0))
     r_o = Vector((0, 0, 0)) 
     

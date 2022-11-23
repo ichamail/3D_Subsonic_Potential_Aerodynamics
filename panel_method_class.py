@@ -142,8 +142,8 @@ class Steady_PanelMethod(PanelMethod):
     
     def solve(self, mesh:PanelAeroMesh):
             
-        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
-        wake_panels = [mesh.panels[id] for id in mesh.panels_id["wake"]]
+        body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+        wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
         
         for panel in body_panels:
             panel.sigma = source_strength(panel, self.V_fs)
@@ -200,19 +200,19 @@ class Steady_PanelMethod(PanelMethod):
         # Compute Influence coefficient matrices
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
         
-        Nb = len(mesh.panels_id["body"])
-        Nw = len(mesh.panels_id["wake"])
+        Nb = len(mesh.panels_ids["body"])
+        Nw = len(mesh.panels_ids["wake"])
         B = np.zeros((Nb, Nb))
         C = np.zeros((Nb, Nb+Nw))
         A = np.zeros_like(B)
         
         # loop all over panels' control points
-        for id_i in mesh.panels_id["body"]:
+        for id_i in mesh.panels_ids["body"]:
             panel_i = mesh.panels[id_i]
             r_cp = panel_i.r_cp
             
             # loop all over panels
-            for id_j in mesh.panels_id["body"]:
+            for id_j in mesh.panels_ids["body"]:
                 
                 panel_j = mesh.panels[id_j]
                 # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
@@ -356,8 +356,8 @@ class UnSteady_PanelMethod(PanelMethod):
     
     def advance_solution(self, mesh:PanelAeroMesh):
                     
-        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
-        wake_panels = [mesh.panels[id] for id in mesh.panels_id["wake"]]
+        body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+        wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
         body_panels = typed.List(body_panels)
         wake_panels = typed.List(wake_panels)
                 
@@ -506,20 +506,20 @@ class UnSteady_PanelMethod(PanelMethod):
         # Compute Influence coefficient matrices
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
         
-        Nb = len(mesh.panels_id["body"])
-        Nw = len(mesh.panels_id["wake"])
+        Nb = len(mesh.panels_ids["body"])
+        Nw = len(mesh.panels_ids["wake"])
         Nte = len(mesh.TrailingEdge["suction side"])
         B = np.zeros((Nb, Nb))
         C = np.zeros((Nb, Nb + Nw))
         A = np.zeros_like(B)
         
         # loop all over panels' control points
-        for id_i in mesh.panels_id["body"]:
+        for id_i in mesh.panels_ids["body"]:
             panel_i = mesh.panels[id_i]
             r_cp = panel_i.r_cp
             
             # loop all over panels
-            for id_j in mesh.panels_id["body"]:
+            for id_j in mesh.panels_ids["body"]:
                 
                 panel_j = mesh.panels[id_j]
                 # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
@@ -555,7 +555,7 @@ class UnSteady_PanelMethod(PanelMethod):
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)      
         
         panels = typed.List(mesh.panels)
-        panels_id = pyObjToNumbaObj(mesh.panels_id)
+        panels_id = pyObjToNumbaObj(mesh.panels_ids)
         TrailingEdge = pyObjToNumbaObj(mesh.TrailingEdge)
         wake_sheddingPanels = pyObjToNumbaObj(mesh.wake_sheddingPanels)
         
