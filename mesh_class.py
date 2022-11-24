@@ -257,6 +257,7 @@ class AeroMesh(Mesh):
         self.set_wake_sheddingShells()
         
         self.free_TrailingEdge()
+        # self.free_LeadingEdge()
         self.eliminate_main_surface_wing_tips_adjacency()
         self.eliminate_body_wake_adjacency()
     
@@ -296,6 +297,12 @@ class AeroMesh(Mesh):
                 if neighbour_id in self.TrailingEdge["suction side"]:
                     self.shell_neighbours[id].remove(neighbour_id)
 
+    def free_LeadingEdge(self):
+        num_shells_le = len(self.TrailingEdge["suction side"])
+        LE_SS = self.shells_ids["suction side"][-num_shells_le:]
+        LE_PS = self.shells_ids["pressure side"][0:num_shells_le]
+        self.eliminate_adjacency(LE_SS, LE_PS)
+        
     def find_suction_side(self):
         suction_side_nodes_ids = self.nodes_ids["suction side"]
         suction_side_shells_ids = [

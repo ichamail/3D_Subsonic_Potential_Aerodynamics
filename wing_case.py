@@ -1,6 +1,6 @@
 from airfoil_class import Airfoil
 from wing_class import Wing
-from wing_mesh_generator import generate_WingPanelMesh, generate_WingPanelMesh2
+from mesh_class import PanelAeroMesh
 from panel_method_class import PanelMethod, Steady_PanelMethod
 from vector_class import Vector
 from matplotlib import pyplot as plt
@@ -17,9 +17,15 @@ num_x_bodyShells = 10
 num_x_wakeShells = 15
 num_y_Shells = 10
 
-wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
-                                   num_x_wakeShells, num_y_Shells,
-                                   mesh_shell_type="quadrilateral")
+nodes, shells, nodes_ids = wing.generate_mesh(
+    num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+    mesh_shell_type="quadrilateral",
+    mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
+    num_x_wake_shells=num_x_wakeShells, standard_mesh_format=False 
+)
+
+wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
+
 # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 
@@ -27,10 +33,15 @@ V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
 panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
 
-# wing_mesh = generate_WingPanelMesh2(panel_method.V_fs, wing, num_x_bodyShells,
-#                                    num_x_wakeShells, num_y_Shells,
-#                                    mesh_shell_type="quadrilateral")
+# nodes, shells, nodes_ids = wing.generate_mesh2(
+#     num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+#     mesh_shell_type="quadrilateral",
+#     mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
+#     num_x_wake_shells=num_x_wakeShells, V_fs=V_fs,
+#     standard_mesh_format=False 
+# )
 
+# wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
 t_start = time.time()        
