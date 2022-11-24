@@ -1,6 +1,6 @@
 from airfoil_class import Airfoil
 from wing_class import Wing
-from wing_mesh_generator import generate_WingPanelMesh
+from mesh_class import PanelAeroMesh
 from panel_method_class import Center_of_Pressure, Cm_about_point,UnSteady_PanelMethod
 from vector_class import Vector
 from matplotlib import pyplot as plt
@@ -15,12 +15,16 @@ wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
 
 # generate wing mesh
 num_x_bodyShells = 10
-num_x_wakeShells = 0
 num_y_Shells = 10
 
-wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells,
-                                   num_x_wakeShells, num_y_Shells,
-                                   mesh_shell_type="quadrilateral")
+nodes, shells, nodes_ids = wing.generate_mesh(
+    num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+    mesh_shell_type="quadrilateral",
+    mesh_main_surface=True, mesh_tips=True, mesh_wake=False,
+    standard_mesh_format=False 
+)
+
+wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 wing_mesh.set_body_fixed_frame_origin(xo=0, yo=0, zo=0)
 wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(-10), yaw=0)
