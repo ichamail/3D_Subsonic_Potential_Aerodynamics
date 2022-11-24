@@ -240,35 +240,35 @@ class Steady_PanelMethod(PanelMethod):
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)
               
         panels = typed.List(mesh.panels)
-        panels_id = pyObjToNumbaObj(mesh.panels_id)
+        panels_ids = pyObjToNumbaObj(mesh.panels_ids)
         TrailingEdge = pyObjToNumbaObj(mesh.TrailingEdge)
         wake_sheddingShells = pyObjToNumbaObj(mesh.wake_sheddingShells)
                 
-        A, B, C = self.jit_influence_coeff_matrices(panels, panels_id,
+        A, B, C = self.jit_influence_coeff_matrices(panels, panels_ids,
                                                 TrailingEdge, wake_sheddingShells)
         
         return A, B, C
 
     @staticmethod
     @jit(nopython=True, parallel=True)
-    def jit_influence_coeff_matrices(panels:list, panels_id:dict,
+    def jit_influence_coeff_matrices(panels:list, panels_ids:dict,
                                 TrailingEdge:dict, wake_sheddingShells:dict):
         
-        Nb = len(panels_id["body"])
-        Nw = len(panels_id["wake"])
+        Nb = len(panels_ids["body"])
+        Nw = len(panels_ids["wake"])
         B = np.zeros((Nb, Nb))
         C = np.zeros((Nb, Nb+Nw))
         A = np.zeros_like(B)
         
         # loop all over panels' control points
         for i in prange(Nb):
-            id_i = panels_id["body"][i]
+            id_i = panels_ids["body"][i]
             panel_i = panels[id_i]
             r_cp = panel_i.r_cp
             
             # loop all over panels
             for j in prange(Nb):
-                id_j = panels_id["body"][j]
+                id_j = panels_ids["body"][j]
                 panel_j = panels[id_j]
                 
                 # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
@@ -330,7 +330,7 @@ class UnSteady_PanelMethod(PanelMethod):
         self.V_fs = V_wind - Vo
     
     def LiftCoeff(self, mesh, ReferenceArea):
-        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
         C_force = AerodynamicForce(body_panels, ReferenceArea)
         V_fs = self.V_fs.transformation(mesh.R.T)
         CL_vec = LiftCoefficient(C_force, V_fs)
@@ -341,7 +341,7 @@ class UnSteady_PanelMethod(PanelMethod):
         return CL
     
     def inducedDragCoeff(self, mesh, ReferenceArea):
-        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
         C_force = AerodynamicForce(body_panels, ReferenceArea)
         V_fs = self.V_fs.transformation(mesh.R.T)
         CD_vec = inducedDragCoefficient(C_force, V_fs)
@@ -555,7 +555,7 @@ class UnSteady_PanelMethod(PanelMethod):
         # Katz & Plotkin eq(9.24, 9.25) or eq(12.34, 12.35)      
         
         panels = typed.List(mesh.panels)
-        panels_id = pyObjToNumbaObj(mesh.panels_ids)
+        panels_ids = pyObjToNumbaObj(mesh.panels_ids)
         TrailingEdge = pyObjToNumbaObj(mesh.TrailingEdge)
         wake_sheddingPanels = pyObjToNumbaObj(mesh.wake_sheddingPanels)
         
@@ -564,7 +564,7 @@ class UnSteady_PanelMethod(PanelMethod):
         else:
             wake_type = "quadrilateral"
         
-        A, B, C = self.jit_influence_coeff_matrices(panels, panels_id,
+        A, B, C = self.jit_influence_coeff_matrices(panels, panels_ids,
                                                     TrailingEdge, wake_sheddingPanels,
                                                     wake_type)
                 
@@ -572,25 +572,25 @@ class UnSteady_PanelMethod(PanelMethod):
     
     @staticmethod
     @jit(nopython=True, parallel=True)
-    def jit_influence_coeff_matrices(panels:list, panels_id:dict,
+    def jit_influence_coeff_matrices(panels:list, panels_ids:dict,
                                 TrailingEdge:dict, wake_sheddingPanels:dict,
                                 wake_type:str):
         
-        Nb = len(panels_id["body"])
-        Nw = len(panels_id["wake"])
+        Nb = len(panels_ids["body"])
+        Nw = len(panels_ids["wake"])
         B = np.zeros((Nb, Nb))
         C = np.zeros((Nb, Nb + Nw))
         A = np.zeros_like(B)
         
         # loop all over panels' control points
         for i in prange(Nb):
-            id_i = panels_id["body"][i]
+            id_i = panels_ids["body"][i]
             panel_i = panels[id_i]
             r_cp = panel_i.r_cp
             
             # loop all over panels
             for j in prange(Nb):
-                id_j = panels_id["body"][j]
+                id_j = panels_ids["body"][j]
                 panel_j = panels[id_j]
                 
                 # B[id_i][id_j] = Src_influence_coeff(r_cp, panel_j)
