@@ -1,7 +1,7 @@
 from airfoil_class import Airfoil
 from mesh_class import PanelAeroMesh
 from wing_class import Wing
-from wing_mesh_generator import generate_WingPanelMesh
+from mesh_class import PanelAeroMesh
 from panel_method_class import PanelMethod, Steady_Wakeless_PanelMethod
 from vector_class import Vector
 from matplotlib import pyplot as plt
@@ -9,20 +9,22 @@ from plot_functions import plot_Cp_SurfaceContours
 
 
 # create wing object   
-root_airfoil = Airfoil(name="naca0012", chord_length=1)
-tip_airfoil = Airfoil(name="naca0012", chord_length=1)
+root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
+tip_airfoil = Airfoil(name="naca0012_new", chord_length=1)
 wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
 
 # generate wing mesh
 num_x_bodyShells = 10
 num_y_Shells = 10
 
-nodes, shells = wing.generate_wingMesh(num_x_bodyShells, num_y_Shells)
-TrailingEdge = wing.give_TrailingEdge_Shells_id(num_x_bodyShells, num_y_Shells)
-wing_mesh = PanelAeroMesh(nodes, shells, TrailingEdge=TrailingEdge)
-wing_mesh.free_TrailingEdge()
+nodes, shells, nodes_ids = wing.generate_mesh(
+    num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+    mesh_shell_type="quadrilateral",
+    mesh_main_surface=True, mesh_tips=True, mesh_wake=False,
+    standard_mesh_format=False 
+)
 
-# wing_mesh.plot_panels(elevation=-150, azimuth=-120)
+wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 
 V_fs = Vector((1, 0, 0))
