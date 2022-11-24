@@ -377,32 +377,48 @@ class UnSteady_PanelMethod(PanelMethod):
         mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
                                       plot_wake=True)
     
-    def solve_steady(self, mesh:PanelAeroMesh, RefArea, dt, iters):
+    def solve_steady(self, mesh:PanelAeroMesh, RefArea, dt, max_iters,
+                     convergence_value = 10**(-3)):
+        
         if self.triangular_wakePanels:
             type = "triangular"
         else:
             type = "quadrilateral"
-
+            
         self.dt = dt
         self.set_V_fs(mesh.Vo, self.V_wind)
-
+        
         CL_prev, CD_prev = 0, 0
-
-        for i in range(iters):
-            print(i)
+        
+        for i in range(max_iters):
+            
+            print("iteration: " + str(i) + "\n")
+            
             mesh.move_body(self.dt)
             mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
             self.advance_solution(mesh)
+            
             mesh.convect_wake(induced_velocity, dt)
-
+            
             CL = self.LiftCoeff(mesh, RefArea)
             CD = self.inducedDragCoeff(mesh, RefArea)
-
-            print(CL, CD)
-            if abs(CL-CL_prev)<= 10**(-4) and abs(CD-CD_prev)<=10**(-4):
+            
+            print("CL = " + str(CL) + ",  CD = " + str(CD) + "\n")
+            
+            dCL_dt = (CL-CL_prev)/dt
+            dCD_dt = (CD-CD_prev)/dt
+            
+            print("dCL/dt = " + str(dCL_dt) +
+                  ",  dCD/dt = " + str(dCD_dt) + "\n")
+                        
+            if ( abs(dCL_dt) <= convergence_value
+                and abs(dCD_dt) <= convergence_value ):
+                
+                print("solution converged \n")
+                
                 break
-
-            CL_prev, CD_prev = CL, CD
+            
+            CL_prev, CD_prev = CL, CD 
           
     def influence_coeff_matrices(self, mesh:PanelAeroMesh):
         

@@ -28,7 +28,7 @@ wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 
 wing_mesh.set_body_fixed_frame_origin(xo=0, yo=0, zo=0)
-wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(-10), yaw=0)
+wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(0), yaw=0)
 
 omega = Vector((0, 0, 0))
 wing_mesh.set_angular_velocity(omega)
@@ -42,7 +42,7 @@ panel_method = UnSteady_PanelMethod(V_wind)
 panel_method.set_wakePanelType(type="triangular")
 panel_method.set_WakeShedFactor(wake_shed_factor=1)
 # panel_method.solve(wing_mesh, 0.15, 60)
-panel_method.solve_steady(wing_mesh, wing.RefArea, 0.15, 100)
+panel_method.solve_steady(wing_mesh, wing.RefArea, dt=0.15, max_iters=100)
 
 # Pressure Coefficient Distribution across root's airfoil section 
 near_root_panels = wing_mesh.give_leftSide_near_root_panels()
