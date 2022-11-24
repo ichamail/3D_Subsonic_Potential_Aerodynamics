@@ -27,7 +27,7 @@ nodes, shells, nodes_ids = wing.generate_mesh(
 wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 wing_mesh.set_body_fixed_frame_origin(xo=0, yo=0, zo=0)
-wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(-10), yaw=0)
+wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(0), yaw=0)
 
 omega = Vector((0, 0, 0))
 wing_mesh.set_angular_velocity(omega)
@@ -42,8 +42,8 @@ panel_method.set_wakePanelType("triangular")
 panel_method.set_WakeShedFactor(1)
 
 t_start = perf_counter()        
-# panel_method.solve(wing_mesh, 0.15, 60)
-panel_method.solve_steady(wing_mesh, wing.RefArea, 0.15, 100)
+# panel_method.solve(wing_mesh, dt=0.15, iters=60)
+panel_method.solve_steady(wing_mesh, wing.RefArea, dt=0.15, max_iters=100)
 t_end = perf_counter()
 solution_time = t_end-t_start
 print("solution time + compile time = " + str(solution_time))

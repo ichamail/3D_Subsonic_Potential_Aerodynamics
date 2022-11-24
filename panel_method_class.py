@@ -473,7 +473,9 @@ class UnSteady_PanelMethod(PanelMethod):
         #                               plot_wake=True)
         pass
     
-    def solve_steady(self, mesh:PanelAeroMesh, RefArea, dt, iters):
+    def solve_steady(self, mesh:PanelAeroMesh, RefArea, dt, max_iters,
+                     convergence_value = 10**(-3)):
+        
         if self.triangular_wakePanels:
             type = "triangular"
         else:
@@ -484,23 +486,37 @@ class UnSteady_PanelMethod(PanelMethod):
         
         CL_prev, CD_prev = 0, 0
         
-        for i in range(iters):
-            print(i)
+        for i in range(max_iters):
+            
+            print("iteration: " + str(i) + "\n")
+            
             mesh.move_body(self.dt)
             mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
             self.advance_solution(mesh)
-            mesh.convect_wake(induced_velocity, dt)
+            
+            # mesh.convect_wake(induced_velocity, dt)
+            mesh.jit_convect_wake(jit_induced_velocity_function, dt)
             
             CL = self.LiftCoeff(mesh, RefArea)
             CD = self.inducedDragCoeff(mesh, RefArea)
             
-            print(CL, CD)
-            if abs(CL-CL_prev)<= 10**(-4) and abs(CD-CD_prev)<=10**(-4):
+            print("CL = " + str(CL) + ",  CD = " + str(CD) + "\n")
+            
+            dCL_dt = (CL-CL_prev)/dt
+            dCD_dt = (CD-CD_prev)/dt
+            
+            print("dCL/dt = " + str(dCL_dt) +
+                  ",  dCD/dt = " + str(dCD_dt) + "\n")
+                        
+            if ( abs(dCL_dt) <= convergence_value
+                and abs(dCD_dt) <= convergence_value ):
+                
+                print("solution converged \n")
+                
                 break
             
             CL_prev, CD_prev = CL, CD 
-            
-                  
+
     def influence_coeff_matrices(self, mesh:PanelAeroMesh):
         
         # Compute Influence coefficient matrices
@@ -655,29 +671,6 @@ def right_hand_side(body_panels, B):
         
     return RHS
 
-@jit(nopython=True, parallel = True)
-def right_hand_side(body_panels, B):
-    
-    # Calculate right-hand-side 
-    # Katz & Plotkin eq(12.35, 12.36)
-        
-    Nb = len(body_panels)
-    RHS = np.zeros(Nb)
-    
-    # loop all over panels' control points
-    for i in prange(Nb):
-        panel_i = body_panels[i]
-        id_i = panel_i.id
-        RHS[id_i] = 0
-        
-        # loop all over panels
-        for j in prange(Nb):
-            panel_j = body_panels[j]
-            id_j = panel_j.id
-            RHS[id_i] = RHS[id_i] - panel_j.sigma * B[id_i][id_j]
-            
-    return RHS
-
 def additional_right_hand_side(body_panels, wake_panels, C):
     
     Nb = len(body_panels)
@@ -704,45 +697,6 @@ def additional_right_hand_side(body_panels, wake_panels, C):
         
     #     # loop all over wake panels 
     #     for panel_j in wake_panels:
-    #         id_j = panel_j.id
-    #         RHS[id_i] = RHS[id_j] - panel_j.mu * C[id_i][id_j]
-    
-    return RHS
-
-@jit(nopython=True, parallel=True)
-def additional_right_hand_side(body_panels, wake_panels, C):
-    
-    Nb = len(body_panels)
-    Nw = len(wake_panels)
-    RHS = np.zeros(Nb)
-    
-    # loop all over panels' control points
-    for i in prange(Nb):
-        panel_i = body_panels[i]
-        id_i = panel_i.id
-        
-        # loop all over wake panels
-        """
-        Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
-        """ 
-        for j in prange(Nw):
-            
-            panel_j = wake_panels[j]
-            id_j = panel_j.id
-            RHS[id_i] = RHS[id_i] - panel_j.mu * C[id_i][id_j]
-            
-    
-    # without using body_panels list as function argument
-    # Nb, _ = C.shape
-    # Nw = len(wake_panels)
-    # RHS = np.zeros(Nb)
-    
-    # # loop all over body panels' control points
-    # for id_i in prange(Nb):
-        
-    #     # loop all over wake panels 
-    #     for j in prange(Nw):
-    #         panel_j = wake_panels[j] 
     #         id_j = panel_j.id
     #         RHS[id_i] = RHS[id_j] - panel_j.mu * C[id_i][id_j]
     
@@ -815,30 +769,6 @@ def body_induced_velocity(r_p, body_panels):
     
     return velocity
 
-@jit(nopython=True, parallel=False)
-def body_induced_velocity(r_p, body_panels):
-    # Velocity calculation with disturbance velocity functions
-    
-    velocity = Vector((0, 0, 0))
-    
-    for i in prange(len(body_panels)):
-        panel = body_panels[i]
-        # Doublet panels
-        velocity = (velocity
-                    + Src_disturb_velocity(r_p, panel)
-                    + Dblt_disturb_velocity(r_p, panel))
-        
-        # velocity += Src_disturb_velocity(r_p, panel)
-        # velocity += Dblt_disturb_velocity(r_p, panel)
-        
-        # Vortex ring panels
-        # velocity = (velocity
-        #             + Src_disturb_velocity(r_p, panel)
-        #             + Vrtx_ring_disturb_velocity(r_p, panel))
-        
-    
-    return velocity
-
 def wake_induce_velocity(r_p, wake_panels):
     """
     Vortex ring panels handle distortion. In unsteady solution method, because of the wake roll-up, hence the distortion of the wake panels, we can use vortex rings or triangular panels to surpass this problem
@@ -854,25 +784,6 @@ def wake_induce_velocity(r_p, wake_panels):
     
         velocity = velocity + Vrtx_ring_disturb_velocity(r_p, panel)
     
-    return velocity
-
-@jit(nopython=True, parallel=False)
-def wake_induce_velocity(r_p, wake_panels):
-    """
-    Vortex ring panels handle distortion. In unsteady solution method, because of the wake roll-up, hence the distortion of the wake panels, we can use vortex rings or triangular panels to surpass this problem
-    """
-    velocity = Vector((0, 0, 0))
-    
-    for i in prange(len(wake_panels)):
-        panel = wake_panels[i]
-        
-        # Doublet panels
-        # velocity = velocity + Dblt_disturb_velocity(r_p, panel)
-
-        # Vortex ring panels
-        velocity = velocity + Vrtx_ring_disturb_velocity(r_p, panel)
-        # velocity += Vrtx_ring_disturb_velocity(r_p, panel)
-        
     return velocity
 
 def induced_velocity(r_p, body_panels, wake_panels=[]):
@@ -896,58 +807,6 @@ def Velocity(V_fs, r_p, body_panels, wake_panels=[]):
       
     return velocity
 
-@jit(nopython=True, parallel=True)
-def jit_body_induce_velocity(r_p, body_panels):
-    velocity_array = np.zeros((3, len(body_panels)))
-            
-    for i in prange(len(body_panels)):
-        velocity = Src_disturb_velocity(r_p, body_panels[i]) + \
-            Vrtx_ring_disturb_velocity(r_p, body_panels[i])
-        velocity_array[0][i] = velocity.x
-        velocity_array[1][i] = velocity.y
-        velocity_array[2][i] = velocity.z
-        
-    vx = np.sum(velocity_array[0])
-    vy = np.sum(velocity_array[1])
-    vz = np.sum(velocity_array[2])
-    velocity = Vector((vx, vy, vz))
-    return velocity
-
-@jit(nopython=True, parallel=True)
-def jit_wake_induced_velocity(r_p, wake_panels):
-    velocity_array = np.zeros((3, len(wake_panels)))
-            
-    for i in prange(len(wake_panels)):
-        velocity = Vrtx_ring_disturb_velocity(r_p, wake_panels[i])
-        velocity_array[0][i] = velocity.x
-        velocity_array[1][i] = velocity.y
-        velocity_array[2][i] = velocity.z
-    
-    vx = np.sum(velocity_array[0])
-    vy = np.sum(velocity_array[1])
-    vz = np.sum(velocity_array[2])
-    velocity = Vector((vx, vy, vz))
-    
-    return velocity
-
-def jit_induced_velocity(r_p, body_panels, wake_panels=[]):
-    
-    velocity = Vector((0, 0, 0))
-    
-    if wake_panels == []:
-        body_panels = typed.List(body_panels)
-        
-        velocity = jit_body_induce_velocity(r_p, body_panels)
-    else:
-        
-        body_panels = typed.List(body_panels)
-        wake_panels = typed.List(wake_panels)
-        
-        velocity = jit_body_induce_velocity(r_p, body_panels) \
-            + jit_wake_induced_velocity(r_p, wake_panels)
-    
-    return velocity
-   
 def AerodynamicForce(panels, ReferenceArea):
     ref_area = ReferenceArea
     C_force = Vector((0, 0, 0))
@@ -1020,8 +879,117 @@ def Center_of_Pressure(body_panels, ReferenceArea):
     r_cop = CF.cross(Cm) / CF.norm()**2 + CF*k
     
     return r_cop
+
+
+# numba modifications with just-in-time decorator
+
+@jit(nopython=True, parallel = True)
+def right_hand_side(body_panels, B):
     
+    # Calculate right-hand-side 
+    # Katz & Plotkin eq(12.35, 12.36)
         
+    Nb = len(body_panels)
+    RHS = np.zeros(Nb)
+    
+    # loop all over panels' control points
+    for i in prange(Nb):
+        panel_i = body_panels[i]
+        id_i = panel_i.id
+        RHS[id_i] = 0
+        
+        # loop all over panels
+        for j in prange(Nb):
+            panel_j = body_panels[j]
+            id_j = panel_j.id
+            RHS[id_i] = RHS[id_i] - panel_j.sigma * B[id_i][id_j]
+            
+    return RHS
+
+@jit(nopython=True, parallel=True)
+def additional_right_hand_side(body_panels, wake_panels, C):
+    
+    Nb = len(body_panels)
+    Nw = len(wake_panels)
+    RHS = np.zeros(Nb)
+    
+    # loop all over panels' control points
+    for i in prange(Nb):
+        panel_i = body_panels[i]
+        id_i = panel_i.id
+        
+        # loop all over wake panels
+        """
+        Κανονικά πρέπει η <<λούπα>> πρέπει να περιλαμβάνει μόνο τα πάνελ του απόρρου της προγούμενη επανάλληψης καθώς μόνο γι αυτά έχει υπολογιστεί η τιμή της έντασης τους. Παρ' όλα αυτά αφού στα νέα πάνελ ορίζεται μηδενική τιμή έντασης κατά την ορισμό τους, δεν θα συμβάλουν στο δεξί μέλος
+        """ 
+        for j in prange(Nw):
+            
+            panel_j = wake_panels[j]
+            id_j = panel_j.id
+            RHS[id_i] = RHS[id_i] - panel_j.mu * C[id_i][id_j]
+            
+    
+    # without using body_panels list as function argument
+    # Nb, _ = C.shape
+    # Nw = len(wake_panels)
+    # RHS = np.zeros(Nb)
+    
+    # # loop all over body panels' control points
+    # for id_i in prange(Nb):
+        
+    #     # loop all over wake panels 
+    #     for j in prange(Nw):
+    #         panel_j = wake_panels[j] 
+    #         id_j = panel_j.id
+    #         RHS[id_i] = RHS[id_j] - panel_j.mu * C[id_i][id_j]
+    
+    return RHS
+
+@jit(nopython=True, parallel=True)
+def induced_velocity_array(r_p_list, panels):
+    
+    num_points = len(r_p_list)
+    num_panels = len(panels)
+    
+    disturb_velocity_matrix = np.empty((num_points, num_panels, 3))
+    
+    for i in prange(num_points):
+        
+        r_p = r_p_list[i]
+        
+        for j in prange(num_panels):
+        
+            panel = panels[j]
+            
+            if panel.sigma == 0:
+                velocity = Vrtx_ring_disturb_velocity(r_p, panel)
+            else:
+                velocity = Src_disturb_velocity(r_p, panel) \
+                    + Vrtx_ring_disturb_velocity(r_p, panel)
+            
+            disturb_velocity_matrix[i][j] = velocity.x, velocity.y, velocity.z
+    
+    velocity_array = np.empty((num_points, 3))
+    
+    for i in prange(num_points):
+        velocity_array[i] = np.sum(disturb_velocity_matrix[i], axis=0)
+       
+    return velocity_array
+
+def jit_induced_velocity_function(r_p_list, panels):
+       
+    velocity_array = induced_velocity_array(
+        typed.List(r_p_list), typed.List(panels)
+    )
+    
+    velocity_list = [
+        Vector(velocity_array[i]) for i in range(len(r_p_list))
+    ]
+    
+    return velocity_list
+  
+
+       
 if __name__ == "__main__":
     from mesh_class import PanelMesh
     from sphere import sphere

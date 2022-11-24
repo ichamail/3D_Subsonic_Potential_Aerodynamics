@@ -129,8 +129,5 @@ class Vector:
         return self
         
 if __name__=='__main__':
-    from numba import typed
-    vectors = typed.List([Vector((1,1,1)), Vector((2, 2, 2))])
-    vector = np.sum(vectors)
-    print(vector.x)
+    
     pass
