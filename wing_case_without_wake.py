@@ -8,8 +8,8 @@ from plot_functions import plot_Cp_SurfaceContours
 
 
 # create wing object   
-root_airfoil = Airfoil(name="naca0012", chord_length=1)
-tip_airfoil = Airfoil(name="naca0012", chord_length=1)
+root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
+tip_airfoil = Airfoil(name="naca0012_new", chord_length=1)
 wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
 
 # generate wing mesh
