@@ -462,41 +462,78 @@ class AeroMesh(Mesh):
         
         return near_root_shells_ids                   
 
+
     ### unsteady features  ###
+    
     def initialize_wake_nodes(self):
-        num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
-        last_body_node_id = self.nodes_id["body"][-1]
+        num_TrailingEdge_nodes = len(self.nodes_ids["trailing edge"])
+        last_body_node_id = self.nodes_ids["body"][-1]
         first_wake_node_id = last_body_node_id + 1
         
         for id in range(num_TrailingEdge_nodes):
                 self.nodes.append(self.nodes[id])
                 id = first_wake_node_id + id
-                self.nodes_id["wake"].append(id)
+                self.nodes_ids["wake"].append(id)
+                
+        self.nodes_ids["wake lines"] = [
+            [id] for id in self.nodes_ids["wake"][-num_TrailingEdge_nodes:]
+        ]
     
     def add_wakeNodes(self):
-        
-        num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
+        num_TrailingEdge_nodes = len(self.nodes_ids["trailing edge"])
         for id in range(num_TrailingEdge_nodes):
             self.nodes.append(self.nodes[id])
-            id = self.nodes_id["wake"][-1] + 1
-            self.nodes_id["wake"].append(id)
+            id = self.nodes_ids["wake"][-1] + 1
+            self.nodes_ids["wake"].append(id)
         
+        id_list = [
+            id for id in self.nodes_ids["wake"][-num_TrailingEdge_nodes:]
+        ]
+        
+        self.nodes_ids["wake lines"] = np.column_stack(
+            (self.nodes_ids["wake lines"], id_list)
+        )
+         
     def add_wakeShells(self, type="quadrilateral"):
         
-        num_TrailingEdge_nodes = len(self.TrailingEdge["pressure side"]) + 1
-        first_id = self.nodes_id["wake"][-1] - 2*num_TrailingEdge_nodes + 1 
+        num_TrailingEdge_nodes = len(self.nodes_ids["trailing edge"])
+        first_id = self.nodes_ids["wake"][-1] + 1  - 2*num_TrailingEdge_nodes  
         ny = num_TrailingEdge_nodes
         
+        def node_id(chord_wise_index, span_wise_index):
+            i = chord_wise_index
+            j = span_wise_index
+            return first_id + j + i*ny
+            
+        def add_shell(*node_ids, reverse_order=False):
+            # node_id_list should be in counter clock wise order
+            
+            if reverse_order:
+                node_ids = list(node_ids)
+                node_ids.reverse()
+                
+            if len(node_ids) == 4:
+                if type == "quadrilateral":
+                    self.shells.append(list(node_ids))
+                elif type == "triangular":
+                    index = node_ids
+                    self.shells.append([index[0], index[1], index[2]])
+                    self.shells.append([index[2], index[3], index[0]])
+                    
+            elif len(node_ids) == 3:
+                self.shells.append(list(node_ids))
+                
+                
         if type=="quadrilateral":
             
-            for i in range(ny-1):
+            for j in range(ny-1):
                 
-                shell = [i + first_id,
-                        (i + 1) + first_id,
-                        (i + 1 + ny) + first_id,
-                        (i + ny) + first_id]
-                
-                self.shells.append(shell)
+                add_shell(
+                    node_id(0, j),
+                    node_id(1, j),
+                    node_id(1, j+1),
+                    node_id(0, j+1)
+                )
                 
                 if self.shells_ids["wake"] == []:
                     id = self.shells_ids["body"][-1] + 1
@@ -506,31 +543,26 @@ class AeroMesh(Mesh):
                 # Προσοχή θα ανανεωθεί και το λεξικό self.panels_ids
                 self.shells_ids["wake"].append(id)
                 
-                
                 value_list_id = id
                 
-                key_id = self.TrailingEdge["pressure side"][i]
+                key_id = self.TrailingEdge["pressure side"][j]
                 self.wake_sheddingShells[key_id].append(value_list_id)
                 
-                key_id = self.TrailingEdge["suction side"][i]
+                key_id = self.TrailingEdge["suction side"][j]
                 self.wake_sheddingShells[key_id].append(value_list_id)
+                
                         
         elif type=="triangular":
             
-            # left side
-            for i in range((ny-1)//2):
+            # right side
+            for j in range((ny-1)//2):
                 
-                shell = [(i+ 1) + first_id,
-                        (i + 1 + ny) + first_id,
-                        (i + ny) + first_id]
-                
-                self.shells.append(shell)
-                
-                shell = [i + first_id,
-                        (i + 1) + first_id,
-                        (i + ny) + first_id]
-                
-                self.shells.append(shell)
+                add_shell(
+                    node_id(1, j),
+                    node_id(1, j+1),
+                    node_id(0, j+1),
+                    node_id(0, j)
+                )
                 
                 if self.shells_ids["wake"] == []:
                     id = self.shells_ids["body"][-1] + 1
@@ -543,29 +575,24 @@ class AeroMesh(Mesh):
                 
                 value_list_id = id
                 
-                key_id = self.TrailingEdge["pressure side"][i]
+                key_id = self.TrailingEdge["pressure side"][j]
                 self.wake_sheddingShells[key_id].append(value_list_id)
                 self.wake_sheddingShells[key_id].append(value_list_id + 1)
                 
-                key_id = self.TrailingEdge["suction side"][i]
+                key_id = self.TrailingEdge["suction side"][j]
                 self.wake_sheddingShells[key_id].append(value_list_id)
                 self.wake_sheddingShells[key_id].append(value_list_id+1)
                 
-            # right side
-            for i in range((ny-1)//2, ny-1):
+            # left side
+            for j in range((ny-1)//2, ny-1):
                 
-                shell = [i + first_id,
-                        (i + 1 + ny) + first_id,
-                        (i + ny) + first_id]
-                
-                self.shells.append(shell)
-                
-                shell = [i + first_id,
-                        (i + 1) + first_id,
-                        (i + 1 + ny) + first_id]
-                
-                self.shells.append(shell)
-                
+                add_shell(
+                    node_id(1, j+1),
+                    node_id(0, j+1),
+                    node_id(0, j),
+                    node_id(1, j)
+                )
+                                
                 if self.shells_ids["wake"] == []:
                     id = self.shells_ids["body"][-1] + 1
                 else:
@@ -577,11 +604,11 @@ class AeroMesh(Mesh):
                 
                 value_list_id = id
                 
-                key_id = self.TrailingEdge["pressure side"][i]
+                key_id = self.TrailingEdge["pressure side"][j]
                 self.wake_sheddingShells[key_id].append(value_list_id)
                 self.wake_sheddingShells[key_id].append(value_list_id + 1)
                 
-                key_id = self.TrailingEdge["suction side"][i]
+                key_id = self.TrailingEdge["suction side"][j]
                 self.wake_sheddingShells[key_id].append(value_list_id)
                 self.wake_sheddingShells[key_id].append(value_list_id+1)
     

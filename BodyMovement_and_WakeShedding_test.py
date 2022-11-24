@@ -2,8 +2,7 @@ import numpy as np
 from vector_class import Vector
 from airfoil_class import Airfoil
 from wing_class import Wing
-from mesh_class import PanelMesh, PanelAeroMesh
-from wing_mesh_generator import generate_WingPanelMesh
+from mesh_class import PanelAeroMesh
 
      
 root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
@@ -13,12 +12,15 @@ wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
 
 num_x_bodyShells = 10
 num_y_Shells = 10
-num_x_wakeShells = 0
 
+nodes, shells, nodes_ids = wing.generate_mesh(
+    num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+    mesh_shell_type="quadrilateral",
+    mesh_main_surface=True, mesh_tips=True, mesh_wake=False,
+    standard_mesh_format=False 
+)
 
-wing_mesh = generate_WingPanelMesh(wing, num_x_bodyShells, num_x_wakeShells,
-                                   num_y_Shells)
-
+wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 wing_mesh.set_body_fixed_frame_origin(0, 0, 0)
 roll, pitch, yaw = np.deg2rad(0), np.deg2rad(0), np.deg2rad(0)
