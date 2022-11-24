@@ -883,8 +883,8 @@ class PanelMesh(Mesh):
 
 class PanelAeroMesh(AeroMesh, PanelMesh):
     
-    def __init__(self, nodes: list, shells: list, nodes_id: dict):
-        super().__init__(nodes, shells, nodes_id)
+    def __init__(self, nodes: list, shells: list, nodes_ids: dict):
+        super().__init__(nodes, shells, nodes_ids)
         
         self.panels_ids = self.shells_ids
         self.wake_sheddingPanels = self.wake_sheddingShells
