@@ -243,7 +243,7 @@ class UnSteady_PanelMethod(PanelMethod):
         self.V_fs = V_wind - Vo
     
     def LiftCoeff(self, mesh, ReferenceArea):
-        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
         C_force = AerodynamicForce(body_panels, ReferenceArea)
         V_fs = self.V_fs.transformation(mesh.R.T)
         CL_vec = LiftCoefficient(C_force, V_fs)
@@ -254,7 +254,7 @@ class UnSteady_PanelMethod(PanelMethod):
         return CL
     
     def inducedDragCoeff(self, mesh, ReferenceArea):
-        body_panels = [mesh.panels[id] for id in mesh.panels_id["body"]]
+        body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
         C_force = AerodynamicForce(body_panels, ReferenceArea)
         V_fs = self.V_fs.transformation(mesh.R.T)
         CD_vec = inducedDragCoefficient(C_force, V_fs)
