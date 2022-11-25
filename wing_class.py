@@ -1,4 +1,5 @@
 import numpy as np
+from collections import deque
 from vector_class import Vector
 from Algorithms import DenserAtBoundaries, interpolation
 from airfoil_class import Airfoil
@@ -236,9 +237,11 @@ class Wing:
                 if j==0:
                     add_face = add_shell
                 elif j==j_max:
-                    add_face = lambda *node_ids: add_shell(*node_ids,
-                                                            reverse_order=True)
-                
+                    def add_face(*node_ids):
+                        node_ids = deque(node_ids)
+                        node_ids.rotate(-1)
+                        return add_shell(*node_ids, reverse_order=True)
+                                      
                 # root or right tip   
                 id = id + 1
                    
