@@ -1,6 +1,6 @@
 import numpy as np
 from vector_class import Vector
-from Algorithms import DenserAtBoundaries, interpolation
+from Algorithms import DenserAtBoundaries, interpolation, cosspace
 from airfoil_class import Airfoil
 
 
@@ -47,11 +47,19 @@ class Wing:
         self.tip_airfoil.new_x_spacing2(num_x_points)       
 
     def generate_mesh(self, num_x_shells:int, num_y_shells:int,
-                           mesh_shell_type:str="quadrilateral",
-                           mesh_main_surface=True, mesh_tips=True, mesh_wake=True,
-                           num_x_wake_shells = 1,
-                           standard_mesh_format =True):
-                
+                      span_wise_spacing = "uniform",
+                      mesh_shell_type:str="quadrilateral",
+                      mesh_main_surface=True, mesh_tips=True, mesh_wake=True,
+                      num_x_wake_shells = 1, standard_mesh_format =True):
+        
+        if span_wise_spacing == "uniform":
+            space = np.linspace
+        elif span_wise_spacing == "cosine":
+            space = cosspace
+        elif span_wise_spacing == "beta distribution":
+            space = lambda start, end, steps: DenserAtBoundaries(start, end,
+                                                                 steps, -0.15)
+              
         self.new_x_spacing(num_x_shells)
         
         # wing's coordinate system:
@@ -69,10 +77,8 @@ class Wing:
         x_root, z_root = x_root[0:-1], z_root[0:-1]
         x_tip, z_tip = x_tip[0:-1], z_tip[0:-1]
                 
-        y_right = DenserAtBoundaries(-self.semi_span, 0, num_y_shells + 1,
-                                     alpha=0.3)
-        y_left = DenserAtBoundaries(0, self.semi_span, num_y_shells + 1,
-                                    alpha=0.3)
+        y_right = space(-self.semi_span, 0, num_y_shells + 1)
+        y_left = space(0, self.semi_span, num_y_shells + 1)
         
         y = np.array([*y_right, *y_left[1:]])
         
@@ -479,6 +485,7 @@ class Wing:
     
     def generate_mesh2(self, num_x_shells:int, num_y_shells:int,
                            mesh_shell_type:str="quadrilateral",
+                           span_wise_spacing = "uniform",
                            mesh_main_surface=True, mesh_tips=True, mesh_wake=True,
                            num_x_wake_shells = 1,
                            V_fs = Vector((1, 0, 0)),
@@ -490,6 +497,13 @@ class Wing:
         generate_mesh2 (if chosen to) generates a plane steady wake in free stream's vector direction
         """
         
+        if span_wise_spacing == "uniform":
+            space = np.linspace
+        elif span_wise_spacing == "cosine":
+            space = cosspace
+        elif span_wise_spacing == "beta distribution":
+            space = lambda start, end, steps: DenserAtBoundaries(start, end,
+                                                                 steps, -0.15)
               
         self.new_x_spacing(num_x_shells)
         
@@ -508,10 +522,8 @@ class Wing:
         x_root, z_root = x_root[0:-1], z_root[0:-1]
         x_tip, z_tip = x_tip[0:-1], z_tip[0:-1]
                 
-        y_right = DenserAtBoundaries(-self.semi_span, 0, num_y_shells + 1,
-                                     alpha=0.3)
-        y_left = DenserAtBoundaries(0, self.semi_span, num_y_shells + 1,
-                                    alpha=0.3)
+        y_right = space(-self.semi_span, 0, num_y_shells + 1)
+        y_left = space(0, self.semi_span, num_y_shells + 1)
         
         y = np.array([*y_right, *y_left[1:]])
         

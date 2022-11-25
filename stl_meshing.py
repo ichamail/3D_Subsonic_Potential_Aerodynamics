@@ -68,12 +68,12 @@ tip_airfoil = Airfoil(name="naca0012_new", chord_length=1)
 wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
 
 # generate wing mesh
-num_x_bodyShells = 10
-num_y_Shells = 10
+num_x_bodyShells = 20
+num_y_Shells = 25
 
 nodes, shells = wing.generate_mesh(
     num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
-    mesh_shell_type="triangular",
+    span_wise_spacing="uniform", mesh_shell_type="triangular",
     mesh_main_surface=True, mesh_tips=True, mesh_wake=False 
 )
 
