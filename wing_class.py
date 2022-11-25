@@ -236,8 +236,11 @@ class Wing:
                 if j==0:
                     add_face = add_shell
                 elif j==j_max:
-                    add_face = lambda *node_ids: add_shell(*node_ids,
-                                                            reverse_order=True)
+                    from collections import deque
+                    def add_face(*node_ids):
+                        node_ids = deque(node_ids)
+                        node_ids.rotate(-1)
+                        return add_shell(*node_ids, reverse_order=True)
                 
                 # root or right tip   
                 id = id + 1
@@ -672,8 +675,11 @@ class Wing:
                 if j==0:
                     add_face = add_shell
                 elif j==j_max:
-                    add_face = lambda *node_ids: add_shell(*node_ids,
-                                                            reverse_order=True)
+                    from collections import deque
+                    def add_face(*node_ids):
+                        node_ids = deque(node_ids)
+                        node_ids.rotate(-1)
+                        return add_shell(*node_ids, reverse_order=True)
                 
                 # root or right tip   
                 id = id + 1
