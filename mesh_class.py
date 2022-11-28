@@ -1290,13 +1290,8 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         nodes = deepcopy(self.nodes)
         shells = deepcopy(self.shells)
         nodes_ids = deepcopy(self.nodes_ids)
-        shells_ids = deepcopy(self.shells_ids)
-        TrailingEdge = deepcopy(self.TrailingEdge)
-        wake_sheddingShells = deepcopy(self.wake_sheddingShells)
-        WingTip = deepcopy(self.WingTip)
-        
-        mesh = PanelAeroMesh(nodes, shells, nodes_ids, shells_ids, TrailingEdge,
-                             wake_sheddingShells, WingTip)
+                
+        mesh = PanelAeroMesh(nodes, shells, nodes_ids)
         
         (xo, yo, zo) = self.origin
         mesh.set_body_fixed_frame_origin(xo, yo, zo)

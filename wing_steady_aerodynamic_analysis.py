@@ -1,6 +1,6 @@
 from airfoil_class import Airfoil
 from wing_class import Wing
-from wing_mesh_generator import generate_WingPanelMesh
+from mesh_class import PanelAeroMesh
 from panel_method_class import Center_of_Pressure, Cm_about_point,Steady_PanelMethod
 from vector_class import Vector
 import numpy as np
@@ -35,11 +35,14 @@ shell_type = "quadrilateral" # "quadrilateral" "triangular"
 num_x_shells = 10 #15
 num_y_shells = 20 #25
 num_x_wakeShells = 100
-wing_mesh = generate_WingPanelMesh(wing=wing,
-                                   num_x_bodyShells=num_x_shells,
-                                   num_x_wakeShells=num_x_wakeShells,
-                                   num_y_Shells=num_y_shells,
-                                   mesh_shell_type=shell_type)
+nodes, shells, nodes_ids = wing.generate_mesh(
+    num_x_shells=num_x_shells, num_y_shells=num_y_shells,
+    mesh_shell_type="quadrilateral", span_wise_spacing="uniform",
+    mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
+    num_x_wake_shells=num_x_wakeShells, standard_mesh_format=False 
+)
+
+wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 # plot mesh
 wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
