@@ -1,6 +1,6 @@
 from airfoil_class import Airfoil
 from vector_class import Vector
-from Algorithms import DenserAtBoundaries, cosspace
+from Algorithms import DenserAtBoundaries, cosspace, interpolation
 import numpy as np
 
 
@@ -119,6 +119,55 @@ class WingCrossSection:
         
         return (r_p.x, r_p.y, r_p.z)
 
+    @classmethod
+    def blend_WingCrossSections(cls, Xsection_0, Xsection_1, blend_fraction):
+        
+                
+        Xsection_0_perc = 1 - blend_fraction
+        Xsection_1_perc = blend_fraction
+        
+        name = f"{Xsection_0_perc * 100:.0f}% {Xsection_0.airfoil.name},\
+            {Xsection_1_perc * 100:.0f}% {Xsection_1.airfoil.name}"
+        
+        
+        x_coords = interpolation(
+            Xsection_0.airfoil.x_coords, Xsection_1.airfoil.x_coords, blend_fraction, type="linear" # or "cubic"
+        )
+        
+        y_coords = interpolation(
+            Xsection_0.airfoil.y_coords, Xsection_1.airfoil.y_coords,
+            blend_fraction, type="linear" # or "cubic"
+        )
+        
+        # x_coords = Xsection_0_perc * Xsection_0.airfoil.x_coords \
+        #     + Xsection_1_perc * Xsection_1.airfoil.x_coords
+        
+        # y_coords = Xsection_0_perc * Xsection_0.airfoil.y_coords \
+        #     + Xsection_1_perc * Xsection_1.airfoil.y_coords
+            
+        blend_airfoil = Airfoil(name=name, x_coords=x_coords, y_coords=y_coords)
+        
+        r_leadingEdge = interpolation(
+            Xsection_0.r_leadingEdge, Xsection_1.r_leadingEdge,
+            blend_fraction, type="linear" # or "cubic" 
+        )
+        
+        twist = interpolation(
+            Xsection_0.twist, Xsection_1.twist, blend_fraction, type="linear" 
+            # or "cubic" 
+        )
+        
+        chord = interpolation(
+            Xsection_0.chord, Xsection_1.chord, blend_fraction, type="linear"
+            # or "cubic"
+        )
+        
+        blended_Xsection = WingCrossSection(
+            r_leadingEdge, chord, twist, blend_airfoil
+        )
+
+        return blended_Xsection
+     
 
 class BWB:
     
