@@ -534,9 +534,9 @@ def additional_right_hand_side(body_panels, wake_panels, C):
 
 def panel_velocity(panel, panel_neighbours, V_fs):
     """
-    V = Vx*ex + Vy*ey + Vz*ez or u*i + V*j  + w*k (global coordinate system)
+    V = Vx*ex + Vy*ey + Vz*ez or u*i + V*j  + w*k (body-fixed frame of ref)
     
-    V = Vl*l + Vm*m + Vn*n (panel's local coordinate system)
+    V = Vl*l + Vm*m + Vn*n (panel's local frame of reference)
     
     (r_ij * nabla)μ = μ_j - μ_i
     
