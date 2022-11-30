@@ -72,14 +72,16 @@ class Mesh:
     def eliminate_adjacency(self, id_list1, id_list2):
         
         for id in id_list1:
-            for neighbour_id in self.shell_neighbours[id]:
-                if neighbour_id in id_list2:
-                    self.shell_neighbours[id].remove(neighbour_id)
-        
+                        
+            self.shell_neighbours[id] = [
+                id for id in self.shell_neighbours[id] if id not in id_list2
+            ]
+                    
         for id in id_list2:
-            for neighbour_id in self.shell_neighbours[id]:
-                if neighbour_id in id_list1:
-                    self.shell_neighbours[id].remove(neighbour_id)
+            
+            self.shell_neighbours[id] = [
+                id for id in self.shell_neighbours[id] if id not in id_list1
+            ]
     
     def add_extra_neighbours(self):
          
