@@ -458,6 +458,52 @@ class AeroMesh(Mesh):
         
         return near_root_shells_ids                   
 
+    def add_VSAERO_adjacency(self):
+        
+        right_edge_shells = [
+            id for id in self.shells_ids["main surface"]
+            if self.do_intersect(
+                self.shells[id], self.nodes_ids["right wing tip"]
+            )
+        ]
+        
+        left_edge_shells = [
+            id for id in self.shells_ids["main surface"]
+            if self.do_intersect(
+                self.shells[id], self.nodes_ids["left wing tip"]
+            )    
+        ]
+        
+        for i, id in enumerate(right_edge_shells):
+            
+            if i == 0:
+                self.shell_neighbours[id].append(right_edge_shells[i+2])
+            
+            if i == len(right_edge_shells)-1:
+                self.shell_neighbours[id].append(right_edge_shells[i-2])
+                
+            self.shell_neighbours[id].append(id+2)
+        
+        for i, id in enumerate(left_edge_shells):
+            
+            if i == 0:
+                self.shell_neighbours[id].append(left_edge_shells[i+2])
+            
+            if i == len(left_edge_shells)-1:
+                self.shell_neighbours[id].append(left_edge_shells[i-2])
+            
+            self.shell_neighbours[id].append(id-2)
+        
+        
+        len_TE = len(self.TrailingEdge["suction side"])
+        for i in range(1,len_TE-1):
+            
+            id = self.TrailingEdge["suction side"][i]
+            self.shell_neighbours[id].append(id + 2*len_TE)
+            
+            id = self.TrailingEdge["pressure side"][i]
+            self.shell_neighbours[id].append(id - 2*len_TE)
+    
 
     ### unsteady features  ###
     
