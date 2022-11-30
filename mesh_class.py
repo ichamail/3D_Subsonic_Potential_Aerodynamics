@@ -289,15 +289,9 @@ class AeroMesh(Mesh):
         "free_TrailingEdge" method will remove false neighbour ids from the attribute shell_neighbour
         """
         
-        for id in self.TrailingEdge["suction side"]:
-            for neighbour_id in self.shell_neighbours[id]:
-                if neighbour_id in self.TrailingEdge["pressure side"]:
-                    self.shell_neighbours[id].remove(neighbour_id)
-    
-        for id in self.TrailingEdge["pressure side"]:
-            for neighbour_id in self.shell_neighbours[id]:
-                if neighbour_id in self.TrailingEdge["suction side"]:
-                    self.shell_neighbours[id].remove(neighbour_id)
+        list1 = [id for id in self.TrailingEdge["suction side"]]
+        list2 = [id for id in self.TrailingEdge["pressure side"]]
+        self.eliminate_adjacency(id_list1=list1, id_list2=list2)
 
     def free_LeadingEdge(self):
         num_shells_le = len(self.TrailingEdge["suction side"])
