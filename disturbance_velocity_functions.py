@@ -57,22 +57,11 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
             if (r_a + r_b - d_ab) == 0:
                 # point p coincide lies on a panel's edge
                 # u, v --> inf
-                return Vector((0, 0, 0))
-            
-            if (r_vertex[b].x - r_vertex[a].x) == 0:
-                m_ab = np.inf 
+                log_term = 0
+                 
             else:
-                m_ab = ( (r_vertex[b].y - r_vertex[a].y)
-                        /(r_vertex[b].x - r_vertex[a].x) )
-            
-            
-            e_a = (r.x - r_vertex[a].x)**2 + r.z**2
-            e_b = (r.x - r_vertex[b].x)**2 + r.z**2
-            h_a = (r.x - r_vertex[a].x)*(r.y - r_vertex[a].y)
-            h_b = (r.x - r_vertex[b].x)*(r.y - r_vertex[b].y)
-            
-            
-            log_term = np.log((r_a + r_b - d_ab)/(r_a + r_b + d_ab))
+                           
+                log_term = np.log((r_a + r_b - d_ab)/(r_a + r_b + d_ab))
             
             u = u + (r_vertex[b].y - r_vertex[a].y)/d_ab  * log_term 
             
