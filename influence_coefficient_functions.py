@@ -44,7 +44,7 @@ def Src_influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             if (r_a + r_b - d_ab) == 0:
                 # point p coincide lies on a panel's edge
                 # log term ---> inf => B ---> inf
-                return 0
+                log_term = 0
         
             else:
                 # katz & Plotkin
@@ -218,7 +218,7 @@ def influence_coeff(r_p:Vector, panel:Panel, alpha=10):
             if (r_a + r_b - d_ab) == 0:
                 # point p coincide lies on a panel's edge
                 # log term ---> inf => B ---> inf
-                return 0, - 1/(4*np.pi) * C
+                log_term = 0
         
             else:
                 # katz & Plotkin
