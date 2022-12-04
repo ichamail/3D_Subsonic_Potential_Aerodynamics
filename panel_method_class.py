@@ -76,7 +76,7 @@ class Steady_Wakeless_PanelMethod(PanelMethod):
             # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
             # παρ' ότι πολύ πιο αργή
             
-            # panel.Velocity = Velocity(self.V_fs, panel.r_cp, self.panels)
+            # panel.Velocity = Velocity(self.V_fs, panel.r_cp, mesh.panels)
             
             
             # pressure coefficient calculation
