@@ -16,7 +16,8 @@ set = [('id', int64), ('sigma', float64), ('mu', float64),
        ('R', float64[:,:]),
        ('r_vertex_local', types.ListType(Vector.class_type.instance_type)),
        ('Velocity', Vector.class_type.instance_type),
-       ('SMQ', int64), ('SMP', int64), ('T', Vector.class_type.instance_type)]
+       ('SMQ', float64), ('SMP', float64),
+       ('T', Vector.class_type.instance_type)]
        
             
 class Panel:
@@ -378,6 +379,11 @@ class Panel:
         self.Velocity: Vector  # Velocity Vector at control point
         self.Cp = 0.0  # Pressure coefficient at control point
         
+        # Only when VSAERO style unit vectors are chosen
+        self.SMQ = 0.0
+        self.SMP = 0.0
+        self.T = Vector((0, 0, 0))
+        
         self.set_up_geometry()
               
     def set_centroid(self):
@@ -444,8 +450,7 @@ class Panel:
         r_3 = self.r_vertex[2]
         r_4 = self.r_vertex[3]
         r_c = self.r_cp
-
-
+        
         D1 = r_3 - r_1
         D2 = r_4 - r_2
         # n = Vector.cross_product(D1, D2)
@@ -459,10 +464,10 @@ class Panel:
         self.l = self.m.cross(self.n)
 
         SMP = (r_2 + r_3)/2 - r_c
-        self.SMP = SMP.norm() 
+        self.SMP = SMP.norm()
         SMQ = (r_3 + r_4)/2 - r_c
         self.SMQ = SMQ.norm()
-
+        print(self.SMQ, self.SMP)
         self.T = (r_3 + r_2)/2 - r_c
 
     def set_R(self):
@@ -552,7 +557,7 @@ class Panel:
             self.set_r_vertex_local()
             self.set_char_length()
             self.set_area()
-        
+            
         else:
             self.set_centroid()
             self.set_unit_vectors()
