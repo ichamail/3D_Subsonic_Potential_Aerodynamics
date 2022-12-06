@@ -467,7 +467,7 @@ class Panel:
         self.SMP = SMP.norm()
         SMQ = (r_3 + r_4)/2 - r_c
         self.SMQ = SMQ.norm()
-        print(self.SMQ, self.SMP)
+        
         self.T = (r_3 + r_2)/2 - r_c
 
     def set_R(self):
