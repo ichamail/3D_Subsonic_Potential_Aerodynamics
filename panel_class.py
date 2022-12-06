@@ -93,37 +93,17 @@ class Panel:
         self.char_length = np.max(side_lengths)      
     
     def set_area(self):
-        if self.num_vertices>4:
-            r_cp = self.r_cp
-            r_vertex = self.r_vertex
-            normal = Vector((0, 0, 0))
-            for i in range(self.num_vertices):
-                j = (i+1)%self.num_vertices
-                r_i = r_vertex[i] - r_cp
-                r_j = r_vertex[j] - r_vertex
-                normal = normal + Vector.cross_product(r_i, r_j)
-            
-            self.area = normal.norm()/2
         
-        else:
-            r_1 = self.r_vertex[0]
-            r_2 = self.r_vertex[1]
-            r_3 = self.r_vertex[2]
-            r_31 = r_1 - r_3
-            
-            if self.num_vertices == 4:
-                r_4 = self.r_vertex[3]
-                r_24 = r_4 - r_2
-                
-                cross_product = Vector.cross_product(r_24, r_31)
-                
-                
-            elif self.num_vertices == 3:
-                r_21 = r_1 - r_2
-                
-                cross_product = Vector.cross_product(r_21, r_31)
-                
-            self.area = cross_product.norm()/2              
+        r_cp = self.r_cp
+        r_vertex = self.r_vertex
+        normal = Vector((0, 0, 0))
+        for i in range(self.num_vertices):
+            j = (i+1)%self.num_vertices
+            r_i = r_vertex[i] - r_cp
+            r_j = r_vertex[j] - r_vertex
+            normal = normal + Vector.cross_product(r_i, r_j)
+        
+        self.area = normal.norm()/2           
     
     def set_up_geometry(self):
         self.set_centroid()
@@ -132,6 +112,7 @@ class Panel:
         self.set_r_vertex_local()
         self.set_char_length()
         # self.set_area()
+        pass
         
     
     # unsteady features
@@ -193,29 +174,13 @@ class Panel:
             self.r_vertex[i] = self.r_vertex[i] + dr
             
                 
-        self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
-        self.set_R()
-        
-        # λογικά δεν χρειάζονται ανανέωση
-        self.set_r_vertex_local()
-        self.set_char_length()
-        self.set_area()
+        self.set_up_geometry()
 
     def update_vertices_location(self, vertex_list):
         for i in range(self.num_vertices):
             self.r_vertex[i] = vertex_list[i]
         
-        self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
-        self.set_R()
-        self.set_r_vertex_local()
-        self.set_char_length()
-        self.set_area()
+        self.set_up_geometry()
    
     
 class quadPanel(Panel):
@@ -269,6 +234,16 @@ class quadPanel(Panel):
         r_24 = r_4 - r_2
         self.char_length = np.max([r_24.norm(), r_31.norm()])
     
+    def set_area(self):    
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_4 = self.r_vertex[3]
+        r_31 = r_1 - r_3
+        r_24 = r_4 - r_2
+        cross_product = Vector.cross_product(r_24, r_31)
+        self.area = cross_product.norm()/2    
+        
     def set_up_geometry(self):
         self.set_centroid()
         # self.set_unit_vectors()
@@ -277,7 +252,8 @@ class quadPanel(Panel):
         self.set_r_vertex_local()
         self.set_char_length()
         self.set_area()    
-        
+
+      
 class triPanel(Panel):
     def __init__(self, vertex0:Vector, vertex1:Vector,
                  vertex2:Vector):
@@ -305,6 +281,16 @@ class triPanel(Panel):
         self.char_length = np.max([r_21.norm(), r_32.norm(),
                                     r_31.norm()])
     
+    def set_area(self):
+            
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_31 = r_1 - r_3
+        r_21 = r_1 - r_2
+        cross_product = Vector.cross_product(r_21, r_31)
+        self.area = cross_product.norm()/2
+    
     def set_up_geometry(self):
         self.set_centroid()
         self.set_unit_vectors()
@@ -312,6 +298,7 @@ class triPanel(Panel):
         self.set_r_vertex_local()
         self.set_char_length()
         # self.set_area()
+        pass
         
     
 if __name__=='__main__':
