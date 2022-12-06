@@ -170,29 +170,32 @@ class Steady_PanelMethod(PanelMethod):
                 
 
         # compute Velocity and pressure coefficient at panels' control points
-        V_fs_norm = self.V_fs.norm()
+        # V_fs_norm = self.V_fs.norm()
         
-        for panel in body_panels:
+        # for panel in body_panels:
             
-            # Velocity caclulation with least squares approach (faster)
+        #     # Velocity caclulation with least squares approach (faster)
             
-            panel_neighbours = mesh.give_neighbours(panel)
-            panel.Velocity = panel_velocity(panel, panel_neighbours, self.V_fs)
+        #     panel_neighbours = mesh.give_neighbours(panel)
+        #     panel.Velocity = panel_velocity(panel, panel_neighbours, self.V_fs)
             
           
-            # Velocity calculation with disturbance velocity functions
+        #     # Velocity calculation with disturbance velocity functions
             
-            # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
-            # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
-            # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
-            # παρ' ότι πολύ πιο αργή
+        #     # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
+        #     # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
+        #     # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
+        #     # παρ' ότι πολύ πιο αργή
             
-            # panel.Velocity = Velocity(self.V_fs, panel.r_cp, body_panels,
-            #                           wake_panels)
+        #     # panel.Velocity = Velocity(self.V_fs, panel.r_cp, body_panels,
+        #     #                           wake_panels)
             
             
-            # pressure coefficient calculation
-            panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
+        #     # pressure coefficient calculation
+        #     panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
+            
+        # on-body Analysis based on "Program VSAERO Theory Document"
+        VSAERO_onbody_analysis(self.V_fs, mesh)
 
     @staticmethod
     def influence_coeff_matrices(mesh:PanelAeroMesh):
@@ -760,27 +763,28 @@ def VSAERO_panel_velocity(V_fs, panel, panel_neighbours, is_neighbour_1=True,
     check pages 48-50 and 23-25
     """
 
-    # if is_neighbour_1 and is_neighbour_3:
-    #     neighbour_1 = panel_neighbours[0]
-    #     neighbour_3 = panel_neighbours[2]
-    #     SMQ_k, SMQ_n1, SMQ_n3 = panel.SMQ, neighbour_1.SMQ, neighbour_3.SMQ
-    #     SA = - (SMQ_k + SMQ_n1)
-    #     SB = SMQ_k + SMQ_n3
-    #     DA = (neighbour_1.mu - panel.mu)/SA
-    #     DB = (neighbour_3.mu - panel.mu)/SB
 
-    #     DELQ = (DA * SB - DB * SA)/(SB - SA)
+    if is_neighbour_1 and is_neighbour_3:
+        neighbour_1 = panel_neighbours[0]
+        neighbour_3 = panel_neighbours[2]
+        SMQ_k, SMQ_n1, SMQ_n3 = panel.SMQ, neighbour_1.SMQ, neighbour_3.SMQ
+        SA = - (SMQ_k + SMQ_n1)
+        SB = SMQ_k + SMQ_n3
+        DA = (neighbour_1.mu - panel.mu)/SA
+        DB = (neighbour_3.mu - panel.mu)/SB
 
-    # if is_neighbour_2 and is_neighbour_4:
-    #     neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
-    #     SMP_k, SMP_n2, SMP_n4 = panel.SMP, neighbour_2.SMP, neighbour_4.SMP
+        delQ = (DA * SB - DB * SA)/(SB - SA)
 
-    #     SA = - (SMP_k + SMP_n4)
-    #     SB = SMP_k + SMP_n2
-    #     DA = (neighbour_4.mu - panel.mu)/SA
-    #     DB = (neighbour_2.mu - panel.mu)/SB
+    if is_neighbour_2 and is_neighbour_4:
+        neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
+        SMP_k, SMP_n2, SMP_n4 = panel.SMP, neighbour_2.SMP, neighbour_4.SMP
 
-    #     DELP = (DA * SB - DB * SA)/(SB - SA)
+        SA = - (SMP_k + SMP_n4)
+        SB = SMP_k + SMP_n2
+        DA = (neighbour_4.mu - panel.mu)/SA
+        DB = (neighbour_2.mu - panel.mu)/SB
+
+        delP = (DA * SB - DB * SA)/(SB - SA)
 
 
     if is_neighbour_1 and is_neighbour_3:
@@ -926,10 +930,10 @@ def VSAERO_onbody_analysis(V_fs:Vector, mesh:PanelAeroMesh):
 
         if len(mesh.shell_neighbours[panel.id])==4:
             # all 4 adjacent panels exist
-                panel_neighbours = mesh.give_neighbours(panel)
-                panel.Velocity = VSAERO_panel_velocity(
-                    V_fs, panel, panel_neighbours
-                )
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = VSAERO_panel_velocity(
+                V_fs, panel, panel_neighbours
+            )
 
         elif len(mesh.shell_neighbours[panel.id])>4:
 
