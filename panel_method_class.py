@@ -763,28 +763,27 @@ def VSAERO_panel_velocity(V_fs, panel, panel_neighbours, is_neighbour_1=True,
     check pages 48-50 and 23-25
     """
 
+    # if is_neighbour_1 and is_neighbour_3:
+    #     neighbour_1 = panel_neighbours[0]
+    #     neighbour_3 = panel_neighbours[2]
+    #     SMQ_k, SMQ_n1, SMQ_n3 = panel.SMQ, neighbour_1.SMQ, neighbour_3.SMQ
+    #     SA = - (SMQ_k + SMQ_n1)
+    #     SB = SMQ_k + SMQ_n3
+    #     DA = (neighbour_1.mu - panel.mu)/SA
+    #     DB = (neighbour_3.mu - panel.mu)/SB
 
-    if is_neighbour_1 and is_neighbour_3:
-        neighbour_1 = panel_neighbours[0]
-        neighbour_3 = panel_neighbours[2]
-        SMQ_k, SMQ_n1, SMQ_n3 = panel.SMQ, neighbour_1.SMQ, neighbour_3.SMQ
-        SA = - (SMQ_k + SMQ_n1)
-        SB = SMQ_k + SMQ_n3
-        DA = (neighbour_1.mu - panel.mu)/SA
-        DB = (neighbour_3.mu - panel.mu)/SB
+    #     DELQ = (DA * SB - DB * SA)/(SB - SA)
 
-        delQ = (DA * SB - DB * SA)/(SB - SA)
+    # if is_neighbour_2 and is_neighbour_4:
+    #     neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
+    #     SMP_k, SMP_n2, SMP_n4 = panel.SMP, neighbour_2.SMP, neighbour_4.SMP
 
-    if is_neighbour_2 and is_neighbour_4:
-        neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
-        SMP_k, SMP_n2, SMP_n4 = panel.SMP, neighbour_2.SMP, neighbour_4.SMP
+    #     SA = - (SMP_k + SMP_n4)
+    #     SB = SMP_k + SMP_n2
+    #     DA = (neighbour_4.mu - panel.mu)/SA
+    #     DB = (neighbour_2.mu - panel.mu)/SB
 
-        SA = - (SMP_k + SMP_n4)
-        SB = SMP_k + SMP_n2
-        DA = (neighbour_4.mu - panel.mu)/SA
-        DB = (neighbour_2.mu - panel.mu)/SB
-
-        delP = (DA * SB - DB * SA)/(SB - SA)
+    #     DELP = (DA * SB - DB * SA)/(SB - SA)
 
 
     if is_neighbour_1 and is_neighbour_3:
@@ -883,13 +882,13 @@ def VSAERO_panel_velocity(V_fs, panel, panel_neighbours, is_neighbour_1=True,
         neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
 
         panel_i_minus1 = neighbour_4
-        panel_minus2 = neighbour_2
+        panel_i_minus2 = neighbour_2
 
         x2 = 0
         x1 = x2 - panel.SMP - panel_i_minus1.SMP
-        x0 = x1 - panel_i_minus1.SMP - panel_minus2.SMP
+        x0 = x1 - panel_i_minus1.SMP - panel_i_minus2.SMP
 
-        mu0 = panel_minus2.mu
+        mu0 = panel_i_minus2.mu
         mu1 = panel_i_minus1.mu
         mu2 = panel.mu
 
@@ -914,7 +913,6 @@ def VSAERO_panel_velocity(V_fs, panel, panel_neighbours, is_neighbour_1=True,
     V_disturb = V_disturb_local.transformation(panel.R.T)
 
     V = V_fs + V_disturb
-
 
     return V
 
