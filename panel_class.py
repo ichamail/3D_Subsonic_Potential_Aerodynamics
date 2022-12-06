@@ -15,18 +15,19 @@ set = [('id', int64), ('sigma', float64), ('mu', float64),
        ('m', Vector.class_type.instance_type),
        ('R', float64[:,:]),
        ('r_vertex_local', types.ListType(Vector.class_type.instance_type)),
-       ('Velocity', Vector.class_type.instance_type)]
+       ('Velocity', Vector.class_type.instance_type),
+       ('SMQ', int64), ('SMP', int64), ('T', Vector.class_type.instance_type)]
        
-       
+            
 class Panel:
-    def __init__(self, num_vertices):
+    def __init__(self, position_vector_list):
         self.id: int  # panel's identity
         self.sigma = 0.0  # constant source stregth per area
         self.mu = 0.0  # constant doublet strength per area
-        self.num_vertices = num_vertices # panel's number of vertices
+        self.num_vertices = len(position_vector_list) # panel's number of vertices
         
         # r_vertex[i] : position vector of panel's i-th vertex
-        # self.r_vertex = np.empty(self.num_vertices, dtype=Vector)
+        self.r_vertex = typed.List(position_vector_list)
         
         
         self.r_cp: Vector  # position vector of panel's control point(centroid) 
@@ -41,7 +42,8 @@ class Panel:
         # r_local = R*r_global or r' = R*r  (x' = Ax συμβολισμός Νατσίαβα)
         self.R: np.ndarray((3, 3))
         
-        # self.r_vertex_local = np.empty_like(self.r_vertex)
+        self.r_vertex_local = self.r_vertex.copy()
+        self.r_vertex_local.clear()
         
         
         self.char_length = 0.0  # maximum diagonal length or maximum edge length
@@ -49,6 +51,8 @@ class Panel:
         
         self.Velocity: Vector  # Velocity Vector at control point
         self.Cp = 0.0  # Pressure coefficient at control point
+        
+        self.set_up_geometry()
               
     def set_centroid(self):
         r_cp = Vector((0, 0, 0))
@@ -58,28 +62,19 @@ class Panel:
         self.r_cp = r_cp/self.num_vertices
             
     def set_n(self):
-        r_1 = self.r_vertex[0]
-        r_2 = self.r_vertex[1]
-        r_3 = self.r_vertex[2]
-        r_31 = r_1 - r_3
+        r_cp = self.r_cp
+        r_vertex = self.r_vertex
+        normal = Vector((0, 0, 0))
+        for i in range(self.num_vertices):
+            j = (i+1)%self.num_vertices
+            r_i = r_vertex[i] - r_cp
+            r_j = r_vertex[j] - r_cp
+            # normal = normal + Vector.cross_product(r_i, r_j)
+            normal = normal + r_i.cross(r_j)
         
-        if self.num_vertices == 4:
-            r_4 = self.r_vertex[3]
-            r_24 = r_4 - r_2
-            
-            # n = Vector.cross_product(r_24, r_31)
-            n = r_24.cross(r_31)
-            n = n/n.norm()
-            
-        elif self.num_vertices == 3:
-            r_21 = r_1 - r_2
-            
-            # n = Vector.cross_product(r_21, r_31)
-            n = r_21.cross(r_31)
-            n = n/n.norm()
-        
-        self.n = n
-    
+        self.area = normal.norm()/2
+        self.n = normal/normal.norm()
+           
     def set_l(self):
         r_1 = self.r_vertex[0]
         r_2 = self.r_vertex[1]
@@ -89,6 +84,11 @@ class Panel:
     def set_m(self):
         # self.m = Vector.cross_product(self.n, self.l)
         self.m = self.n.cross(self.l)
+    
+    def set_unit_vectors(self):
+        self.set_n()
+        self.set_l()
+        self.set_m()
     
     def set_R(self):
         l, m, n = self.l, self.m, self.n
@@ -100,55 +100,41 @@ class Panel:
         n = self.num_vertices
         r_cp = self.r_cp
         r_vertex = self.r_vertex
-        r_vertex_local = self.r_vertex_local
+        self.r_vertex_local = self.r_vertex.copy()
         R = self.R
         
-        for i in range(n):
-            r_vertex_local[i] = r_vertex[i] - r_cp
-            r_vertex_local[i] = r_vertex_local[i].transformation(R)
-        
-        self.r_vertex_local = r_vertex_local   
+        for i in range(n):           
+            self.r_vertex_local[i] = r_vertex[i] - r_cp
+            self.r_vertex_local[i] = self.r_vertex_local[i].transformation(R) 
 
     def set_char_length(self):
-        r_1 = self.r_vertex[0]
-        r_2 = self.r_vertex[1]
-        r_3 = self.r_vertex[2]
-        r_31 = r_1 - r_3
-        
-        if self.num_vertices == 4:
-            r_4 = self.r_vertex[3]
-            r_24 = r_4 - r_2
-            
-            # self.char_length = np.max([r_24.norm(), r_31.norm()])
-            self.char_length = max([r_24.norm(), r_31.norm()])
-            
-        elif self.num_vertices == 3:
-            r_21 = r_1 - r_2
-            r_32 = r_2 - r_3
-            
-            # self.char_length = np.max([r_21.norm(), r_32.norm(),
-            #                            r_31.norm()])
-            self.char_length = max([r_21.norm(), r_32.norm(),
-                                       r_31.norm()])        
+        r = self.r_vertex
+        side_lengths = [
+            (r[i] - r[i+1]).norm() for i in range(self.num_vertices - 1)
+        ]
+        self.char_length = np.max(side_lengths)       
     
     def set_area(self):
-        r_1 = self.r_vertex[0]
-        r_2 = self.r_vertex[1]
-        r_3 = self.r_vertex[2]
-        r_31 = r_1 - r_3
         
-        if self.num_vertices == 3:
-            r_21 = r_1 - r_2
-            # cross_prod = Vector.cross_product(r_31, r_21)
-            cross_prod = r_31.cross(r_21)
-            self.area = 0.5 * cross_prod.norm()
-            
-        elif self.num_vertices == 4:
-            r_4 = self.r_vertex[3]
-            r_24 = r_4 - r_2
-            # cross_prod = Vector.cross_product(r_31, r_24)
-            cross_prod = r_31.cross(r_24)
-            self.area = 0.5 * cross_prod.norm() 
+        r_cp = self.r_cp
+        r_vertex = self.r_vertex
+        normal = Vector((0, 0, 0))
+        for i in range(self.num_vertices):
+            j = (i+1)%self.num_vertices
+            r_i = r_vertex[i] - r_cp
+            r_j = r_vertex[j] - r_vertex
+            normal = normal + Vector.cross_product(r_i, r_j)
+
+        self.area = normal.norm()/2
+    
+    def set_up_geometry(self):
+        self.set_centroid()
+        self.set_unit_vectors()
+        self.set_R()
+        self.set_r_vertex_local()
+        self.set_char_length()
+        # self.set_area()
+        pass
             
     # unsteady features
     
@@ -210,54 +196,96 @@ class Panel:
             self.r_vertex[i] = self.r_vertex[i] + dr
             
                 
-        self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
-        self.set_R()
-        
-        # λογικά δεν χρειάζονται ανανέωση
-        self.set_r_vertex_local()
-        self.set_char_length()
-        self.set_area()
+        self.set_up_geometry()
 
     def update_vertices_location(self, vertex_list):
         for i in range(self.num_vertices):
             self.r_vertex[i] = vertex_list[i]
         
-        self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
-        self.set_R()
-        self.set_r_vertex_local()
-        self.set_char_length()
-        self.set_area()
+        self.set_up_geometry()
 
 
 @jitclass(set)       
 class quadPanel(Panel):
+    
     __init__Panel = Panel.__init__   # works with @jitclass decorator
+    
     def __init__(self, vertex0:Vector, vertex1:Vector,
                  vertex2:Vector, vertex3:Vector):
-        # super().__init__(4)  # doesn't work with @jitclass decorator
-        self.__init__Panel(4)  # works with @jitclass decorator
-        
-        # self.r_vertex[0] = vertex0
-        # self.r_vertex[1] = vertex1
-        # self.r_vertex[2] = vertex2
-        # self.r_vertex[3] = vertex3
-        self.r_vertex = typed.List([vertex0, vertex1, vertex2, vertex3])
-        self.r_vertex_local = typed.List([vertex0, vertex1, vertex2, vertex3])
-        
+        # super().__init__([vertex0, vertex1, vertex2, vertex3])  # doesn't work with @jitclass decorator
+        self.__init__Panel([vertex0, vertex1, vertex2, vertex3])  # works with @jitclass decorator
+                
+        self.set_up_geometry()
+
+    def set_n(self):
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_31 = r_1 - r_3
+        r_4 = self.r_vertex[3]
+        r_24 = r_4 - r_2
+        # cross_product = Vector.cross_product(r_24, r_31)
+        cross_product = r_24.cross(r_31)
+        n = cross_product/cross_product.norm()        
+        self.n = n
+        self.area = cross_product.norm()/2
+
+    def set_VSAERO_unit_vectors(self):
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_4 = self.r_vertex[3]
+        r_c = self.r_cp
+
+
+        D1 = r_3 - r_1
+        D2 = r_4 - r_2
+        # n = Vector.cross_product(D1, D2)
+        n = D1.cross(D2)
+        self.n = n/n.norm()
+
+        m = (r_3 + r_4)/2 - r_c
+        self.m = m/m.norm()
+
+        # self.l = Vector.cross_product(self.m, self.n)
+        self.l = self.m.cross(self.n)
+
+        SMP = (r_2 + r_3)/2 - r_c
+        self.SMP = SMP.norm() 
+        SMQ = (r_3 + r_4)/2 - r_c
+        self.SMQ = SMQ.norm()
+
+        self.T = (r_3 + r_2)/2 - r_c
+
+    def set_char_length(self):
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_31 = r_1 - r_3
+        r_4 = self.r_vertex[3]
+        r_24 = r_4 - r_2
+        # self.char_length = np.max([r_24.norm(), r_31.norm()])
+        self.char_length = max([r_24.norm(), r_31.norm()])
+    
+    def set_area(self):
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_4 = self.r_vertex[3]
+        r_31 = r_1 - r_3
+        r_24 = r_4 - r_2
+        # cross_product = Vector.cross_product(r_24, r_31)
+        cross_product = r_24.cross(r_31)
+        self.area = cross_product.norm()/2
+
+    def set_up_geometry(self):
         self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
+        # self.set_unit_vectors()
+        self.set_VSAERO_unit_vectors()
         self.set_R()
         self.set_r_vertex_local()
         self.set_char_length()
-        self.set_area()
+        self.set_area() 
 
 
 @jitclass(set)      
@@ -267,24 +295,41 @@ class triPanel(Panel):
     
     def __init__(self, vertex0:Vector, vertex1:Vector,
                  vertex2:Vector):
-        # super().__init__(3)  # doesn't work with @jitclass decorator
-        self.__init__Panel(3)  # works with @jitclass decorator
-        
-        # self.r_vertex[0] = vertex0
-        # self.r_vertex[1] = vertex1
-        # self.r_vertex[2] = vertex2
-        
-        self.r_vertex = typed.List([vertex0, vertex1, vertex2])
-        self.r_vertex_local = typed.List([vertex0, vertex1, vertex2])
-                
+        # super().__init__([vertex0, vertex1, vertex2])  # doesn't work with @jitclass decorator
+        self.__init__Panel([vertex0, vertex1, vertex2])  # works with @jitclass decorator
+                        
+        self.set_up_geometry()
+    
+    def set_n(self):
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_31 = r_1 - r_3
+        r_21 = r_1 - r_2
+        # cross_product = Vector.cross_product(r_21, r_31)
+        cross_product = r_21.cross(r_31)
+        n = cross_product/cross_product.norm()
+        self.n = n
+        self.area = cross_product.norm()/2
+
+    def set_char_length(self):
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_31 = r_1 - r_3
+        r_21 = r_1 - r_2
+        r_32 = r_2 - r_3
+        # self.char_length = np.max([r_21.norm(), r_32.norm(), r_31.norm()])
+        self.char_length = max([r_21.norm(), r_32.norm(), r_31.norm()])
+
+    def set_up_geometry(self):
         self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
+        self.set_unit_vectors()
         self.set_R()
         self.set_r_vertex_local()
         self.set_char_length()
-        self.set_area()
+        # self.set_area()
+        pass
 
 
 """
@@ -333,14 +378,7 @@ class Panel:
         self.Velocity: Vector  # Velocity Vector at control point
         self.Cp = 0.0  # Pressure coefficient at control point
         
-        self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
-        self.set_R()
-        self.set_r_vertex_local()
-        self.set_char_length()
-        self.set_area()
+        self.set_up_geometry()
               
     def set_centroid(self):
         r_cp = Vector((0, 0, 0))
@@ -350,27 +388,41 @@ class Panel:
         self.r_cp = r_cp/self.num_vertices
             
     def set_n(self):
-        r_1 = self.r_vertex[0]
-        r_2 = self.r_vertex[1]
-        r_3 = self.r_vertex[2]
-        r_31 = r_1 - r_3
         
-        if self.num_vertices == 4:
-            r_4 = self.r_vertex[3]
-            r_24 = r_4 - r_2
+        if self.num_vertices>4:
             
-            # n = Vector.cross_product(r_24, r_31)
-            n = r_24.cross(r_31)
-            n = n/n.norm()
+            r_cp = self.r_cp
+            r_vertex = self.r_vertex
+            normal = Vector((0, 0, 0))
+            for i in range(self.num_vertices):
+                j = (i+1)%self.num_vertices
+                r_i = r_vertex[i] - r_cp
+                r_j = r_vertex[j] - r_cp
+                # normal = normal + Vector.cross_product(r_i, r_j)
+                normal = normal + r_i.cross(r_j)
             
-        elif self.num_vertices == 3:
-            r_21 = r_1 - r_2
+        else:
             
-            n = r_21.cross(r_31)
-            n = n/n.norm()
+            r_1 = self.r_vertex[0]
+            r_2 = self.r_vertex[1]
+            r_3 = self.r_vertex[2]
+            r_31 = r_1 - r_3
         
-        self.n = n
-    
+            if self.num_vertices == 4:
+                r_4 = self.r_vertex[3]
+                r_24 = r_4 - r_2
+                # normal = Vector.cross_product(r_24, r_31)
+                normal = r_24.cross(r_31)
+            
+            elif self.num_vertices == 3:
+                r_21 = r_1 - r_2
+                # normal = Vector.cross_product(r_21, r_31)
+                normal = r_21.cross(r_31)
+                
+            
+        self.area = normal.norm()/2
+        self.n = normal/normal.norm()
+            
     def set_l(self):
         r_1 = self.r_vertex[0]
         r_2 = self.r_vertex[1]
@@ -381,6 +433,38 @@ class Panel:
         # self.m = Vector.cross_product(self.n, self.l)
         self.m = self.n.cross(self.l)
     
+    def set_unit_vectors(self):
+        self.set_n()
+        self.set_l()
+        self.set_m()
+    
+    def set_VSAERO_unit_vectors(self):
+        r_1 = self.r_vertex[0]
+        r_2 = self.r_vertex[1]
+        r_3 = self.r_vertex[2]
+        r_4 = self.r_vertex[3]
+        r_c = self.r_cp
+
+
+        D1 = r_3 - r_1
+        D2 = r_4 - r_2
+        # n = Vector.cross_product(D1, D2)
+        n = D1.cross(D2)
+        self.n = n/n.norm()
+
+        m = (r_3 + r_4)/2 - r_c
+        self.m = m/m.norm()
+
+        # self.l = Vector.cross_product(self.m, self.n)
+        self.l = self.m.cross(self.n)
+
+        SMP = (r_2 + r_3)/2 - r_c
+        self.SMP = SMP.norm() 
+        SMQ = (r_3 + r_4)/2 - r_c
+        self.SMQ = SMQ.norm()
+
+        self.T = (r_3 + r_2)/2 - r_c
+
     def set_R(self):
         l, m, n = self.l, self.m, self.n
         self.R = np.array([[l.x, l.y, l.z],
@@ -397,45 +481,88 @@ class Panel:
         for i in range(n):           
             self.r_vertex_local[i] = r_vertex[i] - r_cp
             self.r_vertex_local[i] = self.r_vertex_local[i].transformation(R)
-        
-        
+         
     def set_char_length(self):
-        r_1 = self.r_vertex[0]
-        r_2 = self.r_vertex[1]
-        r_3 = self.r_vertex[2]
-        r_31 = r_1 - r_3
         
-        if self.num_vertices == 4:
-            r_4 = self.r_vertex[3]
-            r_24 = r_4 - r_2
+        if self.num_vertices>4:
+            r = self.r_vertex
+            side_lengths = [
+                (r[i] - r[i+1]).norm() for i in range(self.num_vertices - 1)
+            ]
+            # self.char_length = np.max(side_lengths)
+            self.char_length = max(side_lengths)    
+        
+        else:
+            r_1 = self.r_vertex[0]
+            r_2 = self.r_vertex[1]
+            r_3 = self.r_vertex[2]
+            r_31 = r_1 - r_3
             
-            self.char_length = max([r_24.norm(), r_31.norm()])
-            
-        elif self.num_vertices == 3:
-            r_21 = r_1 - r_2
-            r_32 = r_2 - r_3
-            
-            self.char_length = max([r_21.norm(), r_32.norm(), r_31.norm()])
-    
+            if self.num_vertices == 4:
+                r_4 = self.r_vertex[3]
+                r_24 = r_4 - r_2
+                self.char_length = max([r_24.norm(), r_31.norm()])
+                
+            elif self.num_vertices == 3:
+                r_21 = r_1 - r_2
+                r_32 = r_2 - r_3
+                self.char_length = max([r_21.norm(), r_32.norm(), r_31.norm()])
+        
     def set_area(self):
-        r_1 = self.r_vertex[0]
-        r_2 = self.r_vertex[1]
-        r_3 = self.r_vertex[2]
-        r_31 = r_1 - r_3
         
-        if self.num_vertices == 3:
-            r_21 = r_1 - r_2
-            # cross_prod = Vector.cross_product(r_31, r_21)
-            cross_prod = r_31.cross(r_21)
-            self.area = 0.5 * cross_prod.norm()
+        if self.num_vertices>4:
             
-        elif self.num_vertices == 4:
-            r_4 = self.r_vertex[3]
-            r_24 = r_4 - r_2
-            # cross_prod = Vector.cross_product(r_31, r_24)
-            cross_prod = r_31.cross(r_24)
-            self.area = 0.5 * cross_prod.norm()               
-
+            r_cp = self.r_cp
+            r_vertex = self.r_vertex
+            normal = Vector((0, 0, 0))
+            for i in range(self.num_vertices):
+                j = (i+1)%self.num_vertices
+                r_i = r_vertex[i] - r_cp
+                r_j = r_vertex[j] - r_cp
+                # normal = normal + Vector.cross_product(r_i, r_j)
+                normal = normal + r_i.cross(r_j)
+            
+        else:
+            
+            r_1 = self.r_vertex[0]
+            r_2 = self.r_vertex[1]
+            r_3 = self.r_vertex[2]
+            r_31 = r_1 - r_3
+        
+            if self.num_vertices == 4:
+                r_4 = self.r_vertex[3]
+                r_24 = r_4 - r_2
+                # normal = Vector.cross_product(r_24, r_31)
+                normal = r_24.cross(r_31)
+            
+            elif self.num_vertices == 3:
+                r_21 = r_1 - r_2
+                # normal = Vector.cross_product(r_21, r_31)
+                normal = r_21.cross(r_31)
+                    
+        self.area = normal.norm()/2
+                    
+    def set_up_geometry(self):
+                
+        if self.num_vertices == 4:
+            self.set_centroid()
+            # self.set_unit_vectors()
+            self.set_VSAERO_unit_vectors()
+            self.set_R()
+            self.set_r_vertex_local()
+            self.set_char_length()
+            self.set_area()
+        
+        else:
+            self.set_centroid()
+            self.set_unit_vectors()
+            self.set_R()
+            self.set_r_vertex_local()
+            self.set_char_length()
+            # self.set_area()
+            pass
+            
+    
     # unsteady features
     
     def move(self, v_rel, Vo, omega, R, dt):
@@ -496,29 +623,13 @@ class Panel:
             self.r_vertex[i] = self.r_vertex[i] + dr
             
                 
-        self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
-        self.set_R()
-        
-        # λογικά δεν χρειάζονται ανανέωση
-        self.set_r_vertex_local()
-        self.set_char_length()
-        self.set_area()
+        self.set_up_geometry()
 
     def update_vertices_location(self, vertex_list):
         for i in range(self.num_vertices):
             self.r_vertex[i] = vertex_list[i]
         
-        self.set_centroid()
-        self.set_n() 
-        self.set_l() 
-        self.set_m()
-        self.set_R()
-        self.set_r_vertex_local()
-        self.set_char_length()
-        self.set_area()
+        self.set_up_geometry()
    
  
     
@@ -531,11 +642,27 @@ if __name__=='__main__':
     vertex3 = Vector((1, 1, 1))
     vertex4 = Vector((-1, 1, 1))
     
+    
+    # Polygon panel
+    # def hexagon(center=(0, 0), r=1):
+    #     x0, y0 = center
+    #     numS = 6 # number of sides
+    #     # theta0 = (360/(numB-1))/2
+    #     theta0 = 0
+    #     theta = np.linspace(0, 360, numS+1)
+    #     theta = theta + theta0
+    #     theta = theta*(np.pi/180)
+    #     x = x0 + r* np.cos(theta)
+    #     y = y0 + r* np.sin(theta)
+    #     return [Vector((x[i], y[i], 0)) for i in range(numS)]
+
+    # panel = Panel(hexagon())
+    
     # Quadrilateral panel
     # panel = quadPanel(vertex1, vertex2, vertex3, vertex4)
     
     # Triangular panel
-    panel = triPanel(vertex1, vertex2, vertex3)
+    # panel = triPanel(vertex1, vertex2, vertex3)
     
     # jit panel
     vertex_list = [(-1, -1, 1), (1, -1, 1), (1, 1, 1), (-1, 1, 1)]
