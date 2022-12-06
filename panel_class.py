@@ -278,8 +278,7 @@ class triPanel(Panel):
         r_31 = r_1 - r_3
         r_21 = r_1 - r_2
         r_32 = r_2 - r_3
-        self.char_length = np.max([r_21.norm(), r_32.norm(),
-                                    r_31.norm()])
+        self.char_length = np.max([r_21.norm(), r_32.norm(), r_31.norm()])
     
     def set_area(self):
             
