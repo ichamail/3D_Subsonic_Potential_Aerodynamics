@@ -454,52 +454,124 @@ class AeroMesh(Mesh):
         
         return near_root_shells_id
     
-    def add_VSAERO_adjacency(self):
+    def locate_VSAERO_adjacency(self):
         
-        right_edge_shells = [
-            id for id in self.shells_ids["main surface"]
-            if self.do_intersect(
-                self.shells[id], self.nodes_ids["right wing tip"]
-            )
-        ]
+        """
+        this function locates the neighbours of shells, following the notation of NASA Contractor Report 4023 "Program VSAERO theory Document,
+        A Computer Program for Calculating Nonlinear Aerodynamic Characteristics
+        of Arbitrary Configurations, Brian Maskew"
+        """
         
-        left_edge_shells = [
-            id for id in self.shells_ids["main surface"]
-            if self.do_intersect(
-                self.shells[id], self.nodes_ids["left wing tip"]
-            )    
-        ]
+        span_wise_nodes = len(self.nodes_ids["trailing edge"])
+        chrod_wise_nodes = len(self.nodes_ids["main surface"])//span_wise_nodes
+        span_wise_shells = span_wise_nodes - 1
+        chrod_wise_shells = chrod_wise_nodes
         
-        for i, id in enumerate(right_edge_shells):
-            
-            if i == 0:
-                self.shell_neighbours[id].append(right_edge_shells[i+2])
-            
-            if i == len(right_edge_shells)-1:
-                self.shell_neighbours[id].append(right_edge_shells[i-2])
+        j_max = span_wise_shells - 1
+        i_max = chrod_wise_shells - 1
+        
+        def shell_id(chord_wise_index, span_wise_index):            
+            i = chord_wise_index
+            j = span_wise_index
+            shell_id = i*(j_max+1) + j
+            return shell_id
+              
+              
+        for i in range(1, i_max):
+            for j in range(1, j_max):
+                self.shell_neighbours[shell_id(i, j)] = [
+                    shell_id(i, j-1),
+                    shell_id(i+1, j),
+                    shell_id(i, j+1),
+                    shell_id(i-1, j)
+                ]
+        
+        for i in range(1, i_max):
+            j = 0
+            self.shell_neighbours[shell_id(i, j)] = [
+                -1,
+                shell_id(i+1, j),
+                shell_id(i, j+1),
+                shell_id(i-1, j),
                 
-            self.shell_neighbours[id].append(id+2)
+                shell_id(i, j+2)
+            ]
+            
+            j = j_max
+            self.shell_neighbours[shell_id(i, j)] = [
+                shell_id(i, j-1),
+                shell_id(i+1, j),
+                -1,
+                shell_id(i-1, j),
+                
+                shell_id(i, j-2)
+            ]
+            
+        for j in range(1, j_max):
+            i = 0
+            self.shell_neighbours[shell_id(i, j)] = [
+                shell_id(i, j-1),
+                shell_id(i+1, j),
+                shell_id(i, j+1),
+                -1,
+                
+                shell_id(i+2, j)
+            ]
+            
+            i = i_max
+            self.shell_neighbours[shell_id(i, j)] = [
+                shell_id(i, j-1),
+                -1,
+                shell_id(i, j+1),
+                shell_id(i-1, j),
+                
+                shell_id(i-2, j)
+            ]
+            
+        i, j = 0, 0
+        self.shell_neighbours[shell_id(i, j)] = [
+            -1,
+            shell_id(i+1, j),
+            shell_id(i, j+1),
+            -1,
+            
+            shell_id(i, j+2),
+            shell_id(i+2, j)
+        ]
         
-        for i, id in enumerate(left_edge_shells):
+        i, j = 0, j_max
+        self.shell_neighbours[shell_id(i, j)] = [
+            shell_id(i, j-1),
+            shell_id(i+1, j),
+            -1,
+            -1,
             
-            if i == 0:
-                self.shell_neighbours[id].append(left_edge_shells[i+2])
-            
-            if i == len(left_edge_shells)-1:
-                self.shell_neighbours[id].append(left_edge_shells[i-2])
-            
-            self.shell_neighbours[id].append(id-2)
+            shell_id(i, j-2),
+            shell_id(i+2, j)
+        ]
         
+        i, j = i_max, 0
+        self.shell_neighbours[shell_id(i, j)] = [
+            -1,
+            -1,
+            shell_id(i, j+1),
+            shell_id(i-1, j),
+            
+            shell_id(i, j+2),
+            shell_id(i-2, j)
+        ]
         
-        len_TE = len(self.TrailingEdge["suction side"])
-        for i in range(1,len_TE-1):
+        i, j = i_max, j_max
+        self.shell_neighbours[shell_id(i, j)] = [
+            shell_id(i, j-1),
+            -1,
+            -1,
+            shell_id(i-1, j),
             
-            id = self.TrailingEdge["suction side"][i]
-            self.shell_neighbours[id].append(id + 2*len_TE)
-            
-            id = self.TrailingEdge["pressure side"][i]
-            self.shell_neighbours[id].append(id - 2*len_TE)
-    
+            shell_id(i-2, j),
+            shell_id(i, j-2)
+        ]
+        
         
     ### unsteady features  ###
     def initialize_wake_nodes(self):
@@ -744,10 +816,16 @@ class PanelMesh(Mesh):
             # plot normal vectors
             r_cp = panel.r_cp
             n = panel.n
-            scale = 0.1
+            l = panel.l
+            m = panel.m
+            scale = 0.1 * panel.char_length
             n = n * scale
+            l = l * scale
+            m = m * scale
             ax.scatter(r_cp.x, r_cp.y, r_cp.z, color='k', s=5)
             ax.quiver(r_cp.x, r_cp.y, r_cp.z, n.x, n.y, n.z, color='r')
+            ax.quiver(r_cp.x, r_cp.y, r_cp.z, l.x, l.y, l.z, color='b')
+            ax.quiver(r_cp.x, r_cp.y, r_cp.z, m.x, m.y, m.z, color='g')
                 
                 
             

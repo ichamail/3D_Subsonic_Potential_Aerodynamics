@@ -143,28 +143,31 @@ class Steady_PanelMethod(PanelMethod):
         # compute Velocity and pressure coefficient at panels' control points
         V_fs_norm = self.V_fs.norm()
         
-        for panel in body_panels:
+        # for panel in body_panels:
             
-            # Velocity caclulation with least squares approach (faster)
+        #     # Velocity caclulation with least squares approach (faster)
             
-            panel_neighbours = mesh.give_neighbours(panel)
-            panel.Velocity = panel_velocity(panel, panel_neighbours, self.V_fs)
+        #     panel_neighbours = mesh.give_neighbours(panel)
+        #     panel.Velocity = panel_velocity(panel, panel_neighbours, self.V_fs)
             
           
-            # Velocity calculation with disturbance velocity functions
+        #     # Velocity calculation with disturbance velocity functions
             
-            # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
-            # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
-            # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
-            # παρ' ότι πολύ πιο αργή
+        #     # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
+        #     # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
+        #     # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
+        #     # παρ' ότι πολύ πιο αργή
             
-            # panel.Velocity = Velocity(self.V_fs, panel.r_cp, body_panels,
-            #                           wake_panels)
+        #     # panel.Velocity = Velocity(mesh.V_fs, panel.r_cp, body_panels,
+        #     #                           wake_panels)
             
             
-            # pressure coefficient calculation
-            panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
+        #     # pressure coefficient calculation
+        #     panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
 
+        # on-body Analysis based on "Program VSAERO Theory Document"
+        VSAERO_onbody_analysis(self.V_fs, mesh)
+        
     @staticmethod
     def influence_coeff_matrices(mesh:PanelAeroMesh):
         
@@ -579,6 +582,243 @@ def panel_velocity(panel, panel_neighbours, V_fs):
     
     return V
 
+def VSAERO_panel_velocity(V_fs, panel, panel_neighbours, is_neighbour_1=True,
+                          is_neighbour_2=True, is_neighbour_3=True, is_neighbour_4=True):
+    
+    """
+    this function computes the surface velocity, following the notation of NASA Contractor Report 4023 "Program VSAERO theory Document,
+    A Computer Program for Calculating Nonlinear Aerodynamic Characteristics
+    of Arbitrary Configurations, Brian Maskew"
+    
+    check pages 48-50 and 23-25
+    """
+    
+    
+    if is_neighbour_1 and is_neighbour_3:
+        neighbour_1 = panel_neighbours[0]
+        neighbour_3 = panel_neighbours[2]
+        SMQ_k, SMQ_n1, SMQ_n3 = panel.SMQ, neighbour_1.SMQ, neighbour_3.SMQ
+        SA = - (SMQ_k + SMQ_n1)
+        SB = SMQ_k + SMQ_n3
+        DA = (neighbour_1.mu - panel.mu)/SA
+        DB = (neighbour_3.mu - panel.mu)/SB
+        
+        delQ = (DA * SB - DB * SA)/(SB - SA)
+    
+    if is_neighbour_2 and is_neighbour_4:
+        neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
+        SMP_k, SMP_n2, SMP_n4 = panel.SMP, neighbour_2.SMP, neighbour_4.SMP
+        
+        SA = - (SMP_k + SMP_n4)
+        SB = SMP_k + SMP_n2
+        DA = (neighbour_4.mu - panel.mu)/SA
+        DB = (neighbour_2.mu - panel.mu)/SB
+        
+        delP = (DA * SB - DB * SA)/(SB - SA)
+    
+           
+    if is_neighbour_1 and is_neighbour_3:
+        
+        neighbour_1 = panel_neighbours[0]
+        neighbour_3 = panel_neighbours[2]
+        
+        panel_j_minus1 = neighbour_1
+        panel_j_plus1 = neighbour_3
+        
+        x1 = 0
+        x0 = x1 - panel.SMQ - panel_j_minus1.SMQ
+        x2 = x1 + panel.SMQ + panel_j_plus1.SMQ
+        mu0 = panel_j_minus1.mu
+        mu1 = panel.mu
+        mu2 = panel_j_plus1.mu
+        
+        DELQ = mu0 * (x1 - x2)/(x0 - x1)/(x0 - x2) \
+                + mu1 * (2*x1 - x0 - x2)/(x1 - x0)/(x1 - x2) \
+                + mu2 * (x1 - x0)/(x2 - x0)/(x2 - x1)
+                
+    elif is_neighbour_1:
+        neighbour_1 = panel_neighbours[0]
+        neighbour_3 = panel_neighbours[2]
+        panel_j_minus1 = neighbour_1
+        panel_j_minus2 = neighbour_3
+        
+        x2 = 0
+        x1 = x2 - panel.SMQ - panel_j_minus1.SMQ
+        x0 = x1  - panel_j_minus1.SMQ - panel_j_minus2.SMQ
+        
+        mu0 = panel_j_minus2.mu
+        mu1 = panel_j_minus1.mu
+        mu2 = panel.mu
+        
+        DELQ = mu0 * (x2 - x1)/(x0 - x1)/(x0 - x2) \
+                + mu1 * (x2 - x0)/(x1 - x0)/(x1 - x2) \
+                + mu2 * (2*x2 - x0 - x1)/(x2 - x0)/(x2 - x1)
+    
+    elif is_neighbour_3:
+        neighbour_1 = panel_neighbours[0]
+        neighbour_3 = panel_neighbours[2]
+        panel_j_plus1 = neighbour_3
+        panel_j_plus2 = neighbour_1
+        
+        x0 = 0
+        x1 = x0 + panel.SMQ + panel_j_plus1.SMQ
+        x2 = x1 + panel_j_plus1.SMQ + panel_j_plus2.SMQ
+        
+        mu0 = panel.mu
+        mu1 = panel_j_plus1.mu
+        mu2 = panel_j_plus2.mu
+        
+        DELQ = mu0 * (2*x0 - x1 - x2)/(x0 - x1)/(x0 - x2) \
+                + mu1 * (x0 - x2)/(x1 - x0)/(x1 - x2) \
+                + mu2 * (x0 -x1)/(x2 - x0)/(x2 - x1)
+    
+    
+    if is_neighbour_2 and is_neighbour_4:
+        neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
+        
+        panel_i_minus1 = neighbour_4
+        panel_i_plus1 = neighbour_2
+        
+        x1 = 0
+        x0 = x1 - panel.SMP - panel_i_minus1.SMP
+        x2 = x1 + panel.SMP + panel_i_plus1.SMP
+        
+        mu0 = panel_i_minus1.mu
+        mu1 = panel.mu
+        mu2 = panel_i_plus1.mu
+        
+        DELP = mu0 * (x1 - x2)/(x0 - x1)/(x0 - x2) \
+                + mu1 * (2*x1 - x0 - x2)/(x1 - x0)/(x1 - x2) \
+                + mu2 * (x1 - x0)/(x2 - x0)/(x2 - x1)
+                
+    elif is_neighbour_2:
+        neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
+        
+        panel_i_plus1 = neighbour_2
+        panel_i_plus2 = neighbour_4
+        
+        x0 = 0
+        x1 = x0 + panel.SMP + panel_i_plus1.SMP
+        x2 = x1 + panel_i_plus1.SMP + panel_i_plus2.SMP
+        
+        mu0 = panel.mu
+        mu1 = panel_i_plus1.mu
+        mu2 = panel_i_plus2.mu
+        
+        DELP = mu0 * (2*x0 - x1 - x2)/(x0 - x1)/(x0 - x2) \
+                + mu1 * (x0 - x2)/(x1 - x0)/(x1 - x2) \
+                + mu2 * (x0 - x1)/(x2 - x0)/(x2 - x1)
+    
+    elif is_neighbour_4:
+        neighbour_2, neighbour_4 = panel_neighbours[1], panel_neighbours[3]
+        
+        panel_i_minus1 = neighbour_4
+        panel_minus2 = neighbour_2
+        
+        x2 = 0
+        x1 = x2 - panel.SMP - panel_i_minus1.SMP
+        x0 = x1 - panel_i_minus1.SMP - panel_minus2.SMP
+        
+        mu0 = panel_minus2.mu
+        mu1 = panel_i_minus1.mu
+        mu2 = panel.mu
+        
+        DELP = mu0 * (x2 - x1)/(x0 - x1)/(x0 - x2) \
+                + mu1 * (x2 - x0)/(x1 - x0)/(x1 - x2) \
+                + mu2 * (2*x2 - x0 - x1)/(x2 - x0)/(x2 - x1)
+    
+    
+    
+    T = panel.T
+    T = T.transformation(panel.R)
+    TM = T.y
+    TL = T.x
+    
+    VL = - (panel.SMP * DELP - TM * DELQ)/TL 
+    VM = - DELQ
+    VN = panel.sigma
+    
+    Vl, Vm, Vn = VL, VM, VN
+    
+    V_disturb_local = Vector((Vl, Vm, Vn))
+    V_disturb = V_disturb_local.transformation(panel.R.T)
+    
+    V = V_fs + V_disturb
+    
+    
+    return V
+
+def VSAERO_onbody_analysis(V_fs:Vector, mesh:PanelAeroMesh):
+    
+    mesh.locate_VSAERO_adjacency()
+    
+    body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+    
+    V_fs_norm = V_fs.norm()
+    
+    for panel in body_panels:
+        
+        if len(mesh.shell_neighbours[panel.id])==4:
+            # all 4 adjacent panels exist
+                panel_neighbours = mesh.give_neighbours(panel)
+                panel.Velocity = VSAERO_panel_velocity(
+                    V_fs, panel, panel_neighbours
+                )
+                                
+        elif len(mesh.shell_neighbours[panel.id])>4:
+                            
+            neighbours_ids = []
+            i = 4
+            
+            if mesh.shell_neighbours[panel.id][0] == -1:
+                is_neighbour_1 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+                i = i + 1
+            else:
+                is_neighbour_1 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][0])
+                
+            if mesh.shell_neighbours[panel.id][1] == -1:
+                is_neighbour_2 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+                i = i + 1
+            else:
+                is_neighbour_2 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][1])
+                
+            if mesh.shell_neighbours[panel.id][2] == -1:
+                is_neighbour_3 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+                i = i + 1
+            else:
+                is_neighbour_3 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][2])
+                
+            if mesh.shell_neighbours[panel.id][3] == -1:
+                is_neighbour_4 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+            else:
+                is_neighbour_4 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][3])
+            
+            mesh.shell_neighbours[panel.id] = neighbours_ids
+            panel_neighbours = mesh.give_neighbours(panel)
+            
+            
+            panel.Velocity = VSAERO_panel_velocity(
+                V_fs, panel, panel_neighbours, is_neighbour_1,
+                is_neighbour_2, is_neighbour_3, is_neighbour_4
+            )
+                            
+        else:
+            # standard least squares method
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = panel_velocity(panel, panel_neighbours, V_fs)
+            
+        
+        # pressure coefficient calculation
+        panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
+  
 def body_induced_velocity(r_p, body_panels):
     # Velocity calculation with disturbance velocity functions
     
