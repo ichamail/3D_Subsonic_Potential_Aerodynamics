@@ -760,10 +760,10 @@ def VSAERO_onbody_analysis(V_fs:Vector, mesh:PanelAeroMesh):
         
         if len(mesh.shell_neighbours[panel.id])==4:
             # all 4 adjacent panels exist
-                panel_neighbours = mesh.give_neighbours(panel)
-                panel.Velocity = VSAERO_panel_velocity(
-                    V_fs, panel, panel_neighbours
-                )
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = VSAERO_panel_velocity(
+                V_fs, panel, panel_neighbours
+            )
                                 
         elif len(mesh.shell_neighbours[panel.id])>4:
                             
