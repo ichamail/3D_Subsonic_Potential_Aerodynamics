@@ -764,7 +764,6 @@ class Wing:
             y = np.zeros_like(x)
             z = np.zeros_like(x)
                         
-            C_root  = self.root_airfoil.chord
             
             for j in range(j_max+1):
                                 
