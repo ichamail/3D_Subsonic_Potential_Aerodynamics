@@ -320,41 +320,45 @@ class UnSteady_PanelMethod(PanelMethod):
 
         # compute Velocity and pressure coefficient at panels' control points
                
-        for panel in body_panels:
+        # for panel in body_panels:
             
-            v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
-            r_cp = panel.r_cp
-            v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
-            # V_wind - Vo = V_fs
-            # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
-            v = v.transformation(mesh.R.T)
+        #     v_rel = self.V_wind  # velocity relative to inertial frame (V_wind)
+        #     r_cp = panel.r_cp
+        #     v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+        #     # V_wind - Vo = V_fs
+        #     # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
+        #     v = v.transformation(mesh.R.T)
             
-            # Velocity caclulation with least squares approach (faster)
+        #     # Velocity caclulation with least squares approach (faster)
             
-            panel_neighbours = mesh.give_neighbours(panel)
-            panel.Velocity = panel_velocity(panel, panel_neighbours, v)
+        #     panel_neighbours = mesh.give_neighbours(panel)
+        #     panel.Velocity = panel_velocity(panel, panel_neighbours, v)
             
           
-            # Velocity calculation with disturbance velocity functions
+        #     # Velocity calculation with disturbance velocity functions
             
-            # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
-            # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
-            # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
-            # παρ' ότι πολύ πιο αργή
+        #     # Δεν δουλεύει αυτή η μέθοδος. Δεν μπορώ να καταλάβω γιατ΄ί
+        #     # Είναι πιο straight forward (σε αντίθεση με την παραπάνω μέθοδο
+        #     # που απαιτεί προσεγγιστική επίλυση των gradients της έντασης μ)
+        #     # παρ' ότι πολύ πιο αργή
             
-            # panel.Velocity = Velocity(v, panel.r_cp, body_panels,
-            #                           wake_panels)
+        #     # panel.Velocity = Velocity(v, panel.r_cp, body_panels,
+        #     #                           wake_panels)
             
-            # pressure coefficient calculation
-            # Katz & Plotkin eq. 13.168
+        #     # pressure coefficient calculation
+        #     # Katz & Plotkin eq. 13.168
             
-            panel.Cp = 1 - (panel.Velocity.norm()/v.norm())**2
+        #     panel.Cp = 1 - (panel.Velocity.norm()/v.norm())**2
             
-            # dφ/dt = dμ/dt
-            phi_dot = (panel.mu - doublet_strength_old[panel.id])/self.dt
+        #     # dφ/dt = dμ/dt
+        #     phi_dot = (panel.mu - doublet_strength_old[panel.id])/self.dt
             
-            panel.Cp = panel.Cp - 2 * phi_dot
-    
+        #     panel.Cp = panel.Cp - 2 * phi_dot
+
+        VSAERO_usteady_onbody_analysis(
+            self.V_wind, mesh, doublet_strength_old, self.dt
+        )
+        
     def solve(self, mesh:PanelAeroMesh, dt, iters):
         if self.triangular_wakePanels:
             type = "triangular"
@@ -817,7 +821,88 @@ def VSAERO_onbody_analysis(V_fs:Vector, mesh:PanelAeroMesh):
         
         # pressure coefficient calculation
         panel.Cp = 1 - (panel.Velocity.norm()/V_fs_norm)**2
-  
+
+def VSAERO_usteady_onbody_analysis(v_rel:Vector, mesh:PanelAeroMesh,
+                                   mu_previous:np.ndarray, dt:float):
+    
+    mesh.locate_VSAERO_adjacency()
+
+    body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+
+    for panel in body_panels:
+        
+        # v_rel velocity relative to inertial frame (V_wind)
+        r_cp = panel.r_cp
+        v = v_rel - (mesh.Vo + Vector.cross_product(mesh.omega, r_cp))
+        # V_wind - Vo = V_fs
+        # v = self.V_fs - Vector.cross_product(mesh.omega, r_cp)
+        v = v.transformation(mesh.R.T)
+        
+        if len(mesh.shell_neighbours[panel.id])==4:
+            # all 4 adjacent panels exist
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = VSAERO_panel_velocity(v, panel, panel_neighbours)
+
+        elif len(mesh.shell_neighbours[panel.id])>4:
+
+            neighbours_ids = []
+            i = 4
+
+            if mesh.shell_neighbours[panel.id][0] == -1:
+                is_neighbour_1 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+                i = i + 1
+            else:
+                is_neighbour_1 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][0])
+
+            if mesh.shell_neighbours[panel.id][1] == -1:
+                is_neighbour_2 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+                i = i + 1
+            else:
+                is_neighbour_2 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][1])
+
+            if mesh.shell_neighbours[panel.id][2] == -1:
+                is_neighbour_3 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+                i = i + 1
+            else:
+                is_neighbour_3 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][2])
+
+            if mesh.shell_neighbours[panel.id][3] == -1:
+                is_neighbour_4 = False
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][i])
+            else:
+                is_neighbour_4 = True
+                neighbours_ids.append(mesh.shell_neighbours[panel.id][3])
+
+            mesh.shell_neighbours[panel.id] = neighbours_ids
+            panel_neighbours = mesh.give_neighbours(panel)
+
+
+            panel.Velocity = VSAERO_panel_velocity(
+                v, panel, panel_neighbours, is_neighbour_1,
+                is_neighbour_2, is_neighbour_3, is_neighbour_4
+            )
+
+        else:
+            # standard least squares method
+            panel_neighbours = mesh.give_neighbours(panel)
+            panel.Velocity = panel_velocity(panel, panel_neighbours, v)
+
+        # pressure coefficient calculation
+        # Katz & Plotkin eq. 13.168
+        
+        panel.Cp = 1 - (panel.Velocity.norm()/v.norm())**2
+        
+        # dφ/dt = dμ/dt
+        phi_dot = (panel.mu - mu_previous[panel.id])/dt
+        
+        panel.Cp = panel.Cp - 2 * phi_dot
+ 
 def body_induced_velocity(r_p, body_panels):
     # Velocity calculation with disturbance velocity functions
     
