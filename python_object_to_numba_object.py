@@ -57,6 +57,11 @@ def pyObjToNumbaObj(pyObj):
         
     elif type(pyObj) == list:
         pyList = pyObj
+        
+        if len(pyList) == 0:
+            # special case only for panel methods
+            return typed.List.empty_list(types.int64) 
+         
         data = pyList[0]
         if type(data) == int:
             nbs = typed.List.empty_list(types.int64)
