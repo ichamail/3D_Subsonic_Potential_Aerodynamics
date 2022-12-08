@@ -462,11 +462,15 @@ class UnSteady_PanelMethod(PanelMethod):
         for i in range(iters):
             print(i)
             mesh.move_body(self.dt)
-            mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
-            self.advance_solution(mesh)
-            mesh.convect_wake(induced_velocity, dt)
             
-            # mesh.convect_wake(jit_induced_velocity, dt)
+            mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
+            
+            # mesh.ravel_wake(self.V_wind, self.dt, type)  # if shed factor = 1
+            
+            self.advance_solution(mesh)
+            
+            # mesh.convect_wake(induced_velocity, dt)  # not parallel
+            mesh.jit_convect_wake(jit_induced_velocity_function, dt) # parallel
             
             
             # mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
@@ -499,11 +503,15 @@ class UnSteady_PanelMethod(PanelMethod):
             print("iteration: " + str(i) + "\n")
             
             mesh.move_body(self.dt)
-            mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
+            
+            # mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
+            
+            mesh.ravel_wake(self.V_wind, self.dt, type)  # if shed factor = 1
+            
             self.advance_solution(mesh)
             
-            # mesh.convect_wake(induced_velocity, dt)
-            mesh.jit_convect_wake(jit_induced_velocity_function, dt)
+            # mesh.convect_wake(induced_velocity, dt)  # not parallel
+            mesh.jit_convect_wake(jit_induced_velocity_function, dt) # parallel
             
             CL = self.LiftCoeff(mesh, RefArea)
             CD = self.inducedDragCoeff(mesh, RefArea)
