@@ -1159,18 +1159,41 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             self.panels.append(Panel(vertex_array))
             
             self.panels[-1].id = shell_id
+    
+    def ravel_wake(self, v_rel, dt, type="quadrilateral"):
         
-    def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
+        """
+        Performs the same operation as shed_wake() but without using a sheding factor. With this method wake panels aren't streched
+        """
+        
         if self.panels_ids["wake"] == []:
+            
+            super().ravel_wake(v_rel, dt, type)
+            # self.add_wakePanels(type)
+            self.add_wakePanels_jit(type)
+        
+        else:
+            
+            self.move_panels(self.panels_ids["wake"], v_rel, dt)
+            super().ravel_wake(v_rel, dt, type) 
+            # self.add_wakePanels(type)
+            self.add_wakePanels_jit(type)
+    
+    def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
+        
+        if self.panels_ids["wake"] == []:
+            
             super().shed_wake(v_rel, dt, wake_shed_factor, type)
             # self.add_wakePanels(type)
             self.add_wakePanels_jit(type)
+                        
         else:
-            self.move_panels(self.panels_ids["wake"], v_rel, dt*wake_shed_factor)
-            super().shed_wake(v_rel, dt, wake_shed_factor, type)        
+                       
+            super().shed_wake(v_rel, dt, wake_shed_factor, type)
             # self.add_wakePanels(type)
             self.add_wakePanels_jit(type)
-   
+            self.update_wake_panel_vertices()
+     
     def convect_wake(self, induced_velocity_function, dt):
         
         # create velocity list 
