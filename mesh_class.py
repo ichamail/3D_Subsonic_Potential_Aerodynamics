@@ -580,44 +580,45 @@ class AeroMesh(Mesh):
     ### unsteady features  ###
     
     def initialize_wake_nodes(self):
-        num_TrailingEdge_nodes = len(self.nodes_ids["trailing edge"])
-        last_body_node_id = self.nodes_ids["body"][-1]
-        first_wake_node_id = last_body_node_id + 1
-        
-        for id in range(num_TrailingEdge_nodes):
-                self.nodes.append(self.nodes[id])
-                id = first_wake_node_id + id
-                self.nodes_ids["wake"].append(id)
-                
-        self.nodes_ids["wake lines"] = [
-            [id] for id in self.nodes_ids["wake"][-num_TrailingEdge_nodes:]
-        ]
-    
-    def add_wakeNodes(self):
-        num_TrailingEdge_nodes = len(self.nodes_ids["trailing edge"])
-        for id in range(num_TrailingEdge_nodes):
-            self.nodes.append(self.nodes[id])
-            id = self.nodes_ids["wake"][-1] + 1
-            self.nodes_ids["wake"].append(id)
-        
-        id_list = [
-            id for id in self.nodes_ids["wake"][-num_TrailingEdge_nodes:]
-        ]
-        
-        self.nodes_ids["wake lines"] = np.column_stack(
-            (self.nodes_ids["wake lines"], id_list)
+        new_nodes_ids_list = []
+        for id in self.nodes_ids['trailing edge']:
+            
+            new_node_id = len(self.nodes)
+            new_node = self.nodes[id]
+            
+            new_nodes_ids_list.append(new_node_id)
+            self.nodes.append(new_node)
+                        
+        self.nodes_ids["wake"] = new_nodes_ids_list
+                    
+        self.nodes_ids["wake lines"] = np.array(
+            [[id] for id in self.nodes_ids["wake"]]
         )
-         
+             
+    def add_wakeNodes(self):     
+        new_nodes_ids_list = []
+        
+        for id in self.nodes_ids['trailing edge']:
+            
+            new_node_id = self.nodes_ids["wake"][-1] + 1
+            new_node = self.nodes[id]  # new_node coords
+            
+            self.nodes.append(new_node)
+            self.nodes_ids["wake"].append(new_node_id)
+            
+            new_nodes_ids_list.append(new_node_id)
+            
+        self.nodes_ids["wake lines"] = np.column_stack(
+            (new_nodes_ids_list, self.nodes_ids["wake lines"])
+        )
+        
     def add_wakeShells(self, type="quadrilateral"):
-        
-        num_TrailingEdge_nodes = len(self.nodes_ids["trailing edge"])
-        first_id = self.nodes_ids["wake"][-1] + 1  - 2*num_TrailingEdge_nodes  
-        ny = num_TrailingEdge_nodes
-        
+                
         def node_id(chord_wise_index, span_wise_index):
             i = chord_wise_index
             j = span_wise_index
-            return first_id + j + i*ny
+                 
+            return self.nodes_ids["wake lines"][j][i]
             
         def add_shell(*node_ids, reverse_order=False):
             # node_id_list should be in counter clock wise order
@@ -637,16 +638,17 @@ class AeroMesh(Mesh):
             elif len(node_ids) == 3:
                 self.shells.append(list(node_ids))
                 
-                
+        ny = len(self.nodes_ids["trailing edge"])
+               
         if type=="quadrilateral":
             
             for j in range(ny-1):
                 
                 add_shell(
-                    node_id(0, j),
                     node_id(1, j),
-                    node_id(1, j+1),
-                    node_id(0, j+1)
+                    node_id(0, j),
+                    node_id(0, j+1),
+                    node_id(1, j+1)
                 )
                 
                 if self.shells_ids["wake"] == []:
@@ -665,17 +667,16 @@ class AeroMesh(Mesh):
                 key_id = self.TrailingEdge["suction side"][j]
                 self.wake_sheddingShells[key_id].append(value_list_id)
                 
-                        
         elif type=="triangular":
             
             # right side
             for j in range((ny-1)//2):
                 
                 add_shell(
-                    node_id(1, j),
                     node_id(1, j+1),
-                    node_id(0, j+1),
-                    node_id(0, j)
+                    node_id(1, j),
+                    node_id(0, j),
+                    node_id(0, j+1)
                 )
                 
                 if self.shells_ids["wake"] == []:
@@ -701,10 +702,10 @@ class AeroMesh(Mesh):
             for j in range((ny-1)//2, ny-1):
                 
                 add_shell(
-                    node_id(1, j+1),
-                    node_id(0, j+1),
+                    node_id(1, j),
                     node_id(0, j),
-                    node_id(1, j)
+                    node_id(0, j+1),
+                    node_id(1, j+1)
                 )
                                 
                 if self.shells_ids["wake"] == []:
@@ -726,26 +727,47 @@ class AeroMesh(Mesh):
                 self.wake_sheddingShells[key_id].append(value_list_id)
                 self.wake_sheddingShells[key_id].append(value_list_id+1)
     
+    def ravel_wake(self, v_rel, dt, type="quadrilateral"):
+        
+        """
+        Performs the same operation as shed_wake() but without using a sheding factor. With this method wake panels aren't streched
+        """
+        
+        if self.nodes_ids["wake"] == []:
+            self.initialize_wake_nodes()
+        
+        nodes_to_shed =  self.nodes_ids["wake lines"].flatten()
+        self.move_nodes(nodes_to_shed, v_rel, dt)
+        self.add_wakeNodes()
+        self.add_wakeShells(type)
+                     
     def shed_wake(self, v_rel, dt, wake_shed_factor=1, type="quadrilateral"):
                 
         if self.nodes_ids["wake"] == []:
             self.initialize_wake_nodes()
-                      
-        self.move_nodes(self.nodes_ids["wake"], v_rel, dt*wake_shed_factor)    
-        self.add_wakeNodes()
-        self.add_wakeShells(type)
-
-    def nodes_to_convect(self):
-        num_TrailingEdge_nodes = len(self.TrailingEdge["suction side"]) + 1
-        id_start = self.nodes_ids["wake"][0]
-        id_end = self.nodes_ids["wake"][-1] - num_TrailingEdge_nodes
-        
-        node_id_list = []
-        for id in range(id_start, id_end+1):
-            node_id_list.append(id)
-        
-        return node_id_list
             
+            nodes_to_shed =  self.nodes_ids["wake lines"].flatten()
+            self.move_nodes(nodes_to_shed, v_rel, dt*wake_shed_factor)
+            
+            self.add_wakeNodes()
+            self.add_wakeShells(type)
+            
+        else:
+            
+            nodes_to_shed =  self.nodes_ids["wake lines"][:, 0].flatten()
+            self.move_nodes(nodes_to_shed, v_rel, dt*wake_shed_factor)
+            
+            nodes_to_shed =  self.nodes_ids["wake lines"][:, 1:].flatten()
+            self.move_nodes(nodes_to_shed, v_rel, dt)
+            
+            self.add_wakeNodes()
+            self.add_wakeShells(type)
+    
+    def nodes_to_convect(self):
+        nodes_to_convect = self.nodes_ids["wake lines"][:, 1:].flatten()
+        node_id_list = list(nodes_to_convect)
+        return node_id_list
+           
     def convect_wake(self, velocity_list, dt):
         node_id_list = self.nodes_to_convect()
         self.convect_nodes(node_id_list, velocity_list, dt)
