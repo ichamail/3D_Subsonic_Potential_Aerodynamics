@@ -208,6 +208,72 @@ class Steady_PanelMethod(PanelMethod):
                 
         return A, B, C
 
+    def solve_iteratively(self, mesh:PanelAeroMesh, RefArea, dt, max_iters,
+                          convergence_value = 10**(-5)):
+                
+        ny, nx = mesh.nodes_ids["wake lines"].shape
+        CL_prev, CD_prev = 0, 0
+        
+        for it in range(max_iters-1):
+            
+            print("iteration: ", it)
+            
+            self.solve(mesh)
+            
+            body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+            wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
+            old_nodes = mesh.nodes.copy()
+            for j in range(nx-1):
+                for i in range(ny):
+                    node_id = mesh.nodes_ids["wake lines"][i][j]
+                    r = Vector(old_nodes[node_id])
+                    v = Velocity(self.V_fs, r, body_panels, wake_panels)
+                    dr = v * dt
+                    r = r + dr
+                    node_id = mesh.nodes_ids["wake lines"][i][j+1]
+                    mesh.nodes[node_id] = (r.x, r.y, r.z)
+            
+            mesh.update_wake_panel_vertices()
+            
+            
+            CL = self.LiftCoeff(mesh.panels, RefArea)
+            CD = self.inducedDragCoeff(mesh.panels, RefArea)
+            
+            print("CL = " + str(CL) + ",  CD = " + str(CD) + "\n")
+            
+            dCL_dt = (CL-CL_prev)/dt
+            dCD_dt = (CD-CD_prev)/dt
+            
+            print("dCL/dt = " + str(dCL_dt) +
+                  ",  dCD/dt = " + str(dCD_dt) + "\n")
+                      
+            
+            # reset panel strengths
+            for panel in mesh.panels:
+                panel.sigma, panel.mu, panel.Cp = 0.0, 0.0, 0.0
+                panel.Velocity = Vector((0.0, 0.0, 0.0))
+                        
+            if ( abs(dCL_dt) <= convergence_value
+                and abs(dCD_dt) <= convergence_value ):
+                
+                print("solution converged \n")
+                
+                break
+            
+            CL_prev, CD_prev = CL, CD
+        
+        print("final iteration: ", it+1)
+        self.solve(mesh)
+        
+        CL = self.LiftCoeff(mesh.panels, RefArea)
+        CD = self.inducedDragCoeff(mesh.panels, RefArea)
+        
+        print("CL = " + str(CL) + ",  CD = " + str(CD) + "\n")
+        
+        mesh.plot_mesh_bodyfixed_frame(
+            elevation=-150, azimuth=-120, plot_wake=True
+        )
+
 
 class UnSteady_PanelMethod(PanelMethod):
     

@@ -46,9 +46,13 @@ panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
 
 t_start = time.time()        
 panel_method.solve(wing_mesh)
+# panel_method.solve_iteratively(wing_mesh, wing.RefArea, dt=0.2,
+#                                max_iters=2, convergence_value=10**(-3))
 t_end = time.time()
 solution_time = t_end-t_start
 print("solution time = " + str(solution_time))
+
+
 
 ################ Results ###############
 
