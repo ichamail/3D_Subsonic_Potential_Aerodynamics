@@ -353,10 +353,7 @@ class Steady_PanelMethod(PanelMethod):
             
             print("dCL/dt = " + str(dCL_dt) +
                   ",  dCD/dt = " + str(dCD_dt) + "\n")
-            
-            
-            CL_prev, CD_prev = CL, CD
-            
+                      
             
             # reset panel strengths
             for panel in mesh.panels:
@@ -370,6 +367,7 @@ class Steady_PanelMethod(PanelMethod):
                 
                 break
             
+            CL_prev, CD_prev = CL, CD
         
         print("final iteration: ", it+1)
         self.solve(mesh)
