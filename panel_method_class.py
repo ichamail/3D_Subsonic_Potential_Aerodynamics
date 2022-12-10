@@ -294,9 +294,8 @@ class Steady_PanelMethod(PanelMethod):
                     
         return A, B, C
 
-
     def solve_iteratively(self, mesh:PanelAeroMesh, RefArea, dt, max_iters,
-                          convergence_value = 10**(-7)):
+                          convergence_value = 10**(-5)):
                 
         ny, nx = mesh.nodes_ids["wake lines"].shape
         CL_prev, CD_prev = 0, 0
@@ -378,7 +377,6 @@ class Steady_PanelMethod(PanelMethod):
         mesh.plot_mesh_bodyfixed_frame(
             elevation=-150, azimuth=-120, plot_wake=True
         )
-        
         
 
 class UnSteady_PanelMethod(PanelMethod):
