@@ -1211,7 +1211,8 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         super().convect_wake(velocity_list, dt)
         
         # update panel vertices' location
-        self.update_wake_panel_vertices()
+        # self.update_wake_panel_vertices()
+        self.jit_update_wake_panel_vertices()
     
     def jit_convect_wake(self, jit_induced_velocity_function, dt):
         
@@ -1238,7 +1239,7 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         for shell_id in self.shells_ids["wake"]:
             shell = self.shells[shell_id]          
             vertex_list = [Vector(self.nodes[node_id]) for node_id in shell]
-            typed.List(vertex_list)
+            vertex_list = typed.List(vertex_list)
             self.panels[shell_id].update_vertices_location(vertex_list)
          
     def plot_mesh_inertial_frame(self, elevation=30, azimuth=-60,
