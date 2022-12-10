@@ -14,7 +14,7 @@ wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
 
 # generate wing mesh
 num_x_bodyShells = 10
-num_x_wakeShells = 15
+num_x_wakeShells = 50
 num_y_Shells = 10
 
 nodes, shells, nodes_ids = wing.generate_mesh(
@@ -31,30 +31,33 @@ wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
 
 # nodes, shells, nodes_ids = wing.generate_mesh2(
 #     num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
 #     mesh_shell_type="quadrilateral",
 #     mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
-#     num_x_wake_shells=num_x_wakeShells, V_fs=V_fs,
+#     num_x_wake_shells=num_x_wakeShells, V_fs=panel_method.V_fs,
 #     standard_mesh_format=False 
 # )
 
 # wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 # wing_mesh.plot_panels(elevation=-150, azimuth=-120)
 
-t_start = perf_counter()        
-panel_method.solve(wing_mesh.copy())
-t_end = perf_counter()
-solution_time = t_end-t_start
-print("solution time + compile time = " + str(solution_time))
+# t_start = perf_counter()        
+# panel_method.solve(wing_mesh.copy())
+# t_end = perf_counter()
+# solution_time = t_end-t_start
+# print("solution time + compile time = " + str(solution_time))
 
-t_start = perf_counter()        
-panel_method.solve(wing_mesh)
-t_end = perf_counter()
-solution_time = t_end-t_start
-print("solution time = " + str(solution_time))
+# t_start = perf_counter()        
+# panel_method.solve(wing_mesh)
+# t_end = perf_counter()
+# solution_time = t_end-t_start
+# print("solution time = " + str(solution_time))
+
+
+panel_method.solve_iteratively(wing_mesh, wing.RefArea, 0.2, 50)
 
 ################ Results ###############
 
