@@ -27,7 +27,7 @@ def Src_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
         v = 0
         w = 0.5 * panel.sigma
         
-    elif r.z == 0:
+    elif r.z == 0 or abs(r.z) <= 10**(-12):
         point = (r.x, r.y)  
         polygon = [(r_vertex[i].x, r_vertex[i].y) for i in range(n)]
         
@@ -144,7 +144,7 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
         w = ( -1/(4*np.pi) * panel.mu * panel.area 
              * (r.x**2 + r.y**2 - 2 * r.z**2)/(r.norm()**5))
         
-    elif r.z == 0 and is_inside_polygon(polygon, point):
+    elif r.z==0 or abs(r.z)<=10**(-12) and is_inside_polygon(polygon, point):
         u = 0
         v = 0
         
