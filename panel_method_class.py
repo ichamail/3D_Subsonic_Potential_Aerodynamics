@@ -7,7 +7,6 @@ from Algorithms import LeastSquares
 from numba import typed, jit, prange
 from python_object_to_numba_object import pyObjToNumbaObj
 
-
 class PanelMethod:
     
     def __init__(self, V_freestream):
@@ -296,6 +295,92 @@ class Steady_PanelMethod(PanelMethod):
         return A, B, C
 
 
+    def solve_iteratively(self, mesh:PanelAeroMesh, RefArea, dt, max_iters,
+                          convergence_value = 10**(-7)):
+                
+        ny, nx = mesh.nodes_ids["wake lines"].shape
+        CL_prev, CD_prev = 0, 0
+        
+        for it in range(max_iters-1):
+            
+            print("iteration: ", it)
+            
+            self.solve(mesh)
+            
+            # Parallel = False
+            # body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+            # wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
+            # old_nodes = mesh.nodes.copy()
+            # for j in range(nx-1):
+            #     for i in range(ny):
+            #         node_id = mesh.nodes_ids["wake lines"][i][j]
+            #         r = Vector(old_nodes[node_id])
+            #         v = Velocity(self.V_fs, r, body_panels, wake_panels)
+            #         dr = v * dt
+            #         r = r + dr
+            #         node_id = mesh.nodes_ids["wake lines"][i][j+1]
+            #         mesh.nodes[node_id] = (r.x, r.y, r.z)
+            
+            
+            # Parallel = True
+            r_list = [
+                Vector(mesh.nodes[mesh.nodes_ids["wake lines"][i][j]])
+                for j in range(nx-1) for i in range(ny)
+            ]
+
+            velocity_list = jit_induced_velocity_function(r_list, mesh.panels)
+            
+            k = 0        
+            for j in range(nx-1):
+                for i in range(ny):
+                    r = r_list[k]
+                    dr = (velocity_list[k] + self.V_fs) * dt
+                    r = r + dr
+                    node_id = mesh.nodes_ids["wake lines"][i][j+1]
+                    mesh.nodes[node_id] = (r.x, r.y, r.z)
+                    
+                    k = k + 1
+            
+            mesh.jit_update_wake_panel_vertices()
+            
+            
+            CL = self.LiftCoeff(mesh.panels, RefArea)
+            CD = self.inducedDragCoeff(mesh.panels, RefArea)
+            
+            print("CL = " + str(CL) + ",  CD = " + str(CD) + "\n")
+            
+            dCL_dt = (CL-CL_prev)/dt
+            dCD_dt = (CD-CD_prev)/dt
+            
+            print("dCL/dt = " + str(dCL_dt) +
+                  ",  dCD/dt = " + str(dCD_dt) + "\n")
+            
+            
+            CL_prev, CD_prev = CL, CD
+            
+            
+            # reset panel strengths
+            for panel in mesh.panels:
+                panel.sigma, panel.mu, panel.Cp = 0.0, 0.0, 0.0
+                panel.Velocity = Vector((0.0, 0.0, 0.0))
+                        
+            if ( abs(dCL_dt) <= convergence_value
+                and abs(dCD_dt) <= convergence_value ):
+                
+                print("solution converged \n")
+                
+                break
+            
+        
+        print("final iteration: ", it+1)
+        self.solve(mesh)
+        
+        mesh.plot_mesh_bodyfixed_frame(
+            elevation=-150, azimuth=-120, plot_wake=True
+        )
+        
+        
+
 class UnSteady_PanelMethod(PanelMethod):
     
     def __init__(self, V_wind=Vector((0, 0, 0))):
@@ -464,7 +549,6 @@ class UnSteady_PanelMethod(PanelMethod):
             mesh.move_body(self.dt)
             
             mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
-            
             # mesh.ravel_wake(self.V_wind, self.dt, type)  # if shed factor = 1
             
             self.advance_solution(mesh)
@@ -504,9 +588,8 @@ class UnSteady_PanelMethod(PanelMethod):
             
             mesh.move_body(self.dt)
             
-            # mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
-            
-            mesh.ravel_wake(self.V_wind, self.dt, type)  # if shed factor = 1
+            mesh.shed_wake(self.V_wind, self.dt, self.wake_shed_factor, type)
+            # mesh.ravel_wake(self.V_wind, self.dt, type)  # if shed factor = 1
             
             self.advance_solution(mesh)
             
@@ -1089,6 +1172,9 @@ def body_induced_velocity(r_p, body_panels):
     velocity = Vector((0, 0, 0))
     
     for panel in body_panels:
+        
+        
+        Src_disturb_velocity(r_p, panel)
         
         # Doublet panels
         velocity = (velocity
