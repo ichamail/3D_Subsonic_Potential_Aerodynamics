@@ -1102,7 +1102,65 @@ def Center_of_Pressure(body_panels, ReferenceArea):
     r_cop = Vector.cross_product(CF, Cm) / CF.norm()**2 + k*CF
     
     return r_cop
+
+def Trefftz_Plane_Analysis(mesh:PanelAeroMesh, V_fs:Vector, RefArea:float):
+    
+    """
+    CL and CD computed in Trefftz plane.
+    Calculations are based on xflr5's function PanelAnalysis::panelTrefftz()
+    """
+    
+    CL = 0
+    CD = 0
+    CF = Vector((0, 0, 0))
+    
+    ny, nx = mesh.nodes_ids["wake lines"].shape
+    
+    j_max = nx - 1
+    
+    r = [
+        Vector(mesh.nodes[mesh.nodes_ids["wake lines"][i][j_max]])
+        for i in range(ny)
+    ]
+    
+    r_c = [(r[i] + r[i+1])/2 for i in range(len(r)-1)]
+    
+    body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+    wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
+    
+    v_induced = [induced_velocity(r_c[i], body_panels, wake_panels)]
+    
+    # panel's bound vortex vector. Check xflr5's Panel class
+    vortex = [r[i+1] - r[i] for i in range(len(r)-1)] 
+    
+    for i in range(len(r_c)):
         
+        panel_id = mesh.wake_sheddingPanels[
+            mesh.TrailingEdge["suction side"][i]
+        ][-1]
+        
+        panel = mesh.panels[panel_id]
+        
+        w_i = v_induced[i] + V_fs
+        
+        CF = CF + Vector.cross_product(w_i, vortex[i]) * panel.mu
+        
+        # CF = CF + Vector.cross_product(vortex[i], w_i) * panel.mu
+        
+    CF = CF / (0.5 * V_fs.norm()**2 * RefArea)
+    
+    CD = CF * (V_fs/V_fs.norm())
+    
+    CL_vec = CF - CD * V_fs/V_fs.norm()
+    
+    if CL_vec.z <=0:
+        CL = CL_vec.norm()
+    else:
+        CL = -CL_vec.norm()
+
+    return CL, CD
+
+       
 if __name__ == "__main__":
     from mesh_class import PanelMesh
     from sphere import sphere
