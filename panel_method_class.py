@@ -1128,7 +1128,10 @@ def Trefftz_Plane_Analysis(mesh:PanelAeroMesh, V_fs:Vector, RefArea:float):
     body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
     wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
     
-    v_induced = [induced_velocity(r_c[i], body_panels, wake_panels)]
+    v_induced = [
+        induced_velocity(r_c[i], body_panels, wake_panels) 
+        for i in range(len(r_c))
+    ]
     
     # panel's bound vortex vector. Check xflr5's Panel class
     vortex = [r[i+1] - r[i] for i in range(len(r)-1)] 
