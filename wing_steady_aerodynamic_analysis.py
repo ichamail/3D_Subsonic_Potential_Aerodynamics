@@ -86,7 +86,7 @@ csv_params_row_list = [
     [],
     ["Mesh"],
     ["x body-shells:", n_x, "spacing:", "cosine"],
-    ["y shells:", n_y, "spacing:", "spacing"],
+    ["y shells:", n_y, "spacing:", spacing],
     ["x wake-shells:", nw_x],
     ["shell type:", shell_type],
     ["number of body shells:",
