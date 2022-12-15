@@ -14,37 +14,36 @@ wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
 
 # generate wing mesh
 num_x_bodyShells = 10
-num_x_wakeShells = 100
+num_x_wakeShells = 50
 num_y_Shells = 10
 
-# nodes, shells, nodes_ids = wing.generate_mesh(
-#     num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
-#     mesh_shell_type="quadrilateral",
-#     mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
-#     num_x_wake_shells=num_x_wakeShells, standard_mesh_format=False 
-# )
+nodes, shells, nodes_ids = wing.generate_mesh(
+    num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+    mesh_shell_type="quadrilateral", span_wise_spacing="cosine",
+    mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
+    num_x_wake_shells=num_x_wakeShells, standard_mesh_format=False 
+)
 
-# wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
-
-# wing_mesh.plot_panels(elevation=-150, azimuth=-120)
+wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
+wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
+                                    plot_wake=True)
 
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=5, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=10, SideslipAngle=0)
 
-nodes, shells, nodes_ids = wing.generate_mesh2(
-    num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
-    mesh_shell_type="quadrilateral", span_wise_spacing="cosine",
-    mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
-    num_x_wake_shells=num_x_wakeShells, V_fs=panel_method.V_fs,
-    standard_mesh_format=False 
-)
+# nodes, shells, nodes_ids = wing.generate_mesh2(
+#     num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+#     mesh_shell_type="quadrilateral", span_wise_spacing="cosine",
+#     mesh_main_surface=True, mesh_tips=True, mesh_wake=True, 
+#     num_x_wake_shells=num_x_wakeShells, V_fs=panel_method.V_fs,
+#     standard_mesh_format=False 
+# )
 
-wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
-# wing_mesh.plot_panels(elevation=-150, azimuth=-120)
-wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
-                                    plot_wake=True)
+# wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
+# wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150, azimuth=-120,
+#                                     plot_wake=True)
 
 # t_start = perf_counter()        
 # panel_method.solve(wing_mesh.copy())
@@ -87,9 +86,9 @@ CD = panel_method.inducedDragCoeff(body_panels, wing.RefArea)
 print("CL = " + str(CL))
 print("CD = " + str(CD))
 
-CL_trefftz, CD_trefftz = Trefftz_Plane_Analysis(
-    wing_mesh, panel_method.V_fs, wing.RefArea
-)
+# CL_trefftz, CD_trefftz = Trefftz_Plane_Analysis(
+#     wing_mesh, panel_method.V_fs, wing.RefArea
+# )
 
-print("trefftz plane CL = " + str(CL_trefftz))
-print("trefftz plane CD = " + str(CD_trefftz))
+# print("trefftz plane CL = " + str(CL_trefftz))
+# print("trefftz plane CD = " + str(CD_trefftz))
