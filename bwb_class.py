@@ -743,54 +743,64 @@ if __name__=="__main__":
     from mesh_class import PanelMesh, PanelAeroMesh
     
     
-    # bwb = BWB(name = "first try",
-    #           wingXsection_list = [
-    #               WingCrossSection(
-    #               r_leadingEdge=Vector((0, -1, 0)),
-    #               chord=1,
-    #               twist=0,
-    #               airfoil=Airfoil(name="naca0018_new")),
-                  
-    #               WingCrossSection(
-    #               r_leadingEdge=Vector((0, -0.5, 0)),
-    #               chord=1,
-    #               twist=0,
-    #               airfoil=Airfoil(name="naca0018_new")),
-                  
-    #               WingCrossSection(
-    #               r_leadingEdge=Vector((0, 0.5, 0)),
-    #               chord=1,
-    #               twist=0,
-    #               airfoil=Airfoil(name="naca0018_new")),
-                  
-    #               WingCrossSection(
-    #               r_leadingEdge=Vector((0, 1, 0)),
-    #               chord=1,
-    #               twist=0,
-    #               airfoil=Airfoil(name="naca0018_new"))
-    #                                     ]
-    #           )
+    bwb = BWB(
+        name = "first try",
+        wingXsection_list = [
+            WingCrossSection(
+                r_leadingEdge=Vector((0, -1, 0)),
+                chord=1,
+                twist=0,
+                airfoil=Airfoil(name="naca0012_new")
+            ),
+            
+            WingCrossSection(
+                r_leadingEdge=Vector((0, -0.5, 0)),
+                chord=1,
+                twist=0,
+                airfoil=Airfoil(name="naca0018_new")
+            ),
+            
+            WingCrossSection(
+                r_leadingEdge=Vector((0, 0.5, 0)),
+                chord=1,
+                twist=0,
+                airfoil=Airfoil(name="naca0018_new")
+            ),
+            
+            WingCrossSection(
+                r_leadingEdge=Vector((0, 1, 0)),
+                chord=1,
+                twist=0,
+                airfoil=Airfoil(name="naca0012_new")
+            )
+        ]
+    )
     
-    # nodes, shells = bwb.mesh_body(5, 1)
+    # bwb.subdivide_spanwise_sections(5)
     
-    # bwb_mesh = PanelMesh(nodes, shells)
-    # bwb_mesh.plot_mesh_inertial_frame(elevation=-150,azimuth=-120)
+    nodes, shells = bwb.mesh_body(5, 1)
+    
+    bwb_mesh = PanelMesh(nodes, shells)
+    bwb_mesh.plot_mesh_inertial_frame(elevation=-150,azimuth=-120)
     
     
     # test wing class and meshing
     
-    wing = Wing(name="random",
-                root_airfoil=Airfoil(name="naca0012_new", chord_length=1),
-                tip_airfoil=Airfoil(name="naca0012_new", chord_length=1),
-                half_span=1, sweep_angle=0, dihedral_angle=0, twist_angle=0)
+    wing = Wing(
+        name="random",
+        root_airfoil=Airfoil(name="naca0012_new", chord_length=1),
+        tip_airfoil=Airfoil(name="naca0012_new", chord_length=1),
+        half_span=1, sweep_angle=0, dihedral_angle=0, twist_angle=0
+    )
     
     nodes, shells, nodes_id = wing.mesh_body(
         5, 1, mesh_wake=True, wake_resolution=3, standard_mesh_format=False,
-        shellType="quads")
+        shellType="quads"
+    )
     
     
     wing_mesh = PanelAeroMesh(nodes, shells, nodes_id)
         
     wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
-                                       plot_wake=True)
+                                       plot_wake=False)
     
