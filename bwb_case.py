@@ -9,18 +9,6 @@ from plot_functions import plot_Cp_SurfaceContours
 from matplotlib import pyplot as plt
 
 
-def load_airfoil(filePath, fileName, header_lines=1):
-        
-    # Load the data from the text file
-    fileName = filePath + fileName
-    dataBuffer = np.loadtxt(fileName, delimiter=' ', skiprows=header_lines)
-    
-    # Extract data from the loaded dataBuffer array
-    dataX = np.asarray(dataBuffer[:,0])
-    dataY = np.asarray(dataBuffer[:,1])
-    
-    return dataX, dataY
-
 def BWB_reader(filePath, fileName):
     fileName = filePath + fileName
 
