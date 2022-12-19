@@ -275,7 +275,7 @@ class BWB:
     def mesh_body(self, ChordWise_resolution, SpanWise_resolution,
                   SpanWise_spacing="uniform", shellType="quads",
                   mesh_main_surface=True, mesh_tips=True,
-                  mesh_wake=False, wake_resolution=10, standard_mesh_format=True):
+                  mesh_wake=False, wake_resolution=10, planar_wake=False,V_fs=Vector((1,0,0)), standard_mesh_format=True):
         
         for wingXsection in self.wingXsection_list:
             wingXsection.airfoil.new_x_spacing2(ChordWise_resolution)
@@ -480,26 +480,46 @@ class BWB:
             C_root = max([wingXsection.chord
                               for wingXsection in self.wingXsection_list])
             
-            for j in range(j_max+1):
+            if not planar_wake:
                 
-                components = tuple(nodes[node_id(0, j)] - nodes[node_id(1, j)])
-                vec1 = Vector(components)
+                for j in range(j_max+1):
+                    
+                    components = tuple(nodes[node_id(0, j)] - nodes[node_id(1, j)])
+                    vec1 = Vector(components)
+                    
+                    components = tuple(nodes[node_id(i_max, j)]
+                                    - nodes[node_id(i_max - 1, j)])
+                    vec2 = Vector(components)
+                    
+                    bisector = vec1+vec2
+                    
+                    bisector = bisector/bisector.norm()
+                    
+                    bisector = bisector * C_root * 10
+                    
+                    (x0, y0, z0) = nodes[node_id(0, j)]
+                    x[:, j] = np.linspace(
+                        x0, x0 + bisector.x, wake_resolution+1
+                    )
+                    y[:, j] = np.linspace(
+                        y0, y0 + bisector.y, wake_resolution+1
+                    )
+                    z[:, j] = np.linspace(
+                        z0, z0 + bisector.z, wake_resolution+1
+                    )
                 
-                components = tuple(nodes[node_id(i_max, j)]
-                                   - nodes[node_id(i_max - 1, j)])
-                vec2 = Vector(components)
+            else:
+                wake_direction_unit_vec = V_fs/V_fs.norm()
+                max_chord = max(
+                    [Xsection.chord for Xsection in self.wingXsection_list]
+                )
+                vec = wake_direction_unit_vec * 10 * max_chord 
                 
-                bisector = vec1+vec2
-                
-                bisector = bisector/bisector.norm()
-                
-                bisector = bisector * C_root * 10
-                
-                (x0, y0, z0) = nodes[node_id(0, j)]
-                x[:, j] = np.linspace(x0, x0 + bisector.x, wake_resolution+1)
-                y[:, j] = np.linspace(y0, y0 + bisector.y, wake_resolution+1)
-                z[:, j] = np.linspace(z0, z0 + bisector.z, wake_resolution+1)
-            
+                for j in range(j_max+1):
+                    (x0, y0, z0) = nodes[node_id(0, j)]
+                    x[:, j] = np.linspace(x0, x0 + vec.x, wake_resolution+1)
+                    y[:, j] = np.linspace(y0, y0 + vec.y, wake_resolution+1)
+                    z[:, j] = np.linspace(z0, z0 + vec.z, wake_resolution+1)
             
             num_body_nodes = len(nodes)
             for i in range(1, wake_resolution+1):
