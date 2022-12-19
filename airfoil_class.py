@@ -7,7 +7,7 @@ class Airfoil:
     filePath="coord_seligFmt/"
     
     def __init__(self, name:str, chord_length:float=1,
-                 x_coords = None, y_coords = None):
+                 x_coords = None, y_coords = None, CCW_order=True):
         
         self.name = name
         self.chord = chord_length
@@ -18,6 +18,9 @@ class Airfoil:
         else:   
             self.x_coords =  np.asarray(x_coords)
             self.y_coords = np.asarray(y_coords)
+        
+        if not CCW_order:
+            self.invert_coords_order()
     
     def get_from_data_base(self):
         
@@ -32,7 +35,24 @@ class Airfoil:
     def give_pressureSide(self):
         index = np.where(self.x_coords==self.x_coords.min())[0][0]
         return self.x_coords[index:], self.y_coords[index:]
+    
+    def invert_coords_order(self):
         
+        self.x_coords = np.array(
+            [self.x_coords[-i] for i in range(len(self.x_coords))]
+        )
+        
+        self.y_coords = np.array(
+            [self.y_coords[-i] for i in range(len(self.y_coords))]
+        )
+    
+    def close_trailing_edge(self):
+        if (self.x_coords[0] != self.x_coords[-1] 
+            and self.y_coords[0] != self.y_coords[-1]):
+            
+            self.x_coords = np.append(self.x_coords, self.x_coords[0])
+            self.y_coords = np.append(self.y_coords, self.y_coords[0])
+    
     @staticmethod
     def load_airfoil(filePath, fileName, header_lines=1):
         
