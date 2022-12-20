@@ -278,7 +278,7 @@ class BWB:
                   mesh_wake=False, wake_resolution=10, planar_wake=False,V_fs=Vector((1,0,0)), standard_mesh_format=True):
         
         for wingXsection in self.wingXsection_list:
-            wingXsection.airfoil.new_x_spacing2(ChordWise_resolution)
+            wingXsection.airfoil.repanel(ChordWise_resolution+1)
         
         x_perc = np.array([wingXsection.airfoil.x_coords
                            for wingXsection

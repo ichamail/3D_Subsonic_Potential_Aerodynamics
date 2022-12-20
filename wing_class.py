@@ -43,9 +43,9 @@ class Wing:
         self.RefArea = ref_area
         
     def new_x_spacing(self, num_x_points):
-        self.root_airfoil.new_x_spacing2(num_x_points)
-        self.tip_airfoil.new_x_spacing2(num_x_points)       
-
+        self.root_airfoil.repanel(num_x_points+1)
+        self.tip_airfoil.repanel(num_x_points+1)  
+        
     def generate_mesh(self, num_x_shells:int, num_y_shells:int,
                       span_wise_spacing = "uniform",
                       mesh_shell_type:str="quadrilateral",
@@ -1005,4 +1005,4 @@ if __name__=="__main__":
     )
     
     wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
-    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120, plot_wake=True) 
+    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120, plot_wake=False) 
