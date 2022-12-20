@@ -43,8 +43,8 @@ class Wing:
         self.RefArea = ref_area
         
     def new_x_spacing(self, num_x_points):
-        self.root_airfoil.new_x_spacing2(num_x_points)
-        self.tip_airfoil.new_x_spacing2(num_x_points)       
+        self.root_airfoil.repanel(num_x_points+1)
+        self.tip_airfoil.repanel(num_x_points+1)       
 
     def generate_mesh(self, num_x_shells:int, num_y_shells:int,
                            mesh_shell_type:str="quadrilateral",

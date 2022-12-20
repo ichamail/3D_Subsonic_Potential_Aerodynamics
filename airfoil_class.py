@@ -1,5 +1,7 @@
 from matplotlib import pyplot as plt
 import numpy as np
+from scipy import interpolate
+from Algorithms import cosspace
 
 
 class Airfoil:
@@ -199,15 +201,53 @@ class Airfoil:
             PS_x, PS_y = self.new_pressureSide_x_spacing(quotient+remainder)
         
         self.x_coords = np.append(SS_x, PS_x[1:])
-        self.y_coords = np.append(SS_y, PS_y[1:])   
+        self.y_coords = np.append(SS_y, PS_y[1:])
+    
+    def repanel(self, n_points_per_side:int):
+        """
+        improved version of new_x_spacing() and new_x_spacing2()
+        """
+        
+        # upper and lower side coordinates
+        x_u, y_u = self.give_suctionSide()
+        x_l, y_l = self.give_pressureSide()
+        
+        # distances between coordinates
+        dr_u = np.sqrt( (x_u[:-1] - x_u[1:])**2 + (y_u[:-1] - y_u[1:])**2 )
+        dr_l = np.sqrt( (x_l[:-1] - x_l[1:])**2 + (y_l[:-1] - y_l[1:])**2 )
+        
+        # distances from trailing edge
+        dr_u = np.hstack((0, np.cumsum(dr_u)))
+        dr_l = np.hstack((0, np.cumsum(dr_l)))
+        
+        # normalize
+        dr_u = dr_u/dr_u[-1]
+        dr_l = dr_l/dr_l[-1]
+        
+        dr = np.hstack((dr_u, 1 + dr_l[1:]))
+        
+        # cosine-spaced list of points from 0 to 1
+        x = cosspace(0, 1, n_points_per_side)
+        s = np.hstack((x, 1 + x[1:]))
+        
+        # Check that there are no duplicate points in the airfoil.
+        if np.any(np.diff(dr))==0:
+            raise ValueError(
+                "This airfoil has a duplicated point (i.e. two adjacent points with the same (x, y) coordinates), so you can't repanel it!"
+            )
+        
+        self.x_coords = interpolate.PchipInterpolator(dr, self.x_coords)(s)
+        self.y_coords = interpolate.PchipInterpolator(dr, self.y_coords)(s)
+    
 
 if __name__=="__main__":
     name = "naca0012_new"
     chord = 2
     airfoil = Airfoil(name, chord)
     # airfoil.new_x_spacing(10)
-    airfoil.new_x_spacing2(5)
+    # airfoil.new_x_spacing2(5)
     # airfoil.new_x_spacing2(11, UpperLowerSpacing_equal=False)
     # print(airfoil.x_coords)
     # print(airfoil.y_coords)
+    airfoil.repanel(5+1)
     airfoil.plot()
