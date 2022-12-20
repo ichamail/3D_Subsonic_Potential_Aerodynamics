@@ -63,7 +63,7 @@ RX3 = BWB(
 
 panel_method = Steady_PanelMethod(V_freestream=Vector((0, 0, 0)))
 
-panel_method.set_V_fs(Velocity=1, AngleOfAttack=0, SideslipAngle=0)
+panel_method.set_V_fs(Velocity=1, AngleOfAttack=10, SideslipAngle=0)
 
 nodes, shells, nodes_ids = RX3.mesh_body(
     ChordWise_resolution=20,
@@ -82,7 +82,7 @@ nodes, shells, nodes_ids = RX3.mesh_body(
 rx3_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 rx3_mesh.plot_mesh_bodyfixed_frame(
-    elevation=-120, azimuth=-150, plot_wake=False
+    elevation=-120, azimuth=-150, plot_wake=True
 )
 
 panel_method.solve(rx3_mesh)
