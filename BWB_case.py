@@ -2,41 +2,11 @@ import numpy as np
 import csv
 from airfoil_class import Airfoil
 from vector_class import Vector
-from bwb_class import WingCrossSection, BWB
+from bwb_class import WingCrossSection, BWB, BWB_reader
 from mesh_class import PanelMesh, PanelAeroMesh
 from panel_method_class import Steady_PanelMethod, Trefftz_Plane_Analysis
 from plot_functions import plot_Cp_SurfaceContours
 from matplotlib import pyplot as plt
-
-
-def BWB_reader(filePath, fileName):
-    fileName = filePath + fileName
-
-    with open("BWB\BWB_X_sections_info") as csv_file:
-        csv_reader = csv.reader(csv_file, delimiter=",")              
-        data_list = [row for row in csv_reader]
-
-    data_dict = {
-        "airfoil name" : [data_list[i][0] for i in range(len(data_list))],
-        
-        "chord" : [
-            0.001 * float(data_list[i][1]) for i in range(len(data_list))
-        ],
-        
-        "leading edge coords" : [
-            (
-                0.001 * float(data_list[i][2]), 0.001 * float(data_list[i][3]),0.001 * float(data_list[i][4])
-            )
-            for i in range(len(data_list))
-        ],
-        
-        "twist" : [
-            float(data_list[i][5]) for i in range(len(data_list))
-        ]
-    }
-    
-    return data_dict
-
 
 
 data_dict = BWB_reader(filePath="BWB/" , fileName= "BWB_X_sections_info")

@@ -2,6 +2,7 @@ from airfoil_class import Airfoil
 from vector_class import Vector
 from Algorithms import DenserAtBoundaries, cosspace, interpolation
 import numpy as np
+import csv
 
 
 class WingCrossSection:
@@ -766,6 +767,36 @@ class Wing(BWB):
         return x 
      
 
+def BWB_reader(filePath, fileName):
+    fileName = filePath + fileName
+
+    with open("BWB\BWB_X_sections_info") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=",")              
+        data_list = [row for row in csv_reader]
+
+    data_dict = {
+        "airfoil name" : [data_list[i][0] for i in range(len(data_list))],
+        
+        "chord" : [
+            0.001 * float(data_list[i][1]) for i in range(len(data_list))
+        ],
+        
+        "leading edge coords" : [
+            (
+                0.001 * float(data_list[i][2]), 0.001 * float(data_list[i][3]),0.001 * float(data_list[i][4])
+            )
+            for i in range(len(data_list))
+        ],
+        
+        "twist" : [
+            float(data_list[i][5]) for i in range(len(data_list))
+        ]
+    }
+    
+    return data_dict
+
+
+
 if __name__=="__main__":
     from mesh_class import PanelMesh, PanelAeroMesh
     
@@ -831,3 +862,47 @@ if __name__=="__main__":
     wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
                                        plot_wake=False)
     
+    
+    # RX3 conceptual
+    data_dict = BWB_reader(filePath="BWB/" , fileName= "BWB_X_sections_info")
+    
+    # Change Airfoil's class, class atribute
+    Airfoil.filePath = "BWB/"
+    
+    RX3 = BWB(
+            name="RX3",
+            wingXsection_list=[
+                WingCrossSection(
+                    Vector(data_dict["leading edge coords"][id]),
+                    chord=data_dict["chord"][id],
+                    twist=data_dict["twist"][id],
+                    airfoil=Airfoil(
+                        name=data_dict["airfoil name"][id]
+                    )
+                )
+                
+                for id in range(len(data_dict["airfoil name"]))        
+            ]
+    )
+
+    RX3.subdivide_spanwise_sections(1, interpolation_type="linear")
+    
+    nodes, shells, nodes_ids = RX3.mesh_body(
+        ChordWise_resolution=20,
+        SpanWise_resolution=1,
+        SpanWise_spacing="uniform",
+        shellType="quads",
+        mesh_main_surface=True,
+        mesh_tips=True,
+        mesh_wake=True,
+        wake_resolution=1,
+        planar_wake=True,
+        V_fs=Vector((1, 0, 0)),
+        standard_mesh_format=False
+    )
+
+    rx3_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
+
+    rx3_mesh.plot_mesh_bodyfixed_frame(
+        elevation=-120, azimuth=-150, plot_wake=False
+    )
