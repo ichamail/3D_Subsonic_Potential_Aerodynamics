@@ -2,7 +2,7 @@ from airfoil_class import Airfoil
 from vector_class import Vector
 from Algorithms import DenserAtBoundaries, cosspace, interpolation
 import numpy as np
-
+import csv
 
 class WingCrossSection:
     
@@ -120,8 +120,10 @@ class WingCrossSection:
         return (r_p.x, r_p.y, r_p.z)
 
     @classmethod
-    def blend_WingCrossSections(cls, Xsection_0, Xsection_1, blend_fraction):
+    def blend_WingCrossSections(cls, Xsection_0, Xsection_1, blend_fraction,
+                                interpolation_type="linear"):
         
+        # interpolation_type = "linear" or "cubic"
                 
         Xsection_0_perc = 1 - blend_fraction
         Xsection_1_perc = blend_fraction
@@ -131,12 +133,12 @@ class WingCrossSection:
         
         
         x_coords = interpolation(
-            Xsection_0.airfoil.x_coords, Xsection_1.airfoil.x_coords, blend_fraction, type="linear" # or "cubic"
+            Xsection_0.airfoil.x_coords, Xsection_1.airfoil.x_coords, blend_fraction, type=interpolation_type
         )
         
         y_coords = interpolation(
             Xsection_0.airfoil.y_coords, Xsection_1.airfoil.y_coords,
-            blend_fraction, type="linear" # or "cubic"
+            blend_fraction, type=interpolation_type
         )
         
         # x_coords = Xsection_0_perc * Xsection_0.airfoil.x_coords \
@@ -149,17 +151,17 @@ class WingCrossSection:
         
         r_leadingEdge = interpolation(
             Xsection_0.r_leadingEdge, Xsection_1.r_leadingEdge,
-            blend_fraction, type="linear" # or "cubic" 
+            blend_fraction, type=interpolation_type
         )
         
         twist = interpolation(
-            Xsection_0.twist, Xsection_1.twist, blend_fraction, type="linear" 
-            # or "cubic" 
+            Xsection_0.twist, Xsection_1.twist, blend_fraction,
+            type=interpolation_type
         )
         
         chord = interpolation(
-            Xsection_0.chord, Xsection_1.chord, blend_fraction, type="linear"
-            # or "cubic"
+            Xsection_0.chord, Xsection_1.chord, blend_fraction,
+            type=interpolation_type
         )
         
         blended_Xsection = WingCrossSection(
@@ -173,7 +175,7 @@ class BWB:
     
     def __init__(self, name, wingXsection_list):
         self.name = name
-        self.wingXsection_list = wingXsection_list 
+        self.wingXsection_list = wingXsection_list
     
     def compute_wingXsection_coord(self, id, x_perc, y_perc):
         wing_cross_section = self.wingXsection_list[id]
@@ -637,7 +639,8 @@ class BWB:
         else:
             return nodes, shells, nodes_ids_dict
 
-    def subdivide_spanwise_sections(self, div_num:int):
+    def subdivide_spanwise_sections(self, div_num:int, interpol_type="linear"):
+        # interpolation_type="linear" or "cubic"
         new_Xsections = []
         spanwise_fractions = np.linspace(0, 1, div_num+2)
         
@@ -649,13 +652,14 @@ class BWB:
             for s in spanwise_fractions[1:-1]:    
                 new_Xsections.append(
                     WingCrossSection.blend_WingCrossSections(
-                        Xsection_0, Xsection_1, s
+                        Xsection_0, Xsection_1, s, interpol_type
                     )
                 )
         
         new_Xsections.append(Xsection_1)
         
         self.wingXsection_list = new_Xsections
+
 
 class Wing(BWB):
            
@@ -757,61 +761,137 @@ class Wing(BWB):
     def sweep(x, span_location, sweep_angle):
         x = x + abs(span_location) * np.tan(sweep_angle)
         return x 
-     
+
+
+def BWB_reader(filePath, fileName):
+    fileName = filePath + fileName
+
+    with open("BWB\BWB_X_sections_info") as csv_file:
+        csv_reader = csv.reader(csv_file, delimiter=",")              
+        data_list = [row for row in csv_reader]
+
+    data_dict = {
+        "airfoil name" : [data_list[i][0] for i in range(len(data_list))],
+        
+        "chord" : [
+            0.001 * float(data_list[i][1]) for i in range(len(data_list))
+        ],
+        
+        "leading edge coords" : [
+            (
+                0.001 * float(data_list[i][2]), 0.001 * float(data_list[i][3]),0.001 * float(data_list[i][4])
+            )
+            for i in range(len(data_list))
+        ],
+        
+        "twist" : [
+            float(data_list[i][5]) for i in range(len(data_list))
+        ]
+    }
+    
+    return data_dict
+    
 
 if __name__=="__main__":
     from mesh_class import PanelMesh, PanelAeroMesh
     
     
-    bwb = BWB(name = "first try",
-              wingXsection_list = [
-                  WingCrossSection(
-                  r_leadingEdge=Vector((0, -1, 0)),
-                  chord=1,
-                  twist=0,
-                  airfoil=Airfoil(name="naca0018_new")),
+    # bwb = BWB(name = "first try",
+    #           wingXsection_list = [
+    #               WingCrossSection(
+    #               r_leadingEdge=Vector((0, -1, 0)),
+    #               chord=1,
+    #               twist=0,
+    #               airfoil=Airfoil(name="naca0018_new")),
                   
-                  WingCrossSection(
-                  r_leadingEdge=Vector((0, -0.5, 0)),
-                  chord=1,
-                  twist=0,
-                  airfoil=Airfoil(name="naca0018_new")),
+    #               WingCrossSection(
+    #               r_leadingEdge=Vector((0, -0.5, 0)),
+    #               chord=1,
+    #               twist=0,
+    #               airfoil=Airfoil(name="naca0018_new")),
                   
-                  WingCrossSection(
-                  r_leadingEdge=Vector((0, 0.5, 0)),
-                  chord=1,
-                  twist=0,
-                  airfoil=Airfoil(name="naca0018_new")),
+    #               WingCrossSection(
+    #               r_leadingEdge=Vector((0, 0.5, 0)),
+    #               chord=1,
+    #               twist=0,
+    #               airfoil=Airfoil(name="naca0018_new")),
                   
-                  WingCrossSection(
-                  r_leadingEdge=Vector((0, 1, 0)),
-                  chord=1,
-                  twist=0,
-                  airfoil=Airfoil(name="naca0018_new"))
-                                        ]
-              )
+    #               WingCrossSection(
+    #               r_leadingEdge=Vector((0, 1, 0)),
+    #               chord=1,
+    #               twist=0,
+    #               airfoil=Airfoil(name="naca0018_new"))
+    #                                     ]
+    #           )
     
-    nodes, shells = bwb.mesh_body(5, 1)
+    # bwb.subdivide_spanwise_sections(3)
     
-    bwb_mesh = PanelMesh(nodes, shells)
-    bwb_mesh.plot_mesh_inertial_frame(elevation=-150,azimuth=-120)
+    # nodes, shells = bwb.mesh_body(5, 1)
     
-    
-    # test wing class and meshing
-    
-    wing = Wing(name="random",
-                root_airfoil=Airfoil(name="naca0012_new", chord_length=1),
-                tip_airfoil=Airfoil(name="naca0012_new", chord_length=1),
-                half_span=1, sweep_angle=0, dihedral_angle=0, twist_angle=0)
-    
-    nodes, shells, nodes_id = wing.mesh_body(
-        5, 1, mesh_wake=True, wake_resolution=3, standard_mesh_format=False,
-        shellType="quads")
+    # bwb_mesh = PanelMesh(nodes, shells)
+    # bwb_mesh.plot_mesh_inertial_frame(elevation=-150,azimuth=-120)
     
     
-    wing_mesh = PanelAeroMesh(nodes, shells, nodes_id)
+    # # test wing class and meshing
+    
+    # wing = Wing(name="random",
+    #             root_airfoil=Airfoil(name="naca0012_new", chord_length=1),
+    #             tip_airfoil=Airfoil(name="naca0012_new", chord_length=1),
+    #             half_span=1, sweep_angle=0, dihedral_angle=0, twist_angle=0)
+    
+    # nodes, shells, nodes_id = wing.mesh_body(
+    #     5, 1, mesh_wake=True, wake_resolution=3, standard_mesh_format=False,
+    #     shellType="quads")
+    
+    
+    # wing_mesh = PanelAeroMesh(nodes, shells, nodes_id)
         
-    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
-                                       plot_wake=True)
+    # wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120,
+    #                                    plot_wake=True)
     
     
+    # RX3 concept
+    
+    data_dict = BWB_reader(filePath="BWB/" , fileName= "BWB_X_sections_info")
+
+    # Change Airfoil's class, class atribute
+    Airfoil.filePath = "BWB/"
+
+    RX3 = BWB(
+        name="RX3",
+        wingXsection_list=[
+            WingCrossSection(
+                Vector(data_dict["leading edge coords"][id]),
+                chord=data_dict["chord"][id],
+                twist=data_dict["twist"][id],
+                airfoil=Airfoil(
+                    name=data_dict["airfoil name"][id]
+                )
+            )
+            
+            for id in range(len(data_dict["airfoil name"]))
+                
+        ]
+    )
+    
+    RX3.subdivide_spanwise_sections(1, interpol_type="linear")
+    
+    nodes, shells, nodes_ids = RX3.mesh_body(
+        ChordWise_resolution=20,
+        SpanWise_resolution=1,
+        SpanWise_spacing="uniform",
+        shellType="quads",
+        mesh_main_surface=True,
+        mesh_tips=True,
+        mesh_wake=True,
+        wake_resolution=1,
+        planar_wake=True,
+        V_fs=Vector((1, 0, 0)),
+        standard_mesh_format=False
+    )
+
+    rx3_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
+
+    rx3_mesh.plot_mesh_bodyfixed_frame(
+    elevation=-120, azimuth=-150, plot_wake=False
+    )

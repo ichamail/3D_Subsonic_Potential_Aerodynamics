@@ -9,7 +9,8 @@ class Airfoil:
     filePath="coord_seligFmt/"
     
     def __init__(self, name:str, chord_length:float=1,
-                 x_coords = None, y_coords = None, CCW_order=True):
+                 x_coords = None, y_coords = None,
+                 num_points=100, CCW_order=True):
         
         self.name = name
         self.chord = chord_length
@@ -23,7 +24,9 @@ class Airfoil:
         
         if not CCW_order:
             self.invert_coords_order()
-    
+
+        self.repanel(n_points_per_side=num_points)
+        
     def get_from_data_base(self):
         
         fileName = self.name + ".dat"
