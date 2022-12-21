@@ -120,8 +120,10 @@ class WingCrossSection:
         return (r_p.x, r_p.y, r_p.z)
 
     @classmethod
-    def blend_WingCrossSections(cls, Xsection_0, Xsection_1, blend_fraction):
+    def blend_WingCrossSections(cls, Xsection_0, Xsection_1, blend_fraction,
+                                interpolation_type="linear"):
         
+        # interpolation_type = "linear" or "cubic"
                 
         Xsection_0_perc = 1 - blend_fraction
         Xsection_1_perc = blend_fraction
@@ -131,12 +133,12 @@ class WingCrossSection:
         
         
         x_coords = interpolation(
-            Xsection_0.airfoil.x_coords, Xsection_1.airfoil.x_coords, blend_fraction, type="linear" # or "cubic"
+            Xsection_0.airfoil.x_coords, Xsection_1.airfoil.x_coords, blend_fraction, type=interpolation_type
         )
         
         y_coords = interpolation(
             Xsection_0.airfoil.y_coords, Xsection_1.airfoil.y_coords,
-            blend_fraction, type="linear" # or "cubic"
+            blend_fraction, type=interpolation_type
         )
         
         # x_coords = Xsection_0_perc * Xsection_0.airfoil.x_coords \
@@ -149,17 +151,17 @@ class WingCrossSection:
         
         r_leadingEdge = interpolation(
             Xsection_0.r_leadingEdge, Xsection_1.r_leadingEdge,
-            blend_fraction, type="linear" # or "cubic" 
+            blend_fraction, type=interpolation_type
         )
         
         twist = interpolation(
-            Xsection_0.twist, Xsection_1.twist, blend_fraction, type="linear" 
-            # or "cubic" 
+            Xsection_0.twist, Xsection_1.twist, blend_fraction,
+            type=interpolation_type
         )
         
         chord = interpolation(
-            Xsection_0.chord, Xsection_1.chord, blend_fraction, type="linear"
-            # or "cubic"
+            Xsection_0.chord, Xsection_1.chord, blend_fraction,
+            type=interpolation_type
         )
         
         blended_Xsection = WingCrossSection(
