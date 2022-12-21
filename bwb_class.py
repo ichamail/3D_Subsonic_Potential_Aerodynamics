@@ -152,7 +152,7 @@ class WingCrossSection:
         
         r_leadingEdge = interpolation(
             Xsection_0.r_leadingEdge, Xsection_1.r_leadingEdge,
-            blend_fraction, type=interpolation_type
+            blend_fraction, type="linear" # linear always
         )
         
         twist = interpolation(
@@ -161,9 +161,8 @@ class WingCrossSection:
         )
         
         chord = interpolation(
-            Xsection_0.chord, Xsection_1.chord, blend_fraction,
-            type=interpolation_type
-        )
+            Xsection_0.chord, Xsection_1.chord, blend_fraction, type="linear" 
+        ) # linear always
         
         blended_Xsection = WingCrossSection(
             r_leadingEdge, chord, twist, blend_airfoil
