@@ -639,8 +639,11 @@ class BWB:
         else:
             return nodes, shells, nodes_ids_dict
 
-    def subdivide_spanwise_sections(self, div_num:int, interpol_type="linear"):
+    def subdivide_spanwise_sections(self, div_num:int,
+                                    interpolation_type="linear"):
+        
         # interpolation_type="linear" or "cubic"
+        
         new_Xsections = []
         spanwise_fractions = np.linspace(0, 1, div_num+2)
         
@@ -652,7 +655,7 @@ class BWB:
             for s in spanwise_fractions[1:-1]:    
                 new_Xsections.append(
                     WingCrossSection.blend_WingCrossSections(
-                        Xsection_0, Xsection_1, s, interpol_type
+                        Xsection_0, Xsection_1, s, interpolation_type
                     )
                 )
         
@@ -874,7 +877,7 @@ if __name__=="__main__":
         ]
     )
     
-    RX3.subdivide_spanwise_sections(1, interpol_type="linear")
+    RX3.subdivide_spanwise_sections(1, interpolation_type="linear")
     
     nodes, shells, nodes_ids = RX3.mesh_body(
         ChordWise_resolution=20,
