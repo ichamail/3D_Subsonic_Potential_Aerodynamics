@@ -639,7 +639,11 @@ class BWB:
         else:
             return nodes, shells, nodes_ids_dict
 
-    def subdivide_spanwise_sections(self, div_num:int):
+    def subdivide_spanwise_sections(self, div_num:int,
+                                    interpolation_type="linear"):
+        
+        # interpolation_type="linear" or "cubic"
+        
         new_Xsections = []
         spanwise_fractions = np.linspace(0, 1, div_num+2)
         
@@ -651,13 +655,14 @@ class BWB:
             for s in spanwise_fractions[1:-1]:    
                 new_Xsections.append(
                     WingCrossSection.blend_WingCrossSections(
-                        Xsection_0, Xsection_1, s
+                        Xsection_0, Xsection_1, s, interpolation_type
                     )
                 )
         
         new_Xsections.append(Xsection_1)
         
         self.wingXsection_list = new_Xsections
+
 
 class Wing(BWB):
            
