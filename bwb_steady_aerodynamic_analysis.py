@@ -34,8 +34,10 @@ bwb = BWB(
 # C_t = 0.5267, λ=C_t/C_r = 0.5, b/2 = 3.1
 RefArea = 4.898
 
+bwb.subdivide_spanwise_sections(2, interpolation_type="cubic")
+
 # inspect bwb mesh
-n_x = 20
+n_x = 40
 n_y = 1
 nw_x = 1
 spacing = "uniform"
