@@ -58,14 +58,14 @@ panel_method.solve(rx3_mesh)
 body_panels = [rx3_mesh.panels[id] for id in rx3_mesh.panels_ids["body"]]
 plot_Cp_SurfaceContours(body_panels, elevation=-150, azimuth=-120)
 
-CL = panel_method.LiftCoeff(body_panels, ReferenceArea=6.8)
-CD = panel_method.inducedDragCoeff(body_panels, ReferenceArea=6.8)
+CL = panel_method.LiftCoeff(body_panels, ReferenceArea=4.898)
+CD = panel_method.inducedDragCoeff(body_panels, ReferenceArea=4.898)
 
 print("CL = " + str(CL))
 print("CD = " + str(CD))
 
 CL_trefftz, CD_trefftz = Trefftz_Plane_Analysis(
-    rx3_mesh, panel_method.V_fs, RefArea = 6.8
+    rx3_mesh, panel_method.V_fs, RefArea = 4.898
 )
 
 print("trefftz plane CL = " + str(CL_trefftz))
