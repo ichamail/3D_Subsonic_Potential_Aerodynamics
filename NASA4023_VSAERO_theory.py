@@ -202,10 +202,10 @@ if __name__=='__main__':
     from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff
     from disturbance_velocity_functions import Src_disturb_velocity, Vrtx_ring_disturb_velocity, Dblt_disturb_velocity
     
-    vertex1 = Vector((-1, -1, 1))
-    vertex2 = Vector((1, -1, 1))
+    vertex1 = Vector((0, 0, 1))
+    vertex2 = Vector((1, 0, 1))
     vertex3 = Vector((1, 1, 1))
-    vertex4 = Vector((-1, 1, 1))
+    vertex4 = Vector((0, 1, 1))
     
     # Quadrilateral panel
     panel = quadPanel(vertex1, vertex2, vertex3, vertex4)
@@ -213,8 +213,8 @@ if __name__=='__main__':
     # Triangular panel
     # panel = triPanel(vertex1, vertex2, vertex3)
     
-    r_p = panel.r_cp
-    r_p = Vector((0.5, 1, 1))
+    # r_p = panel.r_cp
+    r_p = Vector((2, 0, 1))
     
     C = Dblt_influence_coeff(r_p + Vector((0, 0, 0)), panel)
     B = Src_influence_coeff(r_p, panel)
@@ -275,6 +275,8 @@ if __name__=='__main__':
     ax.quiver(panel.r_cp.x, panel.r_cp.y, panel.r_cp.z,
               panel.m.x, panel.m.y, panel.m.z,
               color='g', label='transverse vector m')
+    
+    ax.scatter(r_p.x, r_p.y, r_p.z)
     
     ax.legend()
     
