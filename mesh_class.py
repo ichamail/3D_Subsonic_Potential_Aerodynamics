@@ -121,6 +121,10 @@ class Mesh:
             ax.plot3D(x, y, z, color='k')    
         
         set_axes_equal(ax)
+        
+        move_view_ = lambda event: move_view(event, ax)
+        ax.figure.canvas.mpl_connect("key_press_event", move_view_)
+        
         plt.show()
     
     
@@ -874,6 +878,10 @@ class PanelMesh(Mesh):
                 
             
         set_axes_equal(ax)
+        
+        move_view_ = lambda event: move_view(event, ax)
+        ax.figure.canvas.mpl_connect("key_press_event", move_view_)
+        
         plt.show()
 
     def plot_mesh(self, elevation=30, azimuth=-60):
@@ -916,6 +924,10 @@ class PanelMesh(Mesh):
         ax.set_ylim3d(y.min(), y.max())
         ax.set_zlim3d(z.min(), z.max())
         set_axes_equal(ax)
+        
+        
+        move_view_ = lambda event: move_view(event, ax)
+        ax.figure.canvas.mpl_connect("key_press_event", move_view_)
         
         plt.show()
     
@@ -1005,6 +1017,9 @@ class PanelMesh(Mesh):
         
         set_axes_equal(ax)
         
+        move_view_ = lambda event: move_view(event, ax)
+        ax.figure.canvas.mpl_connect("key_press_event", move_view_)
+        
         plt.show()
     
     def plot_mesh_bodyfixed_frame(self, elevation=30, azimuth=-60):
@@ -1080,6 +1095,9 @@ class PanelMesh(Mesh):
         ax.set_ylim3d(y.min(), y.max())
         ax.set_zlim3d(z.min(), z.max())
         set_axes_equal(ax)
+        
+        move_view_ = lambda event: move_view(event, ax)
+        ax.figure.canvas.mpl_connect("key_press_event", move_view_)
         
         plt.show()        
          
@@ -1341,6 +1359,9 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         ax.set_zlim3d(z.min(), z.max())
         
         set_axes_equal(ax)
+        
+        move_view_ = lambda event: move_view(event, ax)
+        ax.figure.canvas.mpl_connect("key_press_event", move_view_)
         
         plt.show()
     
