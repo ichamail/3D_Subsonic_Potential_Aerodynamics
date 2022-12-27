@@ -62,3 +62,52 @@ def plot_Cp_SurfaceContours(panel_list, elevation=30, azimuth=-60):
   set_axes_equal(ax)
   
   plt.show()
+
+def move_view(event, ax):
+  ax.autoscale(enable=False, axis='both') 
+  koef = 10
+  zkoef = (ax.get_zbound()[0] - ax.get_zbound()[1]) / koef
+  xkoef = (ax.get_xbound()[0] - ax.get_xbound()[1]) / koef
+  ykoef = (ax.get_ybound()[0] - ax.get_ybound()[1]) / koef
+  ## Map an motion to keyboard shortcuts
+  if event.key == "ctrl+down":
+    ax.set_ybound(ax.get_ybound()[0] + xkoef, ax.get_ybound()[1] + xkoef)
+  if event.key == "ctrl+up":
+    ax.set_ybound(ax.get_ybound()[0] - xkoef, ax.get_ybound()[1] - xkoef)
+  if event.key == "ctrl+right":
+    ax.set_xbound(ax.get_xbound()[0] + ykoef, ax.get_xbound()[1] + ykoef)
+  if event.key == "ctrl+left":
+    ax.set_xbound(ax.get_xbound()[0] - ykoef, ax.get_xbound()[1] - ykoef)
+      
+  if event.key == "alt+down":
+    ax.set_zbound(ax.get_zbound()[0] - zkoef, ax.get_zbound()[1] - zkoef)
+  if event.key == "alt+up":
+    ax.set_zbound(ax.get_zbound()[0] + zkoef, ax.get_zbound()[1] + zkoef)
+  
+  # zoom option
+  if event.key == "+":
+    ax.set_xbound(ax.get_xbound()[0]*0.90, ax.get_xbound()[1]*0.90)
+    ax.set_ybound(ax.get_ybound()[0]*0.90, ax.get_ybound()[1]*0.90)
+    ax.set_zbound(ax.get_zbound()[0]*0.90, ax.get_zbound()[1]*0.90)
+  if event.key == "-":
+    ax.set_xbound(ax.get_xbound()[0]*1.10, ax.get_xbound()[1]*1.10)
+    ax.set_ybound(ax.get_ybound()[0]*1.10, ax.get_ybound()[1]*1.10)
+    ax.set_zbound(ax.get_zbound()[0]*1.10, ax.get_zbound()[1]*1.10)
+  
+  # Rotational movement
+  elev=ax.elev
+  azim=ax.azim
+  if event.key == "8":
+    elev+=10
+  if event.key == "2":
+    elev-=10  
+  if event.key == "4":
+    azim+=10
+  if event.key == "6":
+    azim-=10
+
+  ax.view_init(elev= elev, azim = azim)
+
+  # print which ever variable you want 
+
+  ax.figure.canvas.draw()
