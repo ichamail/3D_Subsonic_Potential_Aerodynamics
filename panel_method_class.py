@@ -1,6 +1,7 @@
 import numpy as np
 from vector_class import Vector
 from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff, influence_coeff
+from NASA4023_VSAERO_theory import Src_NASA4023, Dblt_NASA4023
 from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
 from mesh_class import PanelMesh, PanelAeroMesh
 from Algorithms import LeastSquares
@@ -368,6 +369,10 @@ class Steady_PanelMethod(PanelMethod):
                 break
             
             CL_prev, CD_prev = CL, CD
+            
+            # mesh.plot_mesh_bodyfixed_frame(
+            #     elevation=-150, azimuth=-120, plot_wake=True
+            # )
         
         print("final iteration: ", it+1)
         self.solve(mesh)
@@ -1431,13 +1436,18 @@ def induced_velocity_array(r_p_list, panels):
         
             panel = panels[j]
             
-            if panel.sigma == 0:
-                velocity = Vrtx_ring_disturb_velocity(r_p, panel)
-            else:
-                velocity = Src_disturb_velocity(r_p, panel) \
-                    + Vrtx_ring_disturb_velocity(r_p, panel)
+            # Velocity = Vrtx_ring_disturb_velocity(r_p, panel)
             
-            disturb_velocity_matrix[i][j] = velocity.x, velocity.y, velocity.z
+            _, Vdblt = Dblt_NASA4023(r_p, panel)
+            Velocity = Vdblt
+            
+            if panel.sigma != 0:
+                # Velocity = Velocity + Src_disturb_velocity(r_p, panel)
+                
+                _, Vsrc = Src_NASA4023(r_p, panel)
+                Velocity = Velocity + Vsrc
+            
+            disturb_velocity_matrix[i][j] = Velocity.x, Velocity.y, Velocity.z
     
     velocity_array = np.empty((num_points, 3))
     
