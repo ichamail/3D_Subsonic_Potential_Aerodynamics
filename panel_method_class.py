@@ -1,6 +1,7 @@
 import numpy as np
 from vector_class import Vector
 from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff, influence_coeff
+from NASA4023_VSAERO_theory import Src_NASA4023, Dblt_NASA4023
 from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
 from mesh_class import PanelMesh, PanelAeroMesh
 from Algorithms import LeastSquares
@@ -985,10 +986,16 @@ def body_induced_velocity(r_p, body_panels):
     
     for panel in body_panels:
         
-        # Doublet panels
+        # Source and Doublet panels (Hess and Smith)
         velocity = (velocity
                     + Src_disturb_velocity(r_p, panel)
                     + Dblt_disturb_velocity(r_p, panel))
+        
+        
+        # NASA4023 report (VSAERO)
+        # _, Vsrc = Src_NASA4023(r_p, panel)
+        # _, Vdblt = Dblt_NASA4023(r_p, panel)
+        # velocity = velocity + Vsrc + Vdblt
         
         # Vortex ring panels
         # velocity = (velocity
@@ -1006,11 +1013,14 @@ def wake_induce_velocity(r_p, wake_panels):
     
     for panel in wake_panels:
         
-        # Doublet panels
+        # Doublet panels (Hess & Smith)
         # velocity = velocity + Dblt_disturb_velocity(r_p, panel)
 
+        # NASA4023 report (VSAERO)
+        # _, Vdblt = Dblt_NASA4023(r_p, panel)
+        # velocity = velocity + Vdblt
+        
         # Vortex ring panels
-    
         velocity = velocity + Vrtx_ring_disturb_velocity(r_p, panel)
     
     return velocity

@@ -21,7 +21,7 @@ def Src_NASA4023(r_p:Vector, panel:Panel, alpha=10, core_radius = 10**(-6)):
         phi = panel.area/pjk
         V = PJK * panel.area /pjk/pjk/pjk 
         
-        return phi/(-4*np.pi), V/(4*np.pi)
+        return phi/(-4*np.pi), V/(4*np.pi) * panel.sigma
     
     n = panel.num_vertices
     for i in range(n):
@@ -96,7 +96,7 @@ def Src_NASA4023(r_p:Vector, panel:Panel, alpha=10, core_radius = 10**(-6)):
             V = V + panel.n * CJKi + T1 - T2
         
     
-    return phi/(-4*np.pi), V/(4*np.pi)
+    return phi/(-4*np.pi), V/(4*np.pi) * panel.sigma
 
 def Dblt_NASA4023(r_p:Vector, panel:Panel, alpha=10, core_radius = 10**(-6)):
     
@@ -117,7 +117,7 @@ def Dblt_NASA4023(r_p:Vector, panel:Panel, alpha=10, core_radius = 10**(-6)):
         T = PJK * 3 * PN - panel.n * pjk * pjk
         V = T * panel.area /pjk/pjk/pjk/pjk/pjk 
         
-        return phi/(-4*np.pi), V/(4*np.pi)
+        return phi/(-4*np.pi), V/(4*np.pi) * panel.mu
     
     n = panel.num_vertices
     for i in range(n):
@@ -193,7 +193,7 @@ def Dblt_NASA4023(r_p:Vector, panel:Panel, alpha=10, core_radius = 10**(-6)):
         phi = -2 * np.pi
         
         
-    return phi/(-4*np.pi), V/(4*np.pi)
+    return phi/(-4*np.pi), V/(4*np.pi) * panel.mu
 
 
 
