@@ -2,7 +2,7 @@ from turtle import st
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from Algorithms import light_vector
-from plot_functions import set_axes_equal
+from plot_functions import set_axes_equal, move_view
 import numpy as np
 from vector_class import Vector
 from panel_class import Panel, triPanel, quadPanel
@@ -1442,7 +1442,10 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         ax.set_zlim3d(z.min(), z.max())
         set_axes_equal(ax)
         
-        plt.show()        
+        move_view_ = lambda event: move_view(event, ax)
+        ax.figure.canvas.mpl_connect("key_press_event", move_view_)
+
+        plt.show()      
 
     def copy(self):
         nodes = deepcopy(self.nodes)
