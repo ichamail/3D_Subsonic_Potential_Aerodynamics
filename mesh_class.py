@@ -1210,7 +1210,7 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
             super().shed_wake(v_rel, dt, wake_shed_factor, type)
             # self.add_wakePanels(type)
             self.add_wakePanels_jit(type)
-            self.update_wake_panel_vertices()
+            self.jit_update_wake_panel_vertices()
      
     def convect_wake(self, induced_velocity_function, dt):
         
