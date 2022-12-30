@@ -34,10 +34,10 @@ bwb = BWB(
 # C_t = 0.5267, λ=C_t/C_r = 0.5, b/2 = 3.1
 RefArea = 4.898
 
-bwb.subdivide_spanwise_sections(2, interpolation_type="cubic")
+# bwb.subdivide_spanwise_sections(1, interpolation_type="cubic")
 
 # inspect bwb mesh
-n_x = 40
+n_x = 30
 n_y = 1
 nw_x = 1
 spacing = "uniform"
@@ -163,9 +163,11 @@ for AoA in AoA_list:
         ]
     )
 
-print("total simulation time: " + str(perf_counter()-t) + " seconds")
+t = perf_counter()-t
+print("total simulation time: " + str(t) + " seconds")
 
 with open('Steady Aerodynamic Analysis Results.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerows(csv_params_row_list)
+    writer.writerows([["total simulation time [sec]:", t], []])
     writer.writerows(csv_results_row_list)
