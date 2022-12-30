@@ -62,7 +62,7 @@ class WingCrossSection:
         
         
         # local frame of reference after twist
-        twist = np.deg2rad(self.twist)
+        twist = np.deg2rad(-self.twist)
         
         # first method
         
