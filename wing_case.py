@@ -26,7 +26,7 @@ wing = Wing(
 nodes, shells, nodes_ids = wing.generate_mesh(
     num_x_shells=10,
     num_y_shells=10,
-    num_x_wake_shells=1,
+    num_x_wake_shells=50,
     mesh_shell_type="quadrilateral",
     span_wise_spacing="cosine",
     mesh_main_surface=True,
@@ -43,14 +43,14 @@ wing_mesh.plot_mesh_bodyfixed_frame(
 
 V_fs = Vector((1, 0, 0))
 panel_method = Steady_PanelMethod(V_fs)
-panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
+panel_method.set_V_fs(1, AngleOfAttack=2.5, SideslipAngle=0)
 
 # # generate wing mesh with wake in the free stream direction
 # nodes, shells, nodes_ids = wing.generate_mesh2(
 #     V_fs=panel_method.V_fs,
 #     num_x_shells=10,
 #     num_y_shells=10,
-#     num_x_wake_shells=1,
+#     num_x_wake_shells=50,
 #     mesh_shell_type="quadrilateral",
 #     span_wise_spacing="cosine",
 #     mesh_main_surface=True,
@@ -59,20 +59,21 @@ panel_method.set_V_fs(1, AngleOfAttack=0, SideslipAngle=0)
 #     standard_mesh_format=False
 # )
 
-# wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
-# wing_mesh.plot_mesh_bodyfixed_frame(
-#     elevation=-150, azimuth=-120, plot_wake=True
-# )
+wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
+wing_mesh.plot_mesh_bodyfixed_frame(
+    elevation=-150, azimuth=-120, plot_wake=True
+)
+
+# t_start = perf_counter()        
+# panel_method.solve(wing_mesh.copy())
+# t_end = perf_counter()
+# solution_time = t_end-t_start
+# print("solution time + compile time = " + str(solution_time))
 
 t_start = perf_counter()        
-panel_method.solve(wing_mesh.copy())
-t_end = perf_counter()
-solution_time = t_end-t_start
-print("solution time + compile time = " + str(solution_time))
-
-t_start = perf_counter()        
-panel_method.solve(wing_mesh)
-# panel_method.solve_iteratively(wing_mesh, wing.RefArea, 0.2, 50)
+# panel_method.solve(wing_mesh)
+panel_method.solve_iteratively(wing_mesh, wing.RefArea, 0.2, 50,
+                               convergence_value=10**(-3))
 t_end = perf_counter()
 solution_time = t_end-t_start
 print("solution time = " + str(solution_time))
