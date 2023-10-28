@@ -22,19 +22,16 @@ class Mesh:
         
         
         ### unsteady features ###
-        
-        self.origin = (0, 0, 0)  # body-fixed frame origin
-        
+                
         # position vector of body-fixed frame origin
-        self.ro = Vector(self.origin) 
+        self.ro = Vector((0, 0, 0)) 
         
         # velocity vector of body-fixed frame origin
         self.Vo = Vector((0, 0, 0))
         
         # orientation of body-fixed frame : (yaw-angle, pitch-angle, roll-angle)
-        self.orientation = (0, 0, 0)
-        
-        self.theta = Vector(self.orientation)
+             
+        self.theta = Vector((0, 0, 0))
         
         # Rotation Matrix
         self.R = np.array([[1, 0, 0],
@@ -129,13 +126,11 @@ class Mesh:
     ### unsteady features ###
     
     def set_body_fixed_frame_origin(self, xo, yo, zo):
-        self.origin = (xo, yo, zo)
-        self.ro = Vector(self.origin)
+        self.ro = Vector((xo, yo, zo))
     
     def set_body_fixed_frame_orientation(self, roll, pitch, yaw):
-        self.orientation = (roll, pitch, yaw)
         
-        self.theta = Vector(self.orientation)
+        self.theta = Vector((roll, pitch, yaw))
         
         Rz = np.array([[np.cos(yaw), -np.sin(yaw), 0],
                        [np.sin(yaw), np.cos(yaw), 0],
@@ -149,9 +144,31 @@ class Mesh:
                        [0, np.cos(roll), -np.sin(roll)],
                        [0, np.sin(roll), np.cos(roll)]])
         
-        R = Rz @ Ry @ Rx
-        
-        self.R = R       
+        """
+            A(t+Δt) = Az(t+Δt) Ay(t+Δt) Ax(t+Δt) A(t) =>
+            A(t+Δt) = Az(Δθz) Ay(Δθy) Ax(Δθx) A(t) =>
+            A(t+Δt)^T = [Az(Δθz) Ay(Δθy) Ax(Δθx) A(t)]^T =>
+            R(t+Δt) = A(t)^T Ax(Δθx)^T Ay(Δθy)^T Az(Δθz)^T =>
+            R(t+Δt) = R(t) Rx(Δθx) Ry(Δθy) Rz(Δθz)
+            
+            where Δθx, Δθy, and Δθz correspond to infinitesimal rotations (Δθx, Δθy,Δθz --> 0)
+            
+            if A(t=0) = I => R(t=0) = A(t=0)^T = I^T = I
+            initial orientation of the body is such that f' coincides with f
+            
+            if A(t=0) =/= I then
+            A(t=0) = Az(Δθx) Ay(Δθx) Ax(Δθx) =>
+            A(t=0)^T = [Az(Δθz) Ay(Δθy) Ax(Δθx)]^T =>
+            R(t=0) = Ax(Δθx)^T Ay(Δθy)^T Az(Δθz)^T =>
+            R(t=0) = Rx(Δθx) Ry(Δθy) Rz(Δθz)
+            
+            where Δθx, Δθy, and Δθz correspond to finite rotations
+            
+            for more information check master thesis documentation and
+            https://en.wikipedia.org/wiki/Davenport_chained_rotations
+        """
+
+        self.R = Rx @ Ry @ Rz      
         
     def set_origin_velocity(self, Vo:Vector):
         self.Vo = Vo
@@ -166,13 +183,51 @@ class Mesh:
         
         This method change only the position vector of body-fixed frame's origin and the orintetation of the body-fixed frame.
         Note that origin's position vector and body-fixed frame's orientation are observed from the inertial frame of reference.
+        
+        
+        
+        
+        A(t+Δt) = Az(t+Δt) Ay(t+Δt) Ax(t+Δt) A(t) =>
+        A(t+Δt) = Az(Δθz) Ay(Δθy) Ax(Δθx) A(t) =>
+        A(t+Δt)^T = [Az(Δθz) Ay(Δθy) Ax(Δθx) A(t)]^T =>
+        R(t+Δt) = A(t)^T Ax(Δθx)^T Ay(Δθy)^T Az(Δθz)^T =>
+        R(t+Δt) = R(t) Rx(Δθx) Ry(Δθy) Rz(Δθz)
+        
+        where Δθx, Δθy, and Δθz correspond to infinitesimal rotations (Δθx, Δθy,Δθz --> 0)
+        
+        if A(t=0) = I => R(t=0) = A(t=0)^T = I^T = I
+        initial orientation of the body is such that f' coincides with f
+        
+        if A(t=0) =/= I then
+        A(t=0) = Az(Δθx) Ay(Δθx) Ax(Δθx) =>
+        A(t=0)^T = [Az(Δθz) Ay(Δθy) Ax(Δθx)]^T =>
+        R(t=0) = Ax(Δθx)^T Ay(Δθy)^T Az(Δθz)^T =>
+        R(t=0) = Rx(Δθx) Ry(Δθy) Rz(Δθz)
+        
+        where Δθx, Δθy, and Δθz correspond to finite rotations
+        
+        for more information check master thesis documentation and
+        https://en.wikipedia.org/wiki/Davenport_chained_rotations        
         """
         
-        ro = self.ro + self.Vo*dt
-        theta = self.theta + self.omega*dt
-        
-        self.set_body_fixed_frame_origin(ro.x, ro.y, ro.z)
-        self.set_body_fixed_frame_orientation(theta.x, theta.y, theta.z) 
+        self.ro = self.ro + self.Vo*dt
+        dtheta =  self.omega*dt
+        self.theta = self.theta + dtheta
+
+
+        Rz = np.array([[np.cos(dtheta.z), -np.sin(dtheta.z), 0],
+                       [np.sin(dtheta.z), np.cos(dtheta.z), 0],
+                       [0, 0, 1]])
+
+        Ry = np.array([[np.cos(dtheta.y), 0, np.sin(dtheta.y)],
+                       [0, 1, 0],
+                       [-np.sin(dtheta.y), 0, np.cos(dtheta.y)]])
+
+        Rx = np.array([[1, 0, 0],
+                       [0, np.cos(dtheta.x), -np.sin(dtheta.x)],
+                       [0, np.sin(dtheta.x), np.cos(dtheta.x)]])
+
+        self.R = self.R @ Rx @ Ry @ Rz 
     
     def move_node(self, node_id, v_rel, dt):
         
