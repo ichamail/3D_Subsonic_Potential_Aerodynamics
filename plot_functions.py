@@ -1,6 +1,6 @@
 import numpy as np
 from panel_class import Panel
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt, cm
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
@@ -46,6 +46,8 @@ def plot_Cp_SurfaceContours(panel_list, elevation=30, azimuth=-60):
   Cp_norm = [(float(Cp_i)-min(Cp))/(max(Cp)-min(Cp)) for Cp_i in Cp]
   facecolor = plt.cm.coolwarm(Cp_norm)
   
+  fig = plt.figure()
+  
   ax = plt.axes(projection='3d')
   poly3 = Poly3DCollection(shells, facecolor=facecolor)
   ax.add_collection(poly3)
@@ -60,6 +62,17 @@ def plot_Cp_SurfaceContours(panel_list, elevation=30, azimuth=-60):
   ax.set_ylim3d(y.min(), y.max())
   ax.set_zlim3d(z.min(), z.max())
   set_axes_equal(ax)
+  
+  
+  m = cm.ScalarMappable(cmap=cm.coolwarm)
+  m.set_array([min(Cp),max(Cp)])
+  m.set_clim(vmin=min(Cp),vmax=max(Cp))
+  Cbar = fig.colorbar(m)
+  # Cbar.set_ticks([round(x,2) for x in np.linspace(min(Cp), max(Cp), 6)])
+  Cbar.set_ticks(np.linspace(min(Cp), max(Cp), 6))
+  Cbar.set_ticklabels([str(round(x,2)) for x in np.linspace(min(Cp), max(Cp), 6)])
+  Cbar.set_label("Cp", rotation=0)
+  print(min(Cp), max(Cp))
   
   plt.show()
 
