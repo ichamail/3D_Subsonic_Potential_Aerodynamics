@@ -72,7 +72,6 @@ def plot_Cp_SurfaceContours(panel_list, elevation=30, azimuth=-60):
   Cbar.set_ticks(np.linspace(min(Cp), max(Cp), 6))
   Cbar.set_ticklabels([str(round(x,2)) for x in np.linspace(min(Cp), max(Cp), 6)])
   Cbar.set_label("Cp", rotation=0)
-  print(min(Cp), max(Cp))
   
   plt.show()
 
