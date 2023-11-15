@@ -8,6 +8,7 @@ from vector_class import Vector
 from panel_class import Panel, triPanel, quadPanel
 from numba import typed
 from copy import deepcopy
+import stl
 
 
 class Mesh:
@@ -43,6 +44,50 @@ class Mesh:
         # body-fixed frame's angular velocity vector
         self.omega = Vector((0, 0, 0))
 
+    @classmethod
+    def generate_from_stl_file(cls, fileName:str, filePath="STL_models/"):
+        
+        fileName = filePath + fileName + ".stl"
+        
+        solid_stl_file = open(fileName, "r")
+        solid_stl_obj = stl.read_ascii_file(solid_stl_file)
+
+        nodes = []
+        shells = []
+
+        for facet in solid_stl_obj.facets:
+            for vertex in facet.vertices:
+                node = (vertex[0], vertex[1], vertex[2])
+                is_node_in_nodes_list = False
+                for node_else in nodes:
+                    dx = abs(node[0] - node_else[0])
+                    dy = abs(node[1] - node_else[1])
+                    dz = abs(node[2] - node_else[2])
+                    if dx < 10**(-6) and dy < 10**(-6) and dz < 10**(-6):
+                        is_node_in_nodes_list = True
+                        break
+                if not is_node_in_nodes_list:
+                    nodes.append(node)
+     
+        for facet in solid_stl_obj.facets:
+            shell = []
+            for vertex in facet.vertices:
+                node = (vertex[0], vertex[1], vertex[2])
+                
+                for node_id, node_else in enumerate(nodes):
+                    dx = abs(node[0] - node_else[0])
+                    dy = abs(node[1] - node_else[1])
+                    dz = abs(node[2] - node_else[2])
+                    if dx < 10**(-6) and dy < 10**(-6) and dz < 10**(-6):
+                        break
+                    
+                shell.append(node_id)
+                
+            shells.append(shell)
+        
+        return cls(nodes, shells)
+           
+    
     @staticmethod
     def do_intersect(shell_i, shell_j):
         # intersections = 0
