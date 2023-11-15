@@ -14,7 +14,7 @@ nodes, shells = sphere(radius, num_longitude, num_latitude,
 
 mesh = PanelMesh(nodes, shells)
 
-# mesh = PanelMesh.generate_from_stl_file("Sphere_fuse_0080")
+# mesh = PanelMesh.generate_from_stl_file("Sphere_0080")
 
 
 V_fs = Vector((1, 0, 0))
