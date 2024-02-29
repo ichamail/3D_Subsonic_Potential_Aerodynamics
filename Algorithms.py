@@ -25,10 +25,81 @@ def DenserAtBoundaries(start, end, num_points, alpha):
     a = b = 2-alpha
     return start + beta.cdf(x, a, b) * (end-start)
 
+def DenserAtWingTips(start, end, num_points, factor=5):
+
+    # produces same results as flow5 inv_exp spacing when factor=5
+
+    x = np.linspace(0, 1, num_points)
+    if start < 0  and end <=0:
+        a = 1 + 0.1*factor
+        b = 1
+    elif start>= 0 and end>0 :
+        a = 1
+        b = 1 + 0.1*factor
+
+    else:
+        raise Exception("start, end >=0 or start, end <=0")
+
+
+    return start + beta.cdf(x, a, b) * (end-start)
+
+def DenserAtWingRoot(start, end, num_points, factor=5):
+    x = np.linspace(0, 1, num_points)
+    if start < 0 :
+        a = 1
+        b = 1 + 0.1*factor
+    else:
+        a = 1 + 0.1*factor
+        b = 1
+
+    return start + beta.cdf(x, a, b) * (end-start)  
+
+def logspace(start, end, num_points):
+    x = np.linspace(1, np.e, num_points)
+    x = np.log(x)
+    if  0 <= start < end:
+        x = x*(end-start)
+        x = x + start
+    elif start < end <= 0:
+        x = x * (start-end)
+        x = x + end
+        x = np.flip(x)
+    return x
+
 def cosspace(start, end, num_points):
     mean = (start+end)/2
     amp = (end-start)/2
     return mean + amp * np.cos(np.linspace(np.pi, 0, num_points))
+
+def DenserAtLeadingEdge(num_points, factor=1.5):
+    """
+    Cumulative distribution function of beta distribution
+    
+    factor > 1
+    if factor = 1 evenly spaced
+    if factor > 1 denser at leading edge
+    (leading edge at x=1, trailing adge at x=0)
+    """
+
+    x = np.linspace(0, 1, num_points)
+    a = 1
+    b = factor
+    return  beta.cdf(x, a, b)
+
+def DenserAtTrailingEdge(num_points, factor=1.5):
+    """
+    Cumulative distribution function of beta distribution
+    
+    factor > 1
+    if factor = 1 evenly spaced
+    if factor > 1 denser at trailing edge
+    (leading edge at x=1, trailing adge at x=0)
+    """
+
+    x = np.linspace(0, 1, num_points)
+    a = factor
+    b = 1
+    return  beta.cdf(x, a, b)
 
 def test_spacing(start, end, num_points, alpha):
 
@@ -37,10 +108,14 @@ def test_spacing(start, end, num_points, alpha):
     y1 = np.linspace(start, end, num_points)
     y2 = DenserAtBoundaries(start, end, num_points, alpha)
     y3 = cosspace(start, end, num_points)
+    y4 = logspace(start, end, num_points)
+    y5 = DenserAtWingTips(start, end, num_points)
 
     plt.plot(x, y1, "r", label="linear spacing")
     plt.plot(x, y2, "b", label = "prob dens func Beta, α=" + str(alpha))
     plt.plot(x, y3, "m", label="cosine spacing")
+    plt.plot(x, y4, "g", label="logarithmic spacing")
+    plt.plot(x, y5, "k", label="denser at wing tips")
 
     plt.legend()
     plt.show()
