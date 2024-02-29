@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from Algorithms import cosspace
+from Algorithms import cosspace, DenserAtLeadingEdge, DenserAtTrailingEdge
 from scipy import interpolate
 
 
@@ -206,7 +206,7 @@ class Airfoil:
         self.x_coords = np.append(SS_x, PS_x[1:])
         self.y_coords = np.append(SS_y, PS_y[1:])   
 
-    def repanel(self, n_points_per_side:int):
+    def repanel(self, n_points_per_side:int, spacing="cosine"):
         """
         improved version of new_x_spacing() and new_x_spacing2()
         """
@@ -229,9 +229,21 @@ class Airfoil:
         
         dr = np.hstack((dr_u, 1 + dr_l[1:]))
         
+        if spacing == "cosine":
+            space = lambda  n_points_per_side: cosspace(0, 1, n_points_per_side) 
+        elif spacing == "uniform":
+            space = lambda n_points_per_side: np.linspace(0, 1, n_points_per_side)
+        elif spacing == "denser at leading edge":
+            space = lambda n_points_per_side: DenserAtLeadingEdge(n_points_per_side, factor=1.4)
+        elif spacing == "denser at trailing edge":
+            space = lambda n_points_per_side: DenserAtTrailingEdge(n_points_per_side, factor=1.4)
+        else:
+            space = lambda  n_points_per_side: cosspace(0, 1, n_points_per_side)
+        
         # cosine-spaced list of points from 0 to 1
-        x = cosspace(0, 1, n_points_per_side)
-        s = np.hstack((x, 1 + x[1:]))
+        x = space(n_points_per_side)
+        # s = np.hstack((x, 1 + x[1:]))
+        s = np.hstack((x, 2-x[-2::-1]))
         
         # Check that there are no duplicate points in the airfoil.
         if np.any(np.diff(dr))==0:
@@ -242,9 +254,80 @@ class Airfoil:
         self.x_coords = interpolate.PchipInterpolator(dr, self.x_coords)(s)
         self.y_coords = interpolate.PchipInterpolator(dr, self.y_coords)(s)
         
+    # def repanel(self, n_points_per_side:int, spacing="cosine"):
+    #     """
+    #     improved version of repanel. Needs some work
+    #     """
 
+
+    #     if spacing == "cosine":
+    #         space = lambda start, stop, n_points_per_side: cosspace(start, stop, n_points_per_side) 
+    #     elif spacing == "uniform":
+    #         space = lambda start, stop, n_points_per_side: np.linspace(start, stop, n_points_per_side)
+    #     # elif spacing == "denser at leading edge":
+    #     #     space = lambda n_points_per_side: DenserAtLeadingEdge(n_points_per_side, factor=1.4)
+    #     # elif spacing == "denser at trailing edge":
+    #     #     space = lambda n_points_per_side: DenserAtTrailingEdge(n_points_per_side, factor=1.4)
+    #     # else:
+    #     #     space = lambda  n_points_per_side: cosspace(0, 1, n_points_per_side) 
+
+
+    #     # upper and lower side coordinates
+    #     x_u, y_u = self.give_suctionSide()
+    #     x_l, y_l = self.give_pressureSide()
+
+    #     old_upper_coordinates = np.array([x_u, y_u]).T
+    #     old_lower_coordinates = np.array([x_l, y_l]).T
+
+    #     # Find the streamwise distances between coordinates, assuming linear interpolation
+    #     upper_distances_between_points = np.linalg.norm(np.diff(old_upper_coordinates, axis=0), axis=1)
+    #     lower_distances_between_points = np.linalg.norm(np.diff(old_lower_coordinates, axis=0), axis=1)
+    #     upper_distances_from_TE = np.concatenate(([0], np.cumsum(upper_distances_between_points)))
+    #     lower_distances_from_LE = np.concatenate(([0], np.cumsum(lower_distances_between_points)))
+
+
+    #     try:
+    #         new_upper_coordinates = interpolate.CubicSpline(
+    #             x=upper_distances_from_TE,
+    #             y=old_upper_coordinates,
+    #             axis=0,
+    #             bc_type=(
+    #                 (2, (0, 0)),
+    #                 (1, (0, -1)),
+    #             )
+    #         )(space(0, upper_distances_from_TE[-1], n_points_per_side))
+
+    #         new_lower_coordinates = interpolate.CubicSpline(
+    #             x=lower_distances_from_LE,
+    #             y=old_lower_coordinates,
+    #             axis=0,
+    #             bc_type=(
+    #                 (1, (0, -1)),
+    #                 (2, (0, 0)),
+    #             )
+    #         )(space(0, lower_distances_from_LE[-1], n_points_per_side))
+
+    #     except ValueError as e:
+    #         if not (
+    #                 (np.all(np.diff(upper_distances_from_TE)) > 0) and
+    #                 (np.all(np.diff(lower_distances_from_LE)) > 0)
+    #         ):
+    #             raise ValueError(
+    #                 "It looks like your Airfoil has a duplicate point. Try removing the duplicate point and "
+    #                 "re-running Airfoil.repanel()."
+    #             )
+    #         else:
+    #             raise e
+
+    #     new_coords = np.concatenate(
+    #         (new_upper_coordinates, new_lower_coordinates)
+    #     )
+
+    #     self.x_coords = new_coords[:,0]
+    #     self.y_coords = new_coords[:,1]
+    
 if __name__=="__main__":
-    name = "naca0012_new"
+    name = "naca0012 sharp"
     chord = 2
     airfoil = Airfoil(name, chord)
     # airfoil.new_x_spacing(10)
@@ -252,5 +335,6 @@ if __name__=="__main__":
     # airfoil.new_x_spacing2(11, UpperLowerSpacing_equal=False)
     # print(airfoil.x_coords)
     # print(airfoil.y_coords)
-    airfoil.repanel(6)
+    # airfoil.repanel(5+1, spacing="cosine")
+    airfoil.repanel(5+1, spacing="denser at leading edge")
     airfoil.plot()
