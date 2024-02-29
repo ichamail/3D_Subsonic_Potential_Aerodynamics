@@ -94,14 +94,16 @@ class Vector:
             return Vector(components)          
         
     # __rmul__ method is not yet supported in numba
-    # def __rmul__(self, scalar):
-    #     x = scalar * self.x 
-    #     y = scalar * self.y 
-    #     z = scalar * self.z
-    #     components = (x, y, z)
-    #     return Vector(components)
+    # __rmul__ method is supported from 20 Sept 23
+    def __rmul__(self, scalar):
+        x = scalar * self.x 
+        y = scalar * self.y 
+        z = scalar * self.z
+        components = (x, y, z)
+        return Vector(components)
     
     # __matmul__ method is not yet supported in numba
+    # __matmul__ method is supported from 20 Sept 23
     def __matmul__(self, vector):
         return self.x*vector.x + self.y*vector.y + self.z*vector.z
         
