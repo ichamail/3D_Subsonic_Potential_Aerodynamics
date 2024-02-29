@@ -27,22 +27,28 @@ wing = Wing(
 
 
 # wing mesh info
-n_x = 10
-n_y = 10
-nw_x = 1
-spacing = "uniform"
+n_x = 30
+n_y = 17
+nw_x = 50
+chordwise_spacing = "cosine"
+spanwise_spacing = "denser at wingtips"
 shell_type = "quadrilateral"
+wake_length_in_chords = 10
+triangular_wake_mesh = True
 
 # inspect wing mesh
 nodes, shells, nodes_ids = wing.generate_mesh(
     num_x_shells=n_x,
+    chord_wise_spacing=chordwise_spacing,
     num_y_shells=n_y,
-    num_x_wake_shells=nw_x,
-    span_wise_spacing=spacing,
+    span_wise_spacing=spanwise_spacing,
     mesh_shell_type=shell_type,
     mesh_main_surface=True,
     mesh_tips=True,
     mesh_wake=True,
+    num_x_wake_shells=nw_x,
+    triangular_wake_mesh=triangular_wake_mesh,
+    wake_length_in_chords=wake_length_in_chords,
     standard_mesh_format=False    
 )
 
@@ -58,8 +64,8 @@ wing_mesh.plot_mesh_inertial_frame(
 
 
 # Aerodynamic Analysis Parameters
-AoA_start = -20
-AoA_end = 20
+AoA_start = -15
+AoA_end = 15
 AoA_step = 2.5
 
 AoA_list = []
@@ -71,6 +77,7 @@ for i in range(int((AoA_end-AoA_start)/AoA_step)+1):
 SideSlipAngle = 0
 V_fs = 1
 steady_panel_method = Steady_PanelMethod(V_freestream=Vector((0, 0, 0)))
+wake_rollup = True
 
 
 csv_params_row_list = [
@@ -85,10 +92,12 @@ csv_params_row_list = [
     ["twist:", wing.twist], 
     [],
     ["Mesh"],
-    ["x body-shells:", n_x, "spacing:", "cosine"],
-    ["y shells:", n_y, "spacing:", spacing],
+    ["x body-shells:", n_x, "chordwise spacing:", chordwise_spacing],
+    ["y shells:", n_y, "spacing:", spanwise_spacing],
+    ["body shells type:", shell_type],
     ["x wake-shells:", nw_x],
-    ["shell type:", shell_type],
+    ["triangular wake mesh:", triangular_wake_mesh],
+    ["wake length in chords:", wake_length_in_chords],
     ["number of body shells:",
     len(wing_mesh.shells_ids["body"])],
     ["number of wake shells:",
@@ -96,7 +105,7 @@ csv_params_row_list = [
     ["number of shells:", wing_mesh.shell_num],
     [],
     ["Panel Method"],
-    ["type:", "steady", "wake roll-up:", "False"],
+    ["type:", "steady", "wake roll-up:", wake_rollup],
     ["V_freestream:", V_fs],
     ["side slip angle:", SideSlipAngle],
     [],
@@ -120,22 +129,47 @@ for AoA in AoA_list:
     
     steady_panel_method.set_V_fs(V_fs, AoA, SideSlipAngle)
     
+    wing = Wing(
+    root_airfoil=Airfoil(
+        name="naca0012 sharp",
+        chord_length=1
+    ),
+    
+    tip_airfoil=Airfoil(
+        name="naca0012 sharp",
+        chord_length=1
+    ),
+    
+    semi_span=1,
+    sweep=0,
+    dihedral=0,
+    twist=0
+)
+    
     nodes, shells, nodes_ids = wing.generate_mesh2(
         V_fs=steady_panel_method.V_fs,
         num_x_shells=n_x,
+        chord_wise_spacing=chordwise_spacing,
         num_y_shells=n_y,
-        num_x_wake_shells=nw_x,
-        span_wise_spacing=spacing,
+        span_wise_spacing=spanwise_spacing,
         mesh_shell_type=shell_type,
         mesh_main_surface=True,
         mesh_tips=True,
         mesh_wake=True,
+        num_x_wake_shells=nw_x,
+        triangular_wake_mesh=triangular_wake_mesh,
+        wake_length_in_chords=wake_length_in_chords,
         standard_mesh_format=False    
     )
     
     wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
     
-    steady_panel_method.solve(wing_mesh)
+    if wake_rollup:
+        steady_panel_method.solve_iteratively(wing_mesh, wing.RefArea, max_iters=20, convergence_value=10**(-6))
+    else:
+        # steady_panel_method.solve(wing_mesh)
+        steady_panel_method.solve_with_pressure_kutta(wing_mesh)
+    
     
     body_panels = [wing_mesh.panels[id] for id in wing_mesh.panels_ids["body"]]
     r_c4 = Vector((0.25*wing.root_airfoil.chord, 0, 0))

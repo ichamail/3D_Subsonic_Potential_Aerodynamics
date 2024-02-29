@@ -9,25 +9,28 @@ import numpy as np
 from time import perf_counter
 
 # create wing object   
-root_airfoil = Airfoil(name="naca0012_new", chord_length=1)
-tip_airfoil = Airfoil(name="naca0012_new", chord_length=1)
+root_airfoil = Airfoil(name="naca0012 sharp", chord_length=1)
+tip_airfoil = Airfoil(name="naca0012 sharp", chord_length=1)
 wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0)
 
 # generate wing mesh
-num_x_bodyShells = 10
-num_y_Shells = 10
+num_x_bodyShells = 30
+num_y_Shells = 17
 
 nodes, shells, nodes_ids = wing.generate_mesh(
-    num_x_shells=num_x_bodyShells, num_y_shells=num_y_Shells,
+    num_x_shells=num_x_bodyShells,
+    num_y_shells=num_y_Shells,
+    chord_wise_spacing="cosing",
+    span_wise_spacing="denser at wingtips",
     mesh_shell_type="quadrilateral",
     mesh_main_surface=True, mesh_tips=True, mesh_wake=False,
-    standard_mesh_format=False 
+    standard_mesh_format=False,
 )
 
 wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
 
 wing_mesh.set_body_fixed_frame_origin(xo=0, yo=0, zo=0)
-wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(0), yaw=0)
+wing_mesh.set_body_fixed_frame_orientation(roll=0, pitch=np.deg2rad(-10), yaw=0)
 
 omega = Vector((0, 0, 0))
 wing_mesh.set_angular_velocity(omega)
@@ -43,7 +46,7 @@ panel_method.set_WakeShedFactor(1)
 
 t_start = perf_counter()        
 # panel_method.solve(wing_mesh, dt=0.15, iters=60)
-panel_method.solve_steady(wing_mesh, wing.RefArea, dt=0.15, max_iters=100)
+panel_method.solve_steady(wing_mesh, wing.RefArea, dt=0.2, max_iters=50, convergence_value=10**(-6))
 t_end = perf_counter()
 solution_time = t_end-t_start
 print("solution time + compile time = " + str(solution_time))
@@ -53,6 +56,15 @@ print("solution time + compile time = " + str(solution_time))
 
 wing_mesh.plot_mesh_bodyfixed_frame(elevation=-150,azimuth=-120, plot_wake=True)
 wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120, plot_wake=True)
+
+wing_mesh.plot_mesh_bodyfixed_frame(elevation=-160, azimuth= -30,
+                                   plot_wake = True)
+wing_mesh.plot_mesh_bodyfixed_frame(elevation=-180, azimuth= -90,
+                                   plot_wake = True)
+wing_mesh.plot_mesh_inertial_frame(elevation=-160, azimuth= -30,
+                                   plot_wake = True)
+wing_mesh.plot_mesh_inertial_frame(elevation=-180, azimuth= -90,
+                                   plot_wake = True)
 
 
 # Pressure Coefficient Distribution across root's airfoil section 

@@ -9,20 +9,20 @@ import csv
 # create wing object
 
 # root airfoil
-root_airfoil_name = "naca0012_new" #"naca0018"
+root_airfoil_name = "naca0012 sharp" 
 root_chord = 1
 root_airfoil = Airfoil(name=root_airfoil_name, chord_length=root_chord)
 
 # tip airfoil
-tip_airfoil_name = "naca0012_new" #"naca0012"
-tip_chord = 1 # 0.5
+tip_airfoil_name = "naca0012 sharp"
+tip_chord = 1 
 tip_airfoil = Airfoil(name=tip_airfoil_name, chord_length=tip_chord)
 
 # wing
-span = 2 #4
-sweep = 0 #25
-dihedral = 0 #-10
-twist = 0 #-3
+span = 2 
+sweep = 0 
+dihedral = 0 
+twist = 0 
 wing = Wing(root_airfoil=root_airfoil,
             tip_airfoil = tip_airfoil,
             semi_span=0.5*span,
@@ -32,12 +32,17 @@ wing = Wing(root_airfoil=root_airfoil,
 
 # generate wing mesh
 shell_type = "quadrilateral" # "quadrilateral" "triangular"
-num_x_shells = 10 #15
-num_y_shells = 10 #25
+num_x_shells = 30
+num_y_shells = 17
 nodes, shells, nodes_ids = wing.generate_mesh(
-    num_x_shells=num_x_shells, num_y_shells=num_y_shells,
-    mesh_shell_type="quadrilateral", span_wise_spacing="uniform",
-    mesh_main_surface=True, mesh_tips=True, mesh_wake=False,
+    num_x_shells=num_x_shells,
+    chord_wise_spacing="cosine",
+    num_y_shells=num_y_shells,
+    span_wise_spacing="denser at wingtips",
+    mesh_shell_type="quadrilateral",
+    mesh_main_surface=True,
+    mesh_tips=True,
+    mesh_wake=False,
     standard_mesh_format=False 
 )
 
@@ -85,7 +90,7 @@ wing_mesh.set_angular_velocity(omega)
 dt = 0.5 # 0.2
 iterations = 60 # 50 
 wake_shed_factor = 0.3
-wake_panel_type = "quadrilateral"  # "quadrilateral" "triangular"
+wake_panel_type = "triangular"  # "quadrilateral" "triangular"
 V_wind = Vector((0, 0, 0))
 
 unsteady_panel_method = UnSteady_PanelMethod(V_wind)
