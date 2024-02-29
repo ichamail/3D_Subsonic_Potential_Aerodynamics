@@ -1,6 +1,7 @@
 from turtle import st
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from mpl_toolkits.mplot3d import axes3d
 from Algorithms import light_vector
 from plot_functions import set_axes_equal, move_view
 import numpy as np
@@ -544,7 +545,7 @@ class AeroMesh(Mesh):
         
         near_root_nodes_id = []
         for node_id, node in enumerate(self.nodes):
-            if node[1] == 0:
+            if abs(node[1]) < 10**(-10):
                 near_root_nodes_id.append(node_id)
         
         if self.shells_ids:
@@ -561,6 +562,28 @@ class AeroMesh(Mesh):
         
         return near_root_shells_ids                   
 
+    def give_leftSide_near_tip_shells_id(self):
+        
+        if self.shells_ids["left tip"]:
+            left_wing_tip_shells_ids = self.shells_ids["left tip"]
+        else:
+            left_wing_tip_shells_ids = self.find_left_wing_tip()
+        
+        
+        left_wing_tip_nodes_ids =  self.nodes_ids["left wing tip"]
+        # wing tip shells' ids + near tip shells' ids
+        left_side_near_tip_shells_id = [
+            shell_id for shell_id, shell in enumerate(self.shells)
+            if sum(node_id in left_wing_tip_nodes_ids for node_id in shell)>1
+        ]
+
+        # remove ids from wing tip shells
+        left_side_near_tip_shells_id = [
+            id for id in left_side_near_tip_shells_id if id not in left_wing_tip_shells_ids
+        ]
+        
+        return left_side_near_tip_shells_id
+        
     def locate_VSAERO_adjacency(self):
         
         """
@@ -679,6 +702,36 @@ class AeroMesh(Mesh):
             shell_id(i, j-2)
         ]
     
+    def give_ChordWiseStrips(self):
+        """
+        this function returns an array Ny X Nx array of panel ids, where Nx is the number of chordwise panels and Ny the number of spanwise panels.
+        
+        j-th row corresponds to j-th chordwise strip
+        i-th column corresponds to i-th spanwise strip
+        
+        This function is meaningful only for quadrilateral structured meshes
+        """
+        
+        span_wise_nodes = len(self.nodes_ids["trailing edge"])
+        chrod_wise_nodes = len(self.nodes_ids["main surface"])//span_wise_nodes
+        span_wise_shells = span_wise_nodes - 1
+        chrod_wise_shells = chrod_wise_nodes
+        
+        j_max = span_wise_shells - 1
+        i_max = chrod_wise_shells - 1
+        
+        def shell_id(chord_wise_index, span_wise_index):            
+            i = chord_wise_index
+            j = span_wise_index
+            shell_id = i*(j_max+1) + j
+            return shell_id
+        
+        ChordWiseStrips = np.zeros((j_max+1, i_max+1), dtype=int)
+        for i in range(i_max + 1):
+            for j in range(j_max + 1):
+                ChordWiseStrips[j][i] = shell_id(i,j)
+        
+        return ChordWiseStrips
 
     ### unsteady features  ###
     
@@ -1231,7 +1284,14 @@ class PanelAeroMesh(AeroMesh, PanelMesh):
         
         return near_root_panels
 
-    
+    def give_leftSide_near_tip_panels(self):
+        
+        leftSide_near_tip_panels = [
+            self.panels[id] for id in self.give_leftSide_near_tip_shells_id()
+        ]
+        return leftSide_near_tip_panels
+            
+
     ### unsteady features ###
     
     def add_wakePanels(self, type="quadrilateral"):
