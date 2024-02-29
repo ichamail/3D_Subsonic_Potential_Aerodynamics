@@ -1,6 +1,6 @@
 import numpy as np
 from vector_class import Vector
-from Algorithms import DenserAtBoundaries, interpolation, cosspace
+from Algorithms import DenserAtBoundaries, interpolation, cosspace, DenserAtWingTips, DenserAtWingRoot, logspace
 from airfoil_class import Airfoil
 
 
@@ -42,15 +42,18 @@ class Wing:
         ref_area = 2 * ((C_r + C_t) * half_span)/2
         self.RefArea = ref_area
         
-    def new_x_spacing(self, num_x_points):
-        self.root_airfoil.repanel(num_x_points+1)
-        self.tip_airfoil.repanel(num_x_points+1)       
+    def new_x_spacing(self, num_x_points, spacing="cosine"):
+        self.root_airfoil.repanel(num_x_points+1, spacing)
+        self.tip_airfoil.repanel(num_x_points+1, spacing)       
 
     def generate_mesh(self, num_x_shells:int, num_y_shells:int,
                            mesh_shell_type:str="quadrilateral",
+                           chord_wise_spacing = "cosine",
                            span_wise_spacing = "uniform",
                            mesh_main_surface=True, mesh_tips=True, mesh_wake=True,
                            num_x_wake_shells = 1,
+                           wake_length_in_chords = 30,
+                           triangular_wake_mesh = False,
                            standard_mesh_format =True):
         
         
@@ -61,8 +64,14 @@ class Wing:
         elif span_wise_spacing == "beta distribution":
             space = lambda start, end, steps: DenserAtBoundaries(start, end,
                                                                  steps, -0.15)
+        elif span_wise_spacing == "denser at wingtips":
+            space = lambda start, end, steps: DenserAtWingTips(start, end, steps, factor=5)
+        elif span_wise_spacing == "denser at root":
+            space = lambda start, end, steps: DenserAtWingRoot(start, end, steps, factor=5)
+        elif span_wise_spacing == "logarithmic":
+            space = logspace
                 
-        self.new_x_spacing(num_x_shells)
+        self.new_x_spacing(num_x_shells, spacing = chord_wise_spacing)
         
         # wing's coordinate system:
         # origin: root airfoils leading edge
@@ -335,7 +344,7 @@ class Wing:
                 
                 bisector = bisector/bisector.norm()
                 
-                bisector = bisector * C_root * 10
+                bisector = bisector * C_root * wake_length_in_chords
                 
                 (x0, y0, z0) = nodes[node_id(0, j)]
                 x[:, j] = np.linspace(x0, x0 + bisector.x, num_x_wake_shells+1)
@@ -368,7 +377,7 @@ class Wing:
             
             # call wake_node_id() so i_max_wake can be accessed
             wake_node_id(0, 0)
-            
+            if triangular_wake_mesh == True : mesh_shell_type = "triangular"
             if mesh_shell_type=="quadrilateral":
                 
                 for i in range(i_max_wake):
@@ -487,10 +496,13 @@ class Wing:
     
     def generate_mesh2(self, num_x_shells:int, num_y_shells:int,
                            mesh_shell_type:str="quadrilateral",
+                           chord_wise_spacing="cosine",
                            span_wise_spacing='uniform',
                            mesh_main_surface=True, mesh_tips=True, mesh_wake=True,
+                           triangular_wake_mesh = False,
                            num_x_wake_shells = 1,
                            V_fs = Vector((1, 0, 0)),
+                           wake_length_in_chords = 30,
                            standard_mesh_format =True):
         
         """
@@ -506,8 +518,14 @@ class Wing:
         elif span_wise_spacing == "beta distribution":
             space = lambda start, end, steps: DenserAtBoundaries(start, end,
                                                                  steps, -0.15)
+        elif span_wise_spacing == "denser at wingtips":
+            space = lambda start, end, steps: DenserAtWingTips(start, end, steps, factor=5)
+        elif span_wise_spacing == "denser at root":
+            space = lambda start, end, steps: DenserAtWingRoot(start, end, steps, factor=5)
+        elif span_wise_spacing == "logarithmic":
+            space = logspace
               
-        self.new_x_spacing(num_x_shells)
+        self.new_x_spacing(num_x_shells, spacing=chord_wise_spacing)
         
         # wing's coordinate system:
         # origin: root airfoils leading edge
@@ -760,7 +778,7 @@ class Wing:
         if mesh_wake:
             
             wake_direction_unit_vec = V_fs/V_fs.norm()
-            vec = wake_direction_unit_vec * 10 * self.root_airfoil.chord 
+            vec = wake_direction_unit_vec * wake_length_in_chords * self.root_airfoil.chord 
             
             x = np.zeros((num_x_wake_shells+1, j_max+1))
             y = np.zeros_like(x)
@@ -799,7 +817,7 @@ class Wing:
             
             # call wake_node_id() so i_max_wake can be accessed
             wake_node_id(0, 0)
-            
+            if triangular_wake_mesh == True : mesh_shell_type = "triangular"
             if mesh_shell_type=="quadrilateral":
                 
                 for i in range(i_max_wake):
@@ -993,17 +1011,24 @@ class Wing:
       
 if __name__=="__main__":
     from mesh_class import PanelMesh, PanelAeroMesh
-      
-    root_airfoil = Airfoil(name="naca0012", chord_length=1)
-    tip_airfoil = Airfoil(name="naca0012", chord_length=1)
+     
+    root_airfoil = Airfoil(name="naca0012 sharp", chord_length=1)
+    tip_airfoil = Airfoil(name="naca0012 sharp", chord_length=1)
     wing = Wing(root_airfoil, tip_airfoil, semi_span=1, sweep=0, dihedral=0,
                 twist=0)
     
-    nodes, shells, nodes_ids = wing.generate_mesh2(
-        num_x_shells=5, num_y_shells=1, mesh_shell_type="quadrilateral",
-        mesh_main_surface=True, mesh_tips=True, mesh_wake=True, num_x_wake_shells=3, V_fs=Vector((1, 0, 0)),
+    nodes, shells, nodes_ids = wing.generate_mesh(
+        num_x_shells=30, num_y_shells=17, mesh_shell_type="quadrilateral",
+        mesh_main_surface=True, mesh_tips=True, mesh_wake=False, wake_length_in_chords=30, chord_wise_spacing="cosine", span_wise_spacing="denser at wingtips",
         standard_mesh_format=False
     )
     
     wing_mesh = PanelAeroMesh(nodes, shells, nodes_ids)
-    wing_mesh.plot_mesh_inertial_frame(elevation=-150, azimuth=-120, plot_wake=True)
+    wing_mesh.set_body_fixed_frame_origin(1, 1.5, -1)
+    wing_mesh.set_body_fixed_frame_orientation(roll=np.deg2rad(20), pitch=np.deg2rad(20), yaw=0)
+    
+    
+    # wing_mesh.set_body_fixed_frame_origin(1, 0, -1)
+    wing_mesh.plot_mesh_inertial_frame(elevation=-90, azimuth=180)
+    wing_mesh.plot_mesh_inertial_frame(elevation=-151, azimuth=-56, plot_wake=True)
+    
