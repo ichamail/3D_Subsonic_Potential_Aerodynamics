@@ -222,6 +222,7 @@ def Dblt_disturb_velocity(r_p:Vector, panel:Panel, alpha=10):
 
     return disturb_velocity
 
+# cut-off vortex core model
 def Vrtx_ring_disturb_velocity(r_p:Vector, panel:Panel, epsilon = 10**(-6)):
     
     # with a vortex ring we work with global coordinates
@@ -271,6 +272,68 @@ def Vrtx_ring_disturb_velocity(r_p:Vector, panel:Panel, epsilon = 10**(-6)):
     
     return disturb_velocity
 
+# Lamb–Osseen finite vortex core model
+def Vrtx_ring_induced_veloctiy(r_p:Vector, panel:Panel, core_size=10**(-5)):
+    r_vertex = panel.r_vertex
+    n = panel.num_vertices
+    V_induced = Vector((0, 0, 0))
+
+    for i in range(n):
+
+        next = (i+1)%n
+
+        # Katz & Plotking figure 2.16 and 10.23
+        r_1 = r_p - r_vertex[i]
+        r_2 = r_p - r_vertex[next]
+        r_0 = r_1 - r_2
+        # or
+        # r_0 = r_vertex[next] - r_vertex[i]
+
+        # Katz & Plotking (eq 10.115)
+        term1 = panel.mu/(4 * np.pi)
+
+        norm1 = r_1.norm()
+        norm2 = r_2.norm()
+
+        # vec12 = Vector.cross_product(r_1, r_2)
+        vec12 = r_1.cross(r_2)
+        norm12 = vec12.norm()
+
+        if norm1 ==0 or norm2 ==0 or norm12**2 ==0:
+            u, v, w = 0, 0, 0
+            velocity_term = Vector((u, v, w))
+
+        else:
+
+            vec12 = vec12/(norm12**2)
+            vec1 = r_1/norm1
+            vec2 = r_2/norm2
+            vec3 = vec1 - vec2
+            # term2 = r_0 * vec3
+            term2 = r_0.dot(vec3)
+            # velocity_term = term1 * term2 * vec12
+            velocity_term = vec12 * term1 * term2
+
+            """
+            Lamb-Osseen finite vortex core model
+            ref: "Computational Methods With Vortices—The 1988 Freeman Scholar Lecture", Turgut Sarpkaya
+            ref: "Convergence of different wake alignment methods in a panel code
+            for steady-state flows", Youjiang Wang, Moustafa Abdel-Maksoud, Baowei Song
+            """
+
+            # distance from panel's i-th edge
+            h = r_1.cross(r_0).norm()/r_0.norm()
+
+            # radius of vortex core model
+            r_c = core_size
+
+            velocity_term = velocity_term * (
+                1 - np.exp(- (h**2)/(r_c**2) )
+            ) 
+
+        V_induced = V_induced + velocity_term
+
+    return V_induced
 
 if __name__=='__main__':    
     pass
