@@ -2,7 +2,7 @@ import numpy as np
 from vector_class import Vector
 from influence_coefficient_functions import Src_influence_coeff, Dblt_influence_coeff, influence_coeff
 from NASA4023_VSAERO_theory import Src_NASA4023, Dblt_NASA4023
-from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity
+from disturbance_velocity_functions import Src_disturb_velocity, Dblt_disturb_velocity, Vrtx_ring_disturb_velocity, Vrtx_ring_induced_veloctiy
 from mesh_class import PanelMesh, PanelAeroMesh
 from Algorithms import LeastSquares
 
@@ -209,7 +209,180 @@ class Steady_PanelMethod(PanelMethod):
                 
         return A, B, C
 
-    def solve_iteratively(self, mesh:PanelAeroMesh, RefArea, dt, max_iters,
+    def solve_with_pressure_kutta(self, mesh:PanelAeroMesh):
+
+        body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
+        wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
+
+        for panel in body_panels:
+            panel.sigma = source_strength(panel, self.V_fs)
+
+        A, B, C = self.influence_coeff_matrices(mesh)
+
+        RHS = right_hand_side(body_panels, B)
+
+
+        doublet_strengths = np.linalg.solve(A, RHS)
+        for panel_i in (body_panels):
+            panel_i.mu = doublet_strengths[panel_i.id]
+
+        for id_i in mesh.TrailingEdge["suction side"]:
+            for id_j in mesh.wake_sheddingPanels[id_i]:
+                panel_j = mesh.panels[id_j]
+                panel_j.mu = panel_j.mu + doublet_strengths[id_i]
+
+        for id_i in mesh.TrailingEdge["pressure side"]:
+            for id_j in mesh.wake_sheddingPanels[id_i]:
+                panel_j = mesh.panels[id_j]
+                panel_j.mu = panel_j.mu - doublet_strengths[id_i]
+
+        VSAERO_onbody_analysis(self.V_fs, mesh)
+
+
+        """
+        C mu  + B sigma = 0
+        A mu_s + B sigma = 0  (=> A mu_s = - B sigma)
+        C = [M_s, M_w], mu = [mu_s, mu_w]
+        M_s mu_s + M_w mu_w + B sigma_s = 0
+        M_s mu_s(t) + M_w mu_w(t) + B sigma_s = 0
+        M_s mu_s(t+1) + M_w mu_w(t+1) + B sigma_s = 0
+        M_s mu_s(t+1) + M_w mu_w(t+1) + B sigma_s = 0
+        M_s ( mu_s(t+1) - mu_s(t) ) + M_w ( mu_w(t+1) - mu_w(t) ) = 0
+        
+        M_s ( mu_s(t+1) - mu_s(t) ) = - M_w ( mu_w(t+1) - mu_w(t) )
+        
+        mu_w(t_beta) = (1 + beta) mu_w(t) 
+        => mu_w(t_beta) - mu_w(t) =  beta mu_w(t)
+        
+        M_s ( mu_s(t+1) - mu_s(t) ) = - M_w ( mu_w(t+1) - mu_w(t) ) =>
+        M_s ( mu_s(t_beta) - mu_s(t) ) = - M_w ( mu_w(t_beta) - mu_w(t) ) =>
+        M_s ( mu_s(t_beta) - mu_s(t) ) = - beta M_w mu_w(t)
+        
+        A x = b, x = mu_s(t_beta) - mu_s(t), A=M_s, b = - beta M_w mu_w(t)
+        mu_s(t_beta) = ( mu_s(t_beta) - mu_s(t) ) + mu_s(t)
+        
+        J(t) ( mu_w(t+1) - mu_w(t) ) = - (Cp_TE_ss(t) - Cp_TE_ps(t))
+        J_ij = [ (Cp_TE_ss(t+1) - Cp_TE_ps(t+1)) - (Cp_TE_ss(t) - Cp_TE_ps(t)) ] / [ mu_w(t_beta) - mu_w(t) ] 
+        = [ Delta_Cp(t+1) - Delta_Cp(t) ] / [beta mu_w(t)]
+        
+        Ax = b, x = mu_w(t+1) - mu_w(t), A=J(t), b=-(Cp_TE_ss(t) - Cp_TE_ps(t))
+        mu_w(t+1) =  ( mu_w(t+1) - mu_w(t) ) + mu_w(t)
+        """
+
+        n_te = len(mesh.TrailingEdge["suction side"])
+        delta_cp = np.zeros(n_te)
+        for i, id_i in enumerate(mesh.TrailingEdge["suction side"]):
+            for id_j in mesh.TrailingEdge["pressure side"]:
+                if mesh.wake_sheddingPanels[id_i][0] == mesh.wake_sheddingPanels[id_j][0]:
+                    delta_cp[i] = mesh.panels[id_i].Cp - mesh.panels[id_j].Cp
+
+
+        error = 0.001
+        iter = 0
+        converged = False
+        beta = 0.1
+        if max(abs(delta_cp)) <= error:
+            converged = True
+
+        n_s = len(body_panels)
+        [M_s, M_w] = np.hsplit(C, [n_s])
+        J = np.zeros((n_te, n_te))
+
+        while not converged:
+            iter = iter + 1
+            print("pressute Kutta condition iteration:" + str(iter))
+
+            # M_s mu_s + M_w mu_w + B sigma = 0
+            # M_s mu_s = - (M_w mu_w + B sigma)
+
+            # mu_s = np.linalg.solve(
+            #     M_s,
+            # -( M_w @ np.array([(1+beta)*panel.mu for panel in wake_panels])
+            #    +  B @ np.array([panel.sigma for panel in body_panels]) )
+            # )
+
+
+            # M_s ( mu_s(t+1) - mu_s(t) ) = - M_w ( mu_w(t+1) - mu_w(t) )
+
+            mu_0 = np.array([panel.mu for panel in mesh.panels])
+            [mu_s_0, mu_w_0] = np.hsplit(mu_0, [n_s])
+            mu_w_0_te = np.array([mesh.panels[id_i].mu for id_i in [mesh.wake_sheddingPanels[id_j][0] for id_j in mesh.TrailingEdge["suction side"]]])
+
+
+            for j, id_j in enumerate(mesh.TrailingEdge["suction side"]):
+
+
+                for panel in wake_panels:
+                    panel.mu = 0
+
+                for id in mesh.wake_sheddingPanels[id_j]:
+                    mesh.panels[id].mu = beta * mu_0[id]
+
+                mu_s = (
+                mu_s_0
+                +
+                np.linalg.solve(
+                    M_s,
+                    - M_w @ (np.array([panel.mu for panel in wake_panels]))
+                )
+                )
+
+
+                for i, panel in enumerate(body_panels):
+                    panel.mu = mu_s[i]
+
+                VSAERO_onbody_analysis(self.V_fs, mesh)
+
+
+                for i, id_i in enumerate(mesh.TrailingEdge["suction side"]):
+                    for id_k in mesh.TrailingEdge["pressure side"]:
+                        if mesh.wake_sheddingPanels[id_i][0] == mesh.wake_sheddingPanels[id_k][0]:
+
+                            J[i][j] = (
+                            (mesh.panels[id_i].Cp - mesh.panels[id_k].Cp
+                                - delta_cp[i]
+                            )
+                            /
+                            mesh.panels[mesh.wake_sheddingPanels[id_j][0]].mu
+                            )
+
+
+
+
+            # J(t) ( mu_w(t+1) - mu_w(t) ) = - (Cp_TE_ss(t) - Cp_TE_ps(t))
+            mu_w_te = mu_w_0_te + np.linalg.solve(J, -delta_cp)
+
+
+            for i, id_i in enumerate(mesh.TrailingEdge["suction side"]):
+                for id_j in mesh.wake_sheddingPanels[id_i]:
+                    mesh.panels[id_j].mu = mu_w_te[i]
+
+
+            # M_s ( mu_s(t+1) - mu_s(t) ) = - M_w ( mu_w(t+1) - mu_w(t) )
+
+            mu_w = np.array([panel.mu for panel in wake_panels])
+
+            mu_s = mu_s_0 + np.linalg.solve(M_s, - M_w @ (mu_w - mu_w_0))
+
+            for i, panel in enumerate(body_panels):
+                panel.mu = mu_s[i]
+
+            VSAERO_onbody_analysis(self.V_fs, mesh)
+
+
+            for i, id_i in enumerate(mesh.TrailingEdge["suction side"]):
+                for id_j in mesh.TrailingEdge["pressure side"]:
+                    if mesh.wake_sheddingPanels[id_i][0] == mesh.wake_sheddingPanels[id_j][0]:
+                        delta_cp[i] = (
+                            mesh.panels[id_i].Cp - mesh.panels[id_j].Cp
+                        )
+
+
+            if max(abs(delta_cp)) <= error:
+                converged = True
+                print("pressure Kutta condition converged")
+                
+    def solve_iteratively(self, mesh:PanelAeroMesh, RefArea, max_iters,
                           convergence_value = 10**(-5)):
                 
         ny, nx = mesh.nodes_ids["wake lines"].shape
@@ -219,20 +392,53 @@ class Steady_PanelMethod(PanelMethod):
             
             print("iteration: ", it)
             
-            self.solve(mesh)
+            # self.solve(mesh)
+            self.solve_with_pressure_kutta(mesh)
             
             body_panels = [mesh.panels[id] for id in mesh.panels_ids["body"]]
             wake_panels = [mesh.panels[id] for id in mesh.panels_ids["wake"]]
-            old_nodes = mesh.nodes.copy()
-            for j in range(nx-1):
-                for i in range(ny):
-                    node_id = mesh.nodes_ids["wake lines"][i][j]
-                    r = Vector(old_nodes[node_id])
-                    v = Velocity(self.V_fs, r, body_panels, wake_panels)
-                    dr = v * dt
-                    r = r + dr
+            old_nodes = mesh.nodes.copy()  
+            for i in range(ny):
+                for j in range(nx-2):
+                                                            
+                    r_j = Vector(old_nodes[mesh.nodes_ids["wake lines"][i][j]])
+                    r_j_plus_1 = Vector(
+                        old_nodes[mesh.nodes_ids["wake lines"][i][j+1]]
+                    )
+                    dr_norm = (r_j_plus_1 - r_j).norm()
+                    
+                    v_j = Velocity(self.V_fs, r_j, body_panels, wake_panels)
+                    v_j_plus_1 = Velocity(self.V_fs, r_j_plus_1, body_panels, wake_panels)
+
+                    v_m = 0.5 * (v_j + v_j_plus_1)
+                    dr = dr_norm * (v_m/v_m.norm())
+                    
+                    # faster scheme                
+                    r_j = Vector(mesh.nodes[mesh.nodes_ids["wake lines"][i][j]])
+                    
+                    r_j_plus_1 = r_j + dr
                     node_id = mesh.nodes_ids["wake lines"][i][j+1]
-                    mesh.nodes[node_id] = (r.x, r.y, r.z)
+                    mesh.nodes[node_id] = (r_j_plus_1.x,
+                                           r_j_plus_1.y,
+                                           r_j_plus_1.z)
+                
+                j=j+1
+                r_j = Vector(old_nodes[mesh.nodes_ids["wake lines"][i][j]])
+                r_j_plus_1 = Vector(
+                    old_nodes[mesh.nodes_ids["wake lines"][i][j+1]]
+                )
+                dr_norm = (r_j_plus_1 - r_j).norm()
+                
+                dr = dr_norm * (v_m/v_m.norm())
+                
+                # faster scheme                
+                r_j = Vector(mesh.nodes[mesh.nodes_ids["wake lines"][i][j]])
+                    
+                r_j_plus_1 = r_j + dr
+                node_id = mesh.nodes_ids["wake lines"][i][j+1]
+                mesh.nodes[node_id] = (r_j_plus_1.x,
+                                        r_j_plus_1.y,
+                                        r_j_plus_1.z)
             
             mesh.update_wake_panel_vertices()
             
@@ -242,11 +448,11 @@ class Steady_PanelMethod(PanelMethod):
             
             print("CL = " + str(CL) + ",  CD = " + str(CD) + "\n")
             
-            dCL_dt = (CL-CL_prev)/dt
-            dCD_dt = (CD-CD_prev)/dt
+            Delta_CL = CL-CL_prev
+            Delta_CD = CD-CD_prev
             
-            print("dCL/dt = " + str(dCL_dt) +
-                  ",  dCD/dt = " + str(dCD_dt) + "\n")
+            print("Delta_CL = " + str(Delta_CL) +
+                  ", Delta_CD = " + str(Delta_CD) + "\n")
                       
             
             # reset panel strengths
@@ -254,26 +460,27 @@ class Steady_PanelMethod(PanelMethod):
                 panel.sigma, panel.mu, panel.Cp = 0.0, 0.0, 0.0
                 panel.Velocity = Vector((0.0, 0.0, 0.0))
                         
-            if ( abs(dCL_dt) <= convergence_value
-                and abs(dCD_dt) <= convergence_value ):
+            if ( abs(Delta_CL) <= convergence_value
+                and abs(Delta_CD) <= convergence_value ):
                 
                 print("solution converged \n")
                 
                 break
             
             CL_prev, CD_prev = CL, CD
+            
+            # if it%5==0:
+            #     mesh.plot_mesh_bodyfixed_frame(
+            #         elevation=-150, azimuth=-120, plot_wake=True
+            #     )
         
         print("final iteration: ", it+1)
-        self.solve(mesh)
+        # self.solve(mesh)
+        self.solve_with_pressure_kutta(mesh)
         
-        CL = self.LiftCoeff(mesh.panels, RefArea)
-        CD = self.inducedDragCoeff(mesh.panels, RefArea)
-        
-        print("CL = " + str(CL) + ",  CD = " + str(CD) + "\n")
-        
-        mesh.plot_mesh_bodyfixed_frame(
-            elevation=-150, azimuth=-120, plot_wake=True
-        )
+        # mesh.plot_mesh_bodyfixed_frame(
+        #     elevation=-150, azimuth=-120, plot_wake=True
+        # )
 
 
 class UnSteady_PanelMethod(PanelMethod):
@@ -1020,8 +1227,15 @@ def wake_induce_velocity(r_p, wake_panels):
         # _, Vdblt = Dblt_NASA4023(r_p, panel)
         # velocity = velocity + Vdblt
         
-        # Vortex ring panels
-        velocity = velocity + Vrtx_ring_disturb_velocity(r_p, panel)
+        
+        
+        # Vortex ring panels 
+        # (cut-off finite vortex core model)
+        # velocity = velocity + Vrtx_ring_disturb_velocity(r_p, panel)
+        
+        # Lamb–Osseen finite vortex core model
+        velocity = velocity + Vrtx_ring_induced_veloctiy(r_p, panel,
+                                                         core_size=0.3)
     
     return velocity
 
@@ -1042,6 +1256,14 @@ def Velocity(V_fs, r_p, body_panels, wake_panels=[]):
     return velocity
    
 def AerodynamicForce(panels, ReferenceArea):
+    
+    """
+    CF = C_force
+    N = - CF.z, A = CF.x
+    CL = N * np.cos(10*np.pi/180) - A * np.sin(10*np.pi/180)
+    CD = N * np.sin(10*np.pi/180) + A * np.cos(10*np.pi/180)
+    """
+    
     ref_area = ReferenceArea
     C_force = Vector((0, 0, 0))
     for panel in panels:
@@ -1173,6 +1395,138 @@ def Trefftz_Plane_Analysis(mesh:PanelAeroMesh, V_fs:Vector, RefArea:float):
 
     return CL, CD
 
+def local_Cl(mesh, V_fs):
+    """
+    Cl = l/(1/2 rho V^2 c)
+    """
+
+    ChordWiseStrips = mesh.give_ChordWiseStrips()
+    j_max, i_max = ChordWiseStrips.shape
+    j_max, i_max = j_max - 1, i_max - 1
+    i_te, i_le = 0, i_max//2
+
+    local_Cl = np.zeros((j_max+1, 2))
+    node_first = mesh.nodes[mesh.nodes_ids["trailing edge"][0]]
+    node_last = mesh.nodes[mesh.nodes_ids["trailing edge"][-1]]
+    span = abs(node_last[1] - node_first[1])
+    semi_span = span/2
+
+    for j in range(j_max+1):
+
+        te_nodes_ids = []   
+        for node_id in mesh.shells[ChordWiseStrips[j][i_te]]:
+            if node_id in mesh.shells[ChordWiseStrips[j][i_te-1]]:
+                te_nodes_ids.append(node_id)
+
+        if mesh.nodes[te_nodes_ids[0]][1]<mesh.nodes[te_nodes_ids[-1]][1]:
+            r_te = Vector(mesh.nodes[te_nodes_ids[0]])
+            r_te_next = Vector(mesh.nodes[te_nodes_ids[-1]])
+        else:
+            r_te = Vector(mesh.nodes[te_nodes_ids[-1]])
+            r_te_next = Vector( mesh.nodes[te_nodes_ids[0]])
+
+        le_nodes_ids = [] 
+        for node_id in mesh.shells[ChordWiseStrips[j][i_le]]:
+            if node_id in mesh.shells[ChordWiseStrips[j][i_le+1]]:
+                le_nodes_ids.append(node_id)
+
+        if mesh.nodes[le_nodes_ids[0]][1]<mesh.nodes[le_nodes_ids[-1]][1]:
+            r_le = Vector(mesh.nodes[le_nodes_ids[0]])
+            r_le_next = Vector(mesh.nodes[le_nodes_ids[-1]])
+        else:
+            r_le = Vector(mesh.nodes[le_nodes_ids[-1]])
+            r_le_next = Vector(mesh.nodes[le_nodes_ids[0]])
+
+        chord_prev = (r_te - r_le).norm()
+        chord_next = (r_te_next - r_le_next).norm()
+        strip_span = abs(r_le_next.y - r_le.y)
+        strip_chordwise_area = strip_span * (chord_prev + chord_next)/2
+
+        strip_y_perc = (r_le.y + strip_span/2)/semi_span
+
+        strip_force = Vector((0, 0, 0))
+
+        for id in ChordWiseStrips[j]:
+            panel = mesh.panels[id]
+            strip_force = (
+                strip_force 
+                + panel.n * (-panel.Cp*panel.area/strip_chordwise_area)
+            )
+
+            e_fs = V_fs/V_fs.norm()
+
+            cd_strip = (strip_force.dot(e_fs)) * e_fs
+            cl_strip = strip_force - cd_strip
+
+            if cl_strip.z <= 0:
+                cl_strip = cl_strip.norm()
+            else:
+                cl_strip = - cl_strip.norm()
+
+        local_Cl[j][0] = strip_y_perc
+        local_Cl[j][1] = cl_strip
+
+    return local_Cl
+
+def local_CL(mesh, V_fs, MAC):
+
+    """
+    Cl = l/(1/2 rho V^2 c)
+    local CL = Cl * c/M.A.C.
+    """
+
+    ChordWiseStrips = mesh.give_ChordWiseStrips()
+    j_max, i_max = ChordWiseStrips.shape
+    j_max, i_max = j_max - 1, i_max - 1
+    i_le = i_max//2
+
+    local_CL = np.zeros((j_max+1, 2))
+    node_first = mesh.nodes[mesh.nodes_ids["trailing edge"][0]]
+    node_last = mesh.nodes[mesh.nodes_ids["trailing edge"][-1]]
+    span = abs(node_last[1] - node_first[1])
+    semi_span = span/2
+
+    for j in range(j_max+1):       
+
+        le_nodes_ids = [] 
+        for node_id in mesh.shells[ChordWiseStrips[j][i_le]]:
+            if node_id in mesh.shells[ChordWiseStrips[j][i_le+1]]:
+                le_nodes_ids.append(node_id)
+
+        if mesh.nodes[le_nodes_ids[0]][1]<mesh.nodes[le_nodes_ids[-1]][1]:
+            r_le = Vector(mesh.nodes[le_nodes_ids[0]])
+            r_le_next = Vector(mesh.nodes[le_nodes_ids[-1]])
+        else:
+            r_le = Vector(mesh.nodes[le_nodes_ids[-1]])
+            r_le_next = Vector(mesh.nodes[le_nodes_ids[0]])
+
+        strip_span = abs(r_le_next.y - r_le.y)
+        strip_MAC_area = strip_span * MAC
+
+        strip_y_perc = (r_le.y + strip_span/2)/semi_span
+        strip_force = Vector((0, 0, 0))
+
+        for id in ChordWiseStrips[j]:
+            panel = mesh.panels[id]
+            strip_force = (
+                strip_force 
+                + panel.n * (-panel.Cp*panel.area/strip_MAC_area)
+            )
+
+            e_fs = V_fs/V_fs.norm()
+
+            CD_strip = (strip_force.dot(e_fs)) * e_fs
+            CL_strip = strip_force - CD_strip
+
+            if CL_strip.z <= 0:
+                CL_strip = CL_strip.norm()
+            else:
+                CL_strip = - CL_strip.norm()
+
+        local_CL[j][0] = strip_y_perc
+        local_CL[j][1] = CL_strip
+
+    return local_CL
        
 if __name__ == "__main__":
     from mesh_class import PanelMesh
