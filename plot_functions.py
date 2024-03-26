@@ -66,7 +66,7 @@ def plot_Cp_SurfaceContours(panel_list, elevation=30, azimuth=-60):
   m = cm.ScalarMappable(cmap=cm.coolwarm)
   m.set_array([min(Cp),max(Cp)])
   m.set_clim(vmin=min(Cp),vmax=max(Cp))
-  Cbar = fig.colorbar(m)
+  Cbar = fig.colorbar(m, ax=ax)
   # Cbar.set_ticks([round(x,2) for x in np.linspace(min(Cp), max(Cp), 6)])
   Cbar.set_ticks(np.linspace(min(Cp), max(Cp), 6))
   Cbar.set_ticklabels([str(round(x,2)) for x in np.linspace(min(Cp), max(Cp), 6)])
