@@ -31,9 +31,11 @@ $` \nabla^2 = \frac{\partial^2()}{\partial x^2} + \frac{\partial^2()}{\partial y
 $` \nabla_\mathbf{x}^2 u(\mathbf{x}) = \nabla_\mathbf{y}^2 v(\mathbf{y}) `$, where $` \mathbf{y} = \mathbf{R} \mathbf{x} `$ 
 and $`  u(\mathbf{x}) = v(\mathbf{y}) = v(\mathbf{R} \mathbf{x}) `$
 
-### Fundamental Solution of Laplace's Equation
+### Fundamental Solution of the Laplace operator
 Since  Laplace equation is invariant under rigid motions, it is natural to look for solutions to $` \nabla^2 \psi = 0 `$ which have rotational symmetry and the form 
 $` \psi \colon \mathbb{R}^3 \to \mathbb{R} \colon \psi(\underline{r},\underline{r}_p) = \psi(\lVert \underline{r} - \underline{r}_p \rVert) `$
+
+Assuming that $` \underline{r} \neq \underline{r}_p `$ , it is true that
 
 ```math
 \begin{align*}
@@ -84,11 +86,90 @@ $` \psi \colon \mathbb{R}^3 \to \mathbb{R} \colon \psi(\underline{r},\underline{
 \end{align*}
 ```
 
-### Green's Identities
+
+When  $` c = \frac{1}{4 \pi} `$ and $` c' = 0 `$ are chosen, so that
+$` \psi(\lVert \underline{r} - \underline{r}_p \rVert) = - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} `$, it can be shown that 
+
+```math
+\nabla^2 \psi(\underline{r}, \underline{r}_p) = \delta(\underline{r} - \underline{r}_p)
+\qquad \text{and} \qquad \iiint_V f(\underline{r}) \delta(\underline{r} - \underline{r}_p) \mathrm{d}V = f(\underline{r}_p)
+```
+
+where $` \delta(\underline{r} - \underline{r}_p) `$ is the Dirac delta function defined in $` \mathrm{C}_c^\infty(V) `$ and, $` f \colon V \subseteq \mathbb{R}^3 \to \mathbb{R} `$ and $` f \in \mathrm{C}_c^\infty(V) `$.
+
+
+$` \psi(\lVert \underline{r} - \underline{r}_p \rVert) = - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} `$ is called Fundamental Solution of the Laplace operator
+
+
+### Gauss's Divergence Theorem
+
+Let $` V \subset \mathbb{R}^3 `$ be a bounded domain, and his boundary $` \partial V `$.
+Let $` \partial V `$ be a smooth hypersurface and $` \underline{n} `$ the outward unit normal vector to $` \partial V `$.
+Supose $` \underline{F} \colon V \subseteq \mathbb{R}^3 \to \mathbb{R}^3 `$ and  $` F \in \mathrm{C}^1(V) \cap \mathrm{C}^0(\partial V) `$. It is true that
+
+```math
+\iiint_V \nabla \cdot \vec{F} \mathrm{d}V = \iint_{\partial V} \vec{F} \cdot \vec{n} \mathrm{d}S
+```
+
+### Green's 2nd Identity
+Let $` V \subset \mathbb{R}^3 `$ be a bounded domain, and his boundary $` \partial V `$.
+Let $` \partial V `$ be a smooth hypersurface and $` \underline{n} `$ the outward unit normal vector to $` \partial V `$.
+Supose $` \underline{F} = \psi \nabla \phi - \phi \nabla \psi `$, 
+where $` \psi \, , \phi \in \mathrm{C}^2(V) \cap \mathrm{C}^1(\partial V) `$. It is true that
+
+```math
+\begin{align*}
+&\iiint_V \nabla \cdot \vec{F} \mathrm{d}V = \iint_{S} \vec{F} \cdot \vec{n} \mathrm{d}S
+\implies
+\iiint_V \nabla \cdot \left( \psi \nabla \phi - \phi \nabla \psi \right) \mathrm{d}V = 
+\iint_{S} \left( \psi \nabla \phi - \phi \nabla \psi \right) \cdot \vec{n} \mathrm{d}S
+\implies
+\\
+&\iiint_V \left( \nabla \psi \cdot \nabla \phi + \psi \nabla^2 \phi  - \nabla \phi \cdot \nabla \psi - \phi \nabla^2 \psi \right) \mathrm{d}V = 
+\iint_{S} \left[ \psi (\vec{n} \cdot \nabla) \phi - \phi (\vec{n} \cdot \nabla) \psi \right] \mathrm{d}S
+\implies
+\end{align*}
+```
+```math
+\begin{aligned}
+\iiint_V \left(\psi \nabla^2 \phi - \phi \nabla^2 \psi \right) \mathrm{d}V &=
+\iint_{S} \left[ \psi (\vec{n} \cdot \nabla) \phi - \phi (\vec{n} \cdot \nabla) \psi \right] \mathrm{d}S
+\\
+&= \iint_{S} \left( \psi  \frac{\partial \phi}{\partial n} - \phi \frac{\partial \psi}{\partial n} \right)\mathrm{d}S
+\end{aligned}
+```
 
 
 
-Integral Equation of velocity potential $\phi$:
+### Integral Equation of velocity potential $\phi$
+* Let $` V \subset \mathbb{R}^3 `$ be a bounded domain, and his boundary $` \partial V `$.
+* Let $` \partial V =  S_\infty \cup S \cup S_w `$ be a smooth hypersurface and $` \underline{e}_n (= - \underline{n} ) `$ the inward unit normal vector to $` \partial V `$.
+* Let $` \phi \in \mathrm{C}^2(V) \cap \mathrm{C}^1(\partial V) `$ and $` \psi(\lVert \underline{r} - \underline{r}_p \rVert) = - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} `$
+* Let $` V_\epsilon = V - B[\underline{r}_p, \epsilon] `$. Then $` \partial V_\epsilon = \partial V \cup \partial B[\vec{r}_p, \epsilon] = S_\infty \cup S \cup S_w \cup S_\epsilon `$
+* Let Velocity field $`\underline{V} = \nabla \phi `$  and $` \nabla \cdot \underline{V} = 0 `$. Then $` \nabla^2 \phi = 0 `$
+
+
+Using Green's 2nd Identity we have
+```math
+\begin{align*}
+&\iiint_{V_\epsilon} \left(\psi \nabla^2 \phi - \phi \nabla^2 \psi \right) \mathrm{d}V =
+\iint_{\partial V_\epsilon} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S \xRightarrow[\nabla^2 \phi = 0]{\nabla^2 \psi(\underline{r}, \underline{r}_p) = 0 \, , \underline{r} \neq \underline{r}_p}
+\\
+&
+\iint_{\partial V_\epsilon} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S = 0
+\xRightarrow{\underline{e}_n = - \underline{n}}
+\iint_{\partial V_\epsilon} \left[ \phi (\vec{e}_n \cdot \nabla) \psi - \psi (\vec{e}_n \cdot \nabla) \phi \right] \mathrm{d}S = 0
+\xRightarrow{\partial V_\epsilon = \partial V \cup \partial B[\vec{r}_p, \epsilon]}
+\end{align*}
+```
+
+```math
+\iint_{\partial V} \left[ \phi (\vec{e}_n \cdot \nabla) \psi - \psi (\vec{e}_n \cdot \nabla) \phi \right] \mathrm{d}S
++
+\iint_{\partial B[\vec{r}_p, \epsilon]} \left[ \phi (\vec{e}_n \cdot \nabla) \psi - \psi (\vec{e}_n \cdot \nabla) \phi \right] \mathrm{d}S
+= 0
+```
+
 ```math
 \phi(\underline{r}_p) =
 \iint_S \frac{\sigma}{2\pi} \ln{(\lVert \underline{r} - \underline{r}_p \rVert)} \mathrm{d}S + \iint_S - \frac{\mu}{2\pi} (\underline{e}_n \cdot \nabla) \ln{(\lVert \underline{r} - \underline{r}_p \rVert)} \mathrm{d}S + \iint_{S_w} - \frac{\mu_w}{2\pi} (\underline{e}_n \cdot \nabla) \ln{(\lVert \underline{r} - \underline{r}_p \rVert)} \mathrm{d}S + \phi_\infty(\underline{r}_p)
