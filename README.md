@@ -13,13 +13,21 @@
 
 
 
-### Velocity field
-   * incompressible: $` \nabla \cdot \underline{V} = 0 `$
-   * conservative: $` \underline{V} = \nabla \phi \implies \nabla \times \underline{V} = \nabla \times \nabla \phi = 0 `$ (irrotational)
+### Velocity field $` \underline{V} \colon \mathbb{U} \subseteq \mathbb{R}^3 \to \mathbb{R}^3 `$
 
-```math
-\nabla \cdot \underline{V} = \nabla \cdot \nabla \phi = \nabla^2 \phi = 0 \qquad \text{(Laplace's Equation)}
-```
+$`
+\begin{array}{l}
+\bullet \text{ incompressible: } \nabla \cdot \underline{V} = 0  \\
+\begin{drcases} 
+\bullet \text{ irrotational: } \nabla \times \underline{V} = 0
+\\
+\bullet \text{ simply connected domain } \mathbb{U} 
+\end{drcases} \implies \underline{V} = \nabla \phi \text{ (conservative)}
+\end{array}
+`$
+
+### Laplace's Equation
+$` \nabla \cdot \underline{V} = 0  \implies \nabla \cdot \nabla \phi = 0 \implies \nabla^2 \phi = 0`$
 
 ### Rotational Invariance of Laplace differential operator
 A function defined on an inner product space is said to have rotational invariance if its value does not change when arbitrary rotations are applied to its argument. 
@@ -108,7 +116,7 @@ Let $` \partial V `$ be a smooth hypersurface and $` \underline{n} `$ the outwar
 Supose $` \underline{F} \colon V \subseteq \mathbb{R}^3 \to \mathbb{R}^3 `$ and  $` F \in \mathrm{C}^1(V) \cap \mathrm{C}^0(\partial V) `$. It is true that
 
 ```math
-\iiint_V \nabla \cdot \vec{F} \mathrm{d}V = \iint_{\partial V} \vec{F} \cdot \vec{n} \mathrm{d}S
+\iiint_V \nabla \cdot \underline{F} \mathrm{d}V = \iint_{\partial V} \underline{F} \cdot \underline{n} \mathrm{d}S
 ```
 
 ### Green's 2nd Identity
@@ -119,21 +127,21 @@ where $` \psi \, , \phi \in \mathrm{C}^2(V) \cap \mathrm{C}^1(\partial V) `$. It
 
 ```math
 \begin{align*}
-&\iiint_V \nabla \cdot \vec{F} \mathrm{d}V = \iint_{S} \vec{F} \cdot \vec{n} \mathrm{d}S
+&\iiint_V \nabla \cdot \underline{F} \mathrm{d}V = \iint_{S} \underline{F} \cdot \underline{n} \mathrm{d}S
 \implies
 \iiint_V \nabla \cdot \left( \psi \nabla \phi - \phi \nabla \psi \right) \mathrm{d}V = 
-\iint_{S} \left( \psi \nabla \phi - \phi \nabla \psi \right) \cdot \vec{n} \mathrm{d}S
+\iint_{S} \left( \psi \nabla \phi - \phi \nabla \psi \right) \cdot \underline{n} \mathrm{d}S
 \implies
 \\
 &\iiint_V \left( \nabla \psi \cdot \nabla \phi + \psi \nabla^2 \phi  - \nabla \phi \cdot \nabla \psi - \phi \nabla^2 \psi \right) \mathrm{d}V = 
-\iint_{S} \left[ \psi (\vec{n} \cdot \nabla) \phi - \phi (\vec{n} \cdot \nabla) \psi \right] \mathrm{d}S
+\iint_{S} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
 \implies
 \end{align*}
 ```
 ```math
 \begin{aligned}
 \iiint_V \left(\psi \nabla^2 \phi - \phi \nabla^2 \psi \right) \mathrm{d}V &=
-\iint_{S} \left[ \psi (\vec{n} \cdot \nabla) \phi - \phi (\vec{n} \cdot \nabla) \psi \right] \mathrm{d}S
+\iint_{S} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
 \\
 &= \iint_{S} \left( \psi  \frac{\partial \phi}{\partial n} - \phi \frac{\partial \psi}{\partial n} \right)\mathrm{d}S
 \end{aligned}
@@ -145,29 +153,79 @@ where $` \psi \, , \phi \in \mathrm{C}^2(V) \cap \mathrm{C}^1(\partial V) `$. It
 * Let $` V \subset \mathbb{R}^3 `$ be a bounded domain, and his boundary $` \partial V `$.
 * Let $` \partial V =  S_\infty \cup S \cup S_w `$ be a smooth hypersurface and $` \underline{e}_n (= - \underline{n} ) `$ the inward unit normal vector to $` \partial V `$.
 * Let $` \phi \in \mathrm{C}^2(V) \cap \mathrm{C}^1(\partial V) `$ and $` \psi(\lVert \underline{r} - \underline{r}_p \rVert) = - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} `$
-* Let $` V_\epsilon = V - B[\underline{r}_p, \epsilon] `$. Then $` \partial V_\epsilon = \partial V \cup \partial B[\vec{r}_p, \epsilon] = S_\infty \cup S \cup S_w \cup S_\epsilon `$
-* Let Velocity field $`\underline{V} = \nabla \phi `$  and $` \nabla \cdot \underline{V} = 0 `$. Then $` \nabla^2 \phi = 0 `$
-
+* Let $` V_\epsilon = V - B[\underline{r}_p, \epsilon] `$. Then $` \partial V_\epsilon = \partial V \cup \partial B[\underline{r}_p, \epsilon] = S_\infty \cup S \cup S_w \cup S_\epsilon `$
 
 Using Green's 2nd Identity we have
 ```math
 \begin{align*}
 &\iiint_{V_\epsilon} \left(\psi \nabla^2 \phi - \phi \nabla^2 \psi \right) \mathrm{d}V =
-\iint_{\partial V_\epsilon} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S \xRightarrow[\nabla^2 \phi = 0]{\nabla^2 \psi(\underline{r}, \underline{r}_p) = 0 \, , \underline{r} \neq \underline{r}_p}
+\iint_{\partial V_\epsilon} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
+\xRightarrow{\nabla^2 \psi(\underline{r}, \underline{r}_p) = 0 \, , \underline{r} \neq \underline{r}_p}
+\iiint_{V_\epsilon} \psi \nabla^2 \phi \mathrm{d}V =
+\iint_{\partial V_\epsilon} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
+\xRightarrow[ {\partial V_\epsilon = \partial V \cup \partial B[\underline{r}_p, \epsilon]} ]{ {V_\epsilon = V - B[\underline{r}_p, \epsilon]} }
 \\
 &
-\iint_{\partial V_\epsilon} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S = 0
-\xRightarrow{\underline{e}_n = - \underline{n}}
-\iint_{\partial V_\epsilon} \left[ \phi (\vec{e}_n \cdot \nabla) \psi - \psi (\vec{e}_n \cdot \nabla) \phi \right] \mathrm{d}S = 0
-\xRightarrow{\partial V_\epsilon = \partial V \cup \partial B[\vec{r}_p, \epsilon]}
+\iiint_{V} \psi \nabla^2 \phi \mathrm{d}V - \iiint_{B[\underline{r}_p, \epsilon]} \psi \nabla^2 \phi \mathrm{d}V =
+\iint_{\partial V} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
++ \iint_{\partial B[\underline{r}_p, \epsilon]} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
+\xRightarrow{\epsilon \to 0}
+\end{align*}
+```
+```math
+\iiint_{V} \psi \nabla^2 \phi \mathrm{d}V - \lim_{\epsilon \to 0} \iiint_{B[\underline{r}_p, \epsilon]} \psi \nabla^2 \phi \mathrm{d}V =
+\iint_{\partial V} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
++
+\lim_{\epsilon \to 0} \iint_{\partial B[\underline{r}_p, \epsilon]} \left[ \psi (\underline{n} \cdot \nabla) \phi - \phi (\underline{n} \cdot \nabla) \psi \right] \mathrm{d}S
+= 0
+```
+
+* $` \lim\limits_{\epsilon \to 0} \iiint_{B[\underline{r}_p, \epsilon]} \psi \nabla^2 \phi \mathrm{d}V `$
+* $` \lim\limits_{\epsilon \to 0} \iint_{\partial B[\underline{r}_p, \epsilon]} \psi (\underline{n} \cdot \nabla) \phi  \mathrm{d}S `$ (note: $` \psi(\lVert \underline{r} - \underline{r}_p \rVert) = - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} = const \, , \qquad \forall \underline{r} \in \partial B[\underline{r}_p, \epsilon] `$)
+* $` \lim\limits_{\epsilon \to 0} \iint_{\partial B[\underline{r}_p, \epsilon]} \phi (\underline{n} \cdot \nabla) \psi \mathrm{d}S `$ (note: $` \underline{e}_n = \frac{\underline{r} - \underline{r}_p}{\lVert \underline{r} - \underline{r}_p \rVert} \, , \qquad \forall \underline{r} \in \partial B[\underline{r}_p, \epsilon]  `$ )
+
+```math
+\begin{align*}
+\bullet \quad \lim_{\epsilon \to 0^+} \iiint_{B[\underline{r}_p, \epsilon]} \psi \nabla^2 \phi  \mathrm{d}V
+&= \nabla^2 \phi \lim_{\epsilon \to 0^+} \iiint_{B[\underline{r}_p, \epsilon]} \psi \mathrm{d}V
+= \nabla^2 \phi \lim_{\epsilon \to 0^+} \iiint_{B[\underline{r}_p, \epsilon]} - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} \mathrm{d}V 
+= - \frac{1}{4 \pi} \nabla^2 \phi \lim_{\epsilon \to 0^+} \iiint_{B[\underline{r}_p, \epsilon]} \frac{1}{\rho} \mathrm{d}V
+\\
+&= - \frac{1}{4 \pi} \nabla^2 \phi \lim_{\epsilon \to 0^+} \int_0^\epsilon \iint_{\partial B[ 0, 1]} \frac{1}{\rho} \rho^2 \mathrm{d}S \, \mathrm{d}\rho
+= - \frac{1}{4 \pi} \nabla^2 \phi \lim_{\epsilon \to 0^+} \int_0^\epsilon \rho \iint_{\partial B[0, 1]} \mathrm{d}S \, \mathrm{d}\rho 
+= - \frac{1}{4 \pi} \nabla^2 \phi \lim_{\epsilon \to 0^+} \int_0^\epsilon 4\pi \rho \, \mathrm{d}\rho
+\\
+&= -  \nabla^2 \phi \lim_{\epsilon \to 0^+} \int_0^\epsilon \rho \, \mathrm{d}\rho
+= - \nabla^2 \phi \lim_{\epsilon \to 0^+} \int_0^\epsilon \frac{1}{2} \frac{\mathrm{d} \rho^2}{\mathrm{d} \rho} \, \mathrm{d}\rho
+= - \frac{1}{2} \nabla^2 \phi \lim_{\epsilon \to 0^+} \int_0^\epsilon  \, \mathrm{d}\rho^2
+= - \frac{1}{2} \nabla^2 \phi \lim_{\epsilon \to 0^+} \epsilon^2 = 0
 \end{align*}
 ```
 
 ```math
-\iint_{\partial V} \left[ \phi (\vec{e}_n \cdot \nabla) \psi - \psi (\vec{e}_n \cdot \nabla) \phi \right] \mathrm{d}S
-+
-\iint_{\partial B[\vec{r}_p, \epsilon]} \left[ \phi (\vec{e}_n \cdot \nabla) \psi - \psi (\vec{e}_n \cdot \nabla) \phi \right] \mathrm{d}S
-= 0
+\begin{align*}
+\bullet \quad \lim_{\epsilon \to 0} \iint_{\partial B[\underline{r}_p, \epsilon]} \psi (\underline{n} \cdot \nabla) \phi \, \mathrm{d}S
+&= \lim_{\epsilon \to 0} \iint_{\partial B[\underline{r}_p, \epsilon]} - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} (\underline{n} \cdot \nabla) \phi \, \mathrm{d}S
+= \lim_{\epsilon \to 0} - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert}  \iint_{\partial B[\underline{r}_p, \epsilon]}  (\underline{n} \cdot \nabla) \phi \, \mathrm{d}S
+\\
+&= \lim_{\epsilon \to 0} - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert}  \iiint_{B[\underline{r}_p, \epsilon]} \nabla \cdot \nabla \phi \, \mathrm{d}V
+= \lim_{\epsilon \to 0} - \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert}  \iiint_{B[\underline{r}_p, \epsilon]} \nabla^2 \phi \, \mathrm{d}V
+= \lim_{\substack{\epsilon \to 0^+ \\ \underline{r} \to \underline{r}_p}} - \frac{1}{4 \pi} \frac{\nabla^2 \phi(\underline{r})}{\lVert \underline{r} - \underline{r}_p \rVert}  \iiint_{B[\underline{r}_p, \epsilon]}  \mathrm{d}V
+\\
+&= \lim_{\substack{\epsilon \to 0^+ \\ \underline{r} \to \underline{r}_p}} - \frac{1}{4 \pi} \frac{\nabla^2 \phi(\underline{r})}{\lVert \underline{r} - \underline{r}_p \rVert}  \frac{4}{3} \pi \lVert \underline{r} - \underline{r}_p \rVert^3
+= - \frac{1}{3} \nabla^2 \phi(\underline{r}_p) \lim_{\substack{\epsilon \to 0^+ \\ \underline{r} \to \underline{r}_p}} \lVert \underline{r} - \underline{r}_p \rVert^2 = 0
+\end{align*}
+```
+
+```math
+\begin{align*}
+\bullet \quad \lim_{\epsilon \to 0} \iint_{\partial B[\underline{r}_p, \epsilon]} \phi (\underline{n} \cdot \nabla) \psi \mathrm{d}S
+= \lim_{\epsilon \to 0} \iint_{\partial B[\underline{r}_p, \epsilon]} \phi \left(- \frac{\underline{r} - \underline{r}_p}{\lVert \underline{r} - \underline{r}_p \rVert} \cdot \nabla \right) \left(- \frac{1}{4 \pi} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert} \right) \mathrm{d}S
+= \frac{1}{4 \pi} \lim_{\substack{\epsilon \to 0^+ \\ \underline{r} \to \underline{r}_p}} \iint_{\partial B[\underline{r}_p, \epsilon]} \phi  \left( - \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert}^2 \right) \mathrm{d}S
+= - \frac{1}{4 \pi} \lim_{\substack{\epsilon \to 0^+ \\ \underline{r} \to \underline{r}_p}} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert}^2 \phi(\underline{r})  \iint_{\partial B[\underline{r}_p, \epsilon]} \mathrm{d}S
+= - \frac{1}{4 \pi} \lim_{\substack{\epsilon \to 0^+ \\ \underline{r} \to \underline{r}_p}} \frac{1}{\lVert \underline{r} - \underline{r}_p \rVert}^2 \phi(\underline{r}) 4 \pi \lVert \underline{r} - \underline{r}_p \rVert}^2
+= - \phi(\underline{r}_p)
+\end{align*}
 ```
 
 ```math
