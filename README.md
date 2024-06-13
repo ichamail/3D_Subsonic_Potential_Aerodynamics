@@ -398,3 +398,35 @@ A_{ij} \mu_j = - B_{ij} \sigma_j , \qquad A_{ij} =
 where $`NWP_j`$ is the number of panels that the wake row shedding from the $`j`$-th panel consists of, and f_j(k) returns the id of the $`k`$-th panel of the wake row shedding from $`j`$-th panel
 
 ### Features
+ 1. Calculation of Non-Lifting Potential Flow about 3D arbitrarily-shaped rigid bodies
+    1. Steady simulations
+    2. Unsteady simulations
+
+ 2. Calculation of Lifting Pseudo-Potential Flow around 3D arbitrarily-shaped rigid bodies
+      1. Steady state simulations with flat rigid wake model
+      2. Steady state iterative simulations with flexible wake model 
+      3. Unsteady simulations with a shedding wake model
+
+## Simulation Results
+
+## Potential Flow around a Sphere
+
+
+## Potential Flow around a Low Aspect Ratio Rectangular Wing
+
+
+## Steady Simulation with rigid wake
+
+## Steady Simulation with iterative wake
+
+## Unsteady Simulation with wake roll up
+
+
+## Potential Flow around a BWB-UAV
+
+## Steady Simulation with rigid wake
+
+## Steady Simulation with iterative wake
+
+## Unsteady Simulation with wake roll up
+
