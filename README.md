@@ -1,6 +1,7 @@
 # Subsonic Potential Aerodynamics
 
 # A 3D Aerodynamic Potential-Flow Code
+![Potential Flow Theoretical Model](https://github.com/ichamail/Panel-Methods-3D/assets/107580530/a0a380f7-a822-4470-b100-ed94ea4238ed)
 
 ## Theoretical Model
 
@@ -380,20 +381,20 @@ where:
    
    * $` \sigma_j = - \underline{e}_{n_j} \cdot \underline{V}_\infty `$
 
-#### steady panel method
+#### Steady Panel Method
 from Kutta Condition: $` \mu_w = const = \mu_U - \mu_L `$
 ```math
 A_{ij} \mu_j = - B_{ij} \sigma_j , \qquad A_{ij} = 
 \begin{cases}
-   C_{ij} + \sum\limits_{k} C_{ik} & \text{if the $j$-th panel is located on the upper side of the surface and adjoins the trailing edge}\\
+   C_{ij} + \sum\limits_{k=0}^{NWP_j} C_{if_j(k)} & \text{if the $j$-th panel is located on the upper side of the surface and adjoins the trailing edge}\\
    C_{ij} & \text{if the $j$-th panel do not adjoins the trailing edge}\\
-   C_{ij} - \sum\limits_{k} C_{ik} & \text{if the $j$-th panel is located on the lower side of the surface and adjoins the trailing edge}
+   C_{ij} - \sum\limits_{k=0}^{NWP_j} C_{if_j(k)} & \text{if the $j$-th panel is located on the lower side of the surface and adjoins the trailing edge}
 \end{cases} 
 ```
 
-
 ```math
-0 \le i < N_s  \qquad 0 \le j < N_s  \qquad N_s \le k < N_s + N_w
+0 \le i < N_s  \qquad 0 \le j < N_s  \qquad 0 \le k < NWP_j  
 ```
+where $`NWP_j`$ is the number of panels that the wake row shedding from the $`j`$-th panel consists of, and f_j(k) returns the id of the $`k`$-th panel of the wake row shedding from $`j`$-th panel
 
 ### Features
