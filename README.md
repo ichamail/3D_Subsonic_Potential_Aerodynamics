@@ -464,8 +464,11 @@ where $`NWP_j`$ is the number of panels that the wake row shedding from the $`j`
 
 ![bwb - AoA = 4, wake roll up - side view](https://github.com/ichamail/Panel-Methods-3D/assets/107580530/a02348c3-4c1e-4ba2-a40f-0423a5715133)
 
-![bwb - Cp - AoA = -4 - wake roll up - SS](https://github.com/ichamail/Panel-Methods-3D/assets/107580530/a260b030-e679-4ea4-9ada-a39bb13fe37e)
-
 ![bwb - Cp - AoA = 4 - wake roll up - SS](https://github.com/ichamail/Panel-Methods-3D/assets/107580530/bec3b10f-83c4-452e-93bf-01234ebdf13f)
+
+![bwb - Cp - AoA = 4 - wake roll up - PS](https://github.com/ichamail/Panel-Methods-3D/assets/107580530/b17caf9b-d4f2-4899-9835-ffa1c909fdbe)
+
+
+
 
 
